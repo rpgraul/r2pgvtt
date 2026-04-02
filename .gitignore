@@ -6,3 +6,19 @@ dist/
 build/
 .svelte-kit/
 *.log
+
+# Firebase
+.firebaserc
+firebase-debug.log
+firebase.json
+
+# IDE
+.idea/
+.vscode/
+
+# Reference files
+bits.txt
+shadcn-svelte.txt
+referencias-tecnic*.txt
+AGENTS.md
+.geminiignore
