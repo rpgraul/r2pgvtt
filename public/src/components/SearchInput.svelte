@@ -1,5 +1,5 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import Input from './ui/Input.svelte';
   import { Search } from 'lucide-svelte';
   import { onDestroy } from 'svelte';

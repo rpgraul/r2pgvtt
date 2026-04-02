@@ -1,127 +1,59 @@
-import { subscribeToMusic, unsubscribeMusic, play, pause, seekTo, setVideoId } from '../firebase/audioService.js';
-import { gameState } from './game.svelte.js';
+import { audioStore } from './audio.svelte';
 
-function createAudioState() {
-  let videoId = $state(null);
-  let status = $state('paused');
-  let timestamp = $state(0);
-  let lastUpdated = $state(null);
-  let volume = $state(0.5);
-  let isVisible = $state(true);
+export const audioState = {
+  get videoId() { return audioStore.currentVideoId; },
+  get status() { return audioStore.status; },
+  get volume() { return audioStore.volume / 100; },
+  get isVisible() { 
+    if (typeof localStorage === 'undefined') return true;
+    return localStorage.getItem('audioPlayerVisible') !== 'false';
+  },
+  get isPlaying() { return audioStore.status === 'playing'; },
+  get hasVideo() { return !!audioStore.currentVideoId; },
   
-  let localPlayer = $state(null);
-  let unsubscribeFirebase = null;
+  init(gameId) {
+    audioStore.init(gameId);
+  },
   
-  function init(gameId) {
-    if (unsubscribeFirebase) {
-      unsubscribeFirebase();
-    }
-    
-    unsubscribeFirebase = subscribeToMusic(gameId, (data) => {
-      if (data) {
-        videoId = data.videoId || null;
-        status = data.status || 'paused';
-        timestamp = data.timestamp || 0;
-        lastUpdated = data.lastUpdated || null;
-        
-        if (data.volume !== undefined) {
-          volume = data.volume;
-        }
-      }
-    });
-  }
+  destroy() {
+    audioStore.destroy();
+  },
   
-  function destroy() {
-    if (unsubscribeFirebase) {
-      unsubscribeFirebase();
-      unsubscribeFirebase = null;
-    }
-    videoId = null;
-    status = 'paused';
-    timestamp = 0;
-    lastUpdated = null;
-  }
+  setPlayer(player) {
+  },
   
-  function setPlayer(player) {
-    localPlayer = player;
-  }
-  
-  function togglePlay() {
-    if (!gameState.isNarrator || !localPlayer) return;
-    
-    if (status === 'playing') {
-      pauseAction();
+  togglePlay() {
+    if (audioStore.status === 'playing') {
+      audioStore.pause();
     } else {
-      playAction();
+      audioStore.resume();
     }
+  },
+  
+  play(gameId) {
+    audioStore.setGameId(gameId);
+  },
+  
+  pause(gameId) {
+    audioStore.pause();
+  },
+  
+  seekTo(gameId, timestamp) {
+    audioStore.seekTo(timestamp);
+  },
+  
+  setVideoId(gameId, videoId) {
+    audioStore.setGameId(gameId);
+    audioStore.play(videoId);
+  },
+  
+  setVolume(newVolume) {
+    audioStore.setVolume(newVolume * 100);
+  },
+  
+  toggleVisibility() {
+    const current = localStorage.getItem('audioPlayerVisible');
+    const newValue = current === 'false' ? 'true' : 'false';
+    localStorage.setItem('audioPlayerVisible', newValue);
   }
-  
-  function playAction() {
-    if (!gameState.gameId || !gameState.isNarrator) return;
-    play(gameState.gameId);
-  }
-  
-  function pauseAction() {
-    if (!gameState.gameId || !gameState.isNarrator) return;
-    pause(gameState.gameId);
-  }
-  
-  function seekAction(newTimestamp) {
-    if (!gameState.gameId || !gameState.isNarrator) return;
-    seekTo(gameState.gameId, newTimestamp);
-  }
-  
-  function setVideoIdAction(newVideoId) {
-    if (!gameState.gameId || !gameState.isNarrator) return;
-    setVideoId(gameState.gameId, newVideoId);
-  }
-  
-  function setVolume(newVolume) {
-    volume = Math.max(0, Math.min(1, newVolume));
-    if (localPlayer && localPlayer.setVolume) {
-      localPlayer.setVolume(volume * 100);
-    }
-  }
-  
-  function toggleVisibility() {
-    isVisible = !isVisible;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('audioPlayerVisible', isVisible.toString());
-    }
-  }
-  
-  function loadVisibilityPreference() {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem('audioPlayerVisible');
-      if (saved !== null) {
-        isVisible = saved === 'true';
-      }
-    }
-  }
-  
-  loadVisibilityPreference();
-  
-  return {
-    get videoId() { return videoId; },
-    get status() { return status; },
-    get timestamp() { return timestamp; },
-    get lastUpdated() { return lastUpdated; },
-    get volume() { return volume; },
-    get isVisible() { return isVisible; },
-    get isPlaying() { return status === 'playing'; },
-    get hasVideo() { return videoId !== null && videoId !== ''; },
-    
-    init,
-    destroy,
-    setPlayer,
-    togglePlay,
-    play: playAction,
-    pause: pauseAction,
-    seek: seekAction,
-    setVideoId: setVideoIdAction,
-    setVolume,
-    toggleVisibility
-  };
-}
-
-export const audioState = createAudioState();
+};

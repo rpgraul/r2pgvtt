@@ -1,5 +1,5 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import Button from './ui/Button.svelte';
   import Input from './ui/Input.svelte';
   

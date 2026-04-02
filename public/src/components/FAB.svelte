@@ -1,6 +1,6 @@
 <script>
   import { goto } from '$app/navigation';
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import { diceStore } from '$lib/state/diceStore.svelte.js';
   import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet/index.js';
   import Dialog from './ui/Dialog.svelte';

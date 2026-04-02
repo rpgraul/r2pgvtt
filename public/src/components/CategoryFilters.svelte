@@ -1,7 +1,7 @@
 <script>
   import { ToggleGroup } from 'bits-ui';
   import { cn } from '$lib/utils/cn.js';
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   
   const categories = [
     { value: 'all', label: 'Todos', icon: null },

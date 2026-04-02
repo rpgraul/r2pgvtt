@@ -1,221 +1,224 @@
-import { supabase } from '$lib/supabase/client';
-import { authState } from './auth.svelte';
-import type { Game, GameMember, GameMemberWithProfile } from '$lib/supabase/types';
-
-const MAX_GAMES = 3;
+import { db } from '$lib/supabase/tables';
+import { authState } from './auth.svelte.ts';
 
 function createGameState() {
-  let games = $state<Game[]>([]);
-  let isLoading = $state(false);
-  let error = $state<string | null>(null);
-
-  async function loadGames() {
-    if (!authState.user) return;
-    
+  let isLoading = $state(true);
+  let currentGameId = $state(null);
+  
+  let items = $state([]);
+  let chatMessages = $state([]);
+  let rolls = $state([]);
+  
+  let filters = $state({
+    search: '',
+    category: 'all',
+    tags: [],
+    visibility: 'all'
+  });
+  
+  let viewMode = $state('grid');
+  
+  let unsubItems = null;
+  let unsubChat = null;
+  let unsubRolls = null;
+  let rollCallback = null;
+  let lastRollId = null;
+  
+  function init(gameId = null) {
     isLoading = true;
-    error = null;
-
-    try {
-      const { data, error: err } = await supabase
-        .from('game_members')
-        .select(`
-          role,
-          game:games (
-            *,
-            owner:profiles!owner_id (id, display_name)
-          )
-        `)
-        .eq('user_id', authState.user.id);
-
-      if (err) throw err;
-
-      games = data?.map(m => ({
-        ...(m.game as any),
-        user_role: m.role
-      })) ?? [];
-    } catch (err: any) {
-      error = err.message;
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function createGame(nome: string): Promise<Game | null> {
-    if (!authState.user) return null;
+    currentGameId = gameId;
+    authState.init();
     
-    if (games.length >= MAX_GAMES) {
-      throw new Error(`Limite de ${MAX_GAMES} mesas atingido`);
-    }
-
-    isLoading = true;
-    error = null;
-
-    try {
-      const { data, error: err } = await supabase.rpc('create_game_with_owner', {
-        p_nome: nome,
-        p_owner_id: authState.user.id
-      });
-
-      if (err) throw err;
-
-      await loadGames();
-      return data;
-    } catch (err: any) {
-      error = err.message;
-      return null;
-    } finally {
+    unsubItems = db.subscribeToItems(gameId, (cards) => {
+      items = cards;
       isLoading = false;
+    });
+    
+    unsubChat = db.subscribeToChat(gameId, (messages) => {
+      chatMessages = messages;
+    });
+    
+    unsubRolls = db.subscribeToRolls(gameId, (rollData) => {
+      rolls = rollData;
+      
+      if (rollData.length > 0) {
+        const latestRoll = rollData[0];
+        if (latestRoll.id !== lastRollId && rollCallback) {
+          lastRollId = latestRoll.id;
+          rollCallback(latestRoll);
+        }
+      }
+    });
+  }
+  
+  function setGameId(gameId: string | null) {
+    if (currentGameId !== gameId) {
+      destroy();
+      init(gameId);
     }
   }
-
-  async function getGameById(id: string): Promise<Game | null> {
-    const { data, error: err } = await supabase
-      .from('games')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (err) return null;
-    return data;
+  
+  function onRollReceived(callback) {
+    rollCallback = callback;
   }
-
-  async function getGameByInviteCode(inviteCode: string): Promise<Game | null> {
-    const { data, error: err } = await supabase
-      .from('games')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single();
-
-    if (err) return null;
-    return data;
-  }
-
-  async function getGameMembers(gameId: string): Promise<GameMemberWithProfile[]> {
-    const { data, error: err } = await supabase
-      .from('game_members')
-      .select(`
-        *,
-        profile:profiles (*)
-      `)
-      .eq('game_id', gameId);
-
-    if (err) return [];
-    return data ?? [];
-  }
-
-  async function checkUserGameMembership(gameId: string): Promise<string | null> {
-    if (!authState.user) return null;
-
-    const { data } = await supabase
-      .from('game_members')
-      .select('role')
-      .eq('game_id', gameId)
-      .eq('user_id', authState.user.id)
-      .single();
-
-    return data?.role ?? null;
-  }
-
-  async function joinGame(inviteCode: string): Promise<{ success: boolean; gameId?: string; error?: string }> {
-    if (!authState.user) {
-      return { success: false, error: 'Não autenticado' };
+  
+  const filteredItems = $derived.by(() => {
+    let result = items;
+    
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(item => 
+        item.titulo?.toLowerCase().includes(searchLower) ||
+        item.conteudo?.toLowerCase().includes(searchLower) ||
+        item.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+      );
     }
-
-    if (games.length >= MAX_GAMES) {
-      return { success: false, error: `Limite de ${MAX_GAMES} mesas atingido` };
+    
+    if (filters.category && filters.category !== 'all') {
+      result = result.filter(item => item.category === filters.category);
     }
-
-    const game = await getGameByInviteCode(inviteCode);
-    if (!game) {
-      return { success: false, error: 'Código de convite inválido' };
+    
+    if (filters.tags && filters.tags.length > 0) {
+      result = result.filter(item => 
+        filters.tags.every(tag => item.tags?.includes(tag))
+      );
     }
-
-    const existingMembership = await checkUserGameMembership(game.id);
-    if (existingMembership) {
-      return { success: true, gameId: game.id };
+    
+    if (filters.visibility !== 'all') {
+      if (filters.visibility === 'visible') {
+        result = result.filter(item => item.is_visible_to_players);
+      } else if (filters.visibility === 'hidden') {
+        result = result.filter(item => !item.is_visible_to_players);
+      }
     }
-
-    const { error: err } = await supabase
-      .from('game_members')
-      .insert({
-        game_id: game.id,
-        user_id: authState.user.id,
-        role: 'jogador'
-      });
-
-    if (err) {
-      return { success: false, error: err.message };
-    }
-
-    await loadGames();
-    return { success: true, gameId: game.id };
+    
+    return result;
+  });
+  
+  const allTags = $derived.by(() => {
+    const tagSet = new Set();
+    items.forEach(item => {
+      item.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  });
+  
+  const categories = $derived.by(() => {
+    const cats = new Set();
+    items.forEach(item => {
+      if (item.category) cats.add(item.category);
+    });
+    return Array.from(cats);
+  });
+  
+  function setSearch(search) {
+    filters.search = search;
+  }
+  
+  function setCategory(category) {
+    filters.category = category;
+  }
+  
+  function setTags(tags) {
+    filters.tags = tags;
+  }
+  
+  function setVisibility(visibility) {
+    filters.visibility = visibility;
+  }
+  
+  function setViewMode(mode) {
+    viewMode = mode;
+  }
+  
+  async function createCard(cardData) {
+    return await db.addItem({
+      game_id: currentGameId,
+      ...cardData,
+      created_by: authState.displayName
+    });
   }
 
-  async function leaveGame(gameId: string): Promise<boolean> {
-    if (!authState.user) return false;
-
-    const membership = await checkUserGameMembership(gameId);
-    if (membership === 'narrador') {
-      throw new Error('Narrador não pode sair da mesa. Transfira a propriedade primeiro.');
-    }
-
-    const { error: err } = await supabase
-      .from('game_members')
-      .delete()
-      .eq('game_id', gameId)
-      .eq('user_id', authState.user.id);
-
-    if (err) return false;
-
-    await loadGames();
-    return true;
+  async function editCard(cardId, cardData) {
+    await db.updateItem(cardId, cardData);
   }
 
-  async function removeMember(gameId: string, userId: string): Promise<boolean> {
-    const { error: err } = await supabase
-      .from('game_members')
-      .delete()
-      .eq('game_id', gameId)
-      .eq('user_id', userId);
-
-    return !err;
+  async function removeCard(cardId) {
+    await db.deleteItem(cardId);
+  }
+  
+  async function reorderCards(reorderedItems) {
+    const updates = reorderedItems.map((item, index) => ({
+      id: item.id,
+      order: index
+    }));
+    
+    await db.reorderItems(updates);
   }
 
-  async function updateGame(gameId: string, updates: Partial<Game>): Promise<boolean> {
-    const { error: err } = await supabase
-      .from('games')
-      .update(updates)
-      .eq('id', gameId);
+  async function sendMessage(text) {
+    if (!authState.displayName) return;
+    await db.addChatMessage(text, 'user', authState.displayName);
+  }
 
-    if (err) return false;
+  async function sendSystemMessage(text) {
+    await db.addChatMessage(text, 'system', 'Sistema');
+  }
 
-    await loadGames();
-    return true;
+  async function sendRoll(formula, result, details) {
+    if (!authState.displayName) return;
+    await db.addRoll({
+      userName: authState.displayName,
+      formula,
+      result,
+      details
+    });
   }
 
   function destroy() {
-    games = [];
-    error = null;
+    if (unsubItems) unsubItems();
+    if (unsubChat) unsubChat();
+    if (unsubRolls) unsubRolls();
+    unsubItems = null;
+    unsubChat = null;
+    unsubRolls = null;
   }
 
   return {
-    get games() { return games; },
+    get user() { return authState.user; },
+    get userName() { return authState.displayName; },
+    getUserName: () => authState.displayName,
+    get isNarrator() { return authState.role === 'narrador'; },
     get isLoading() { return isLoading; },
-    get error() { return error; },
-    get canCreateMore() { return games.length < MAX_GAMES; },
-    get maxGames() { return MAX_GAMES; },
-    init: loadGames,
+    get items() { return items; },
+    get chatMessages() { return chatMessages; },
+    get rolls() { return rolls; },
+    get filters() { return filters; },
+    get viewMode() { return viewMode; },
+    get filteredItems() { return filteredItems; },
+    get allTags() { return allTags(); },
+    get categories() { return categories(); },
+    get gameId() { return currentGameId; },
+    
+    init,
     destroy,
-    loadGames,
-    createGame,
-    getGameById,
-    getGameByInviteCode,
-    getGameMembers,
-    checkUserGameMembership,
-    joinGame,
-    leaveGame,
-    removeMember,
-    updateGame
+    setGameId,
+    setSearch,
+    setCategory,
+    setTags,
+    setVisibility,
+    setViewMode,
+    createCard,
+    editCard,
+    removeCard,
+    reorderCards,
+    sendMessage,
+    sendSystemMessage,
+    sendRoll,
+    setUserName: (name) => authState.updateProfile({ display_name: name }),
+    setNarrator: () => authState.updateProfile({ role: 'narrador' }),
+    onRollReceived,
+    logout: () => authState.signOut()
   };
 }
 

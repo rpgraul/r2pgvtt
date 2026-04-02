@@ -1,4 +1,4 @@
-import { gameState } from './state/game.svelte.js';
+import { gameState } from './state/game.svelte.ts';
 
 export const GameContext = {
   provide: () => gameState

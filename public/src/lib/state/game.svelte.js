@@ -1,54 +1,46 @@
-import { 
-  subscribeToItems, 
-  subscribeToChat, 
-  subscribeToRolls,
-  addItem,
-  updateItem,
-  deleteItem,
-  addChatMessage,
-  addRoll
-} from '../firebase/firestore.js';
+import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte.ts';
-import { diceStore } from './diceStore.svelte.js';
 
 function createGameState() {
   let isLoading = $state(true);
-  
+  let currentGameId = $state(null);
+
   let items = $state([]);
   let chatMessages = $state([]);
   let rolls = $state([]);
-  
+
   let filters = $state({
     search: '',
     category: 'all',
     tags: [],
     visibility: 'all'
   });
-  
+
   let viewMode = $state('grid');
-  
-  let unsubscribeItems = null;
-  let unsubscribeChat = null;
-  let unsubscribeRolls = null;
+
+  let unsubItems = null;
+  let unsubChat = null;
+  let unsubRolls = null;
   let rollCallback = null;
   let lastRollId = null;
-  
-  function init() {
+
+  function init(gameId = null) {
     isLoading = true;
+    currentGameId = gameId;
     authState.init();
-    
-    unsubscribeItems = subscribeToItems((cards) => {
+
+    unsubItems = db.subscribeToItems(gameId, (cards) => {
       items = cards;
       isLoading = false;
     });
-    
-    unsubscribeChat = subscribeToChat((messages) => {
+
+    unsubChat = db.subscribeToChat(gameId, (messages) => {
       chatMessages = messages;
     });
-    
-    unsubscribeRolls = subscribeToRolls((rollData) => {
+
+    unsubRolls = db.subscribeToRolls(gameId, (rollData) => {
       rolls = rollData;
-      
+
       if (rollData.length > 0) {
         const latestRoll = rollData[0];
         if (latestRoll.id !== lastRollId && rollCallback) {
@@ -58,44 +50,51 @@ function createGameState() {
       }
     });
   }
-  
+
+  function setGameId(gameId = null) {
+    if (currentGameId !== gameId) {
+      destroy();
+      init(gameId);
+    }
+  }
+
   function onRollReceived(callback) {
     rollCallback = callback;
   }
-  
+
   const filteredItems = $derived.by(() => {
     let result = items;
-    
+
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      result = result.filter(item => 
+      result = result.filter(item =>
         item.titulo?.toLowerCase().includes(searchLower) ||
         item.conteudo?.toLowerCase().includes(searchLower) ||
         item.tags?.some(tag => tag.toLowerCase().includes(searchLower))
       );
     }
-    
+
     if (filters.category && filters.category !== 'all') {
       result = result.filter(item => item.category === filters.category);
     }
-    
+
     if (filters.tags && filters.tags.length > 0) {
-      result = result.filter(item => 
+      result = result.filter(item =>
         filters.tags.every(tag => item.tags?.includes(tag))
       );
     }
-    
+
     if (filters.visibility !== 'all') {
       if (filters.visibility === 'visible') {
-        result = result.filter(item => item.isVisibleToPlayers);
+        result = result.filter(item => item.is_visible_to_players);
       } else if (filters.visibility === 'hidden') {
-        result = result.filter(item => !item.isVisibleToPlayers);
+        result = result.filter(item => !item.is_visible_to_players);
       }
     }
-    
+
     return result;
   });
-  
+
   const allTags = $derived.by(() => {
     const tagSet = new Set();
     items.forEach(item => {
@@ -103,7 +102,7 @@ function createGameState() {
     });
     return Array.from(tagSet).sort();
   });
-  
+
   const categories = $derived.by(() => {
     const cats = new Set();
     items.forEach(item => {
@@ -111,79 +110,78 @@ function createGameState() {
     });
     return Array.from(cats);
   });
-  
+
   function setSearch(search) {
     filters.search = search;
   }
-  
+
   function setCategory(category) {
     filters.category = category;
   }
-  
+
   function setTags(tags) {
     filters.tags = tags;
   }
-  
+
   function setVisibility(visibility) {
     filters.visibility = visibility;
   }
-  
+
   function setViewMode(mode) {
     viewMode = mode;
   }
-  
+
   async function createCard(cardData) {
-    return await addItem({
+    return await db.addItem({
+      game_id: currentGameId,
       ...cardData,
-      createdBy: authState.displayName
+      created_by: authState.displayName
     });
   }
 
   async function editCard(cardId, cardData) {
-    await updateItem(cardId, {
-      ...cardData,
-      updatedBy: authState.displayName
-    });
+    await db.updateItem(cardId, cardData);
   }
 
   async function removeCard(cardId) {
-    await deleteItem(cardId);
+    await db.deleteItem(cardId);
   }
-  
+
   async function reorderCards(reorderedItems) {
     const updates = reorderedItems.map((item, index) => ({
       id: item.id,
-      posicao: { x: index % 4, y: Math.floor(index / 4) }
+      order: index
     }));
-    
-    for (const update of updates) {
-      await updateItem(update.id, { posicao: update.posicao });
-    }
+
+    await db.reorderItems(updates);
   }
 
   async function sendMessage(text) {
     if (!authState.displayName) return;
-    await addChatMessage(text, 'user', authState.displayName, diceStore.currentDiceColor);
+    await db.addChatMessage(text, 'user', authState.displayName);
   }
 
   async function sendSystemMessage(text) {
-    await addChatMessage(text, 'system', 'Sistema');
+    await db.addChatMessage(text, 'system', 'Sistema');
   }
 
   async function sendRoll(formula, result, details) {
     if (!authState.displayName) return;
-    await addRoll({
+    await db.addRoll({
       userName: authState.displayName,
       formula,
       result,
-      ...details
+      details
     });
   }
 
   function destroy() {
-    if (unsubscribeItems) unsubscribeItems();
-    if (unsubscribeChat) unsubscribeChat();
-    if (unsubscribeRolls) unsubscribeRolls();
+    if (unsubItems) unsubItems();
+    if (unsubChat) unsubChat();
+    if (unsubRolls) unsubRolls();
+    unsubItems = null;
+    unsubChat = null;
+    unsubRolls = null;
   }
 
   return {
@@ -200,8 +198,11 @@ function createGameState() {
     get filteredItems() { return filteredItems; },
     get allTags() { return allTags(); },
     get categories() { return categories(); },
-    
+    get gameId() { return currentGameId; },
+
     init,
+    destroy,
+    setGameId,
     setSearch,
     setCategory,
     setTags,
@@ -217,8 +218,7 @@ function createGameState() {
     setUserName: (name) => authState.updateProfile({ display_name: name }),
     setNarrator: () => authState.updateProfile({ role: 'narrador' }),
     onRollReceived,
-    logout: () => authState.signOut(),
-    destroy
+    logout: () => authState.signOut()
   };
 }
 

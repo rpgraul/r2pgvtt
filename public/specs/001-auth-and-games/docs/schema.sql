@@ -172,3 +172,175 @@ CREATE INDEX IF NOT EXISTS idx_games_owner ON games(owner_id);
 CREATE INDEX IF NOT EXISTS idx_games_invite_code ON games(invite_code);
 CREATE INDEX IF NOT EXISTS idx_game_members_user ON game_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_game_members_game ON game_members(game_id);
+
+-- ============================================
+-- Firebase Migration: Items (Cards)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID REFERENCES games(id) ON DELETE CASCADE,
+  titulo TEXT NOT NULL DEFAULT '',
+  conteudo TEXT DEFAULT '',
+  category TEXT DEFAULT 'misc',
+  tags TEXT[] DEFAULT '{}',
+  imagem_url TEXT,
+  is_visible_to_players BOOLEAN DEFAULT true,
+  posicao JSONB DEFAULT '{"x":0,"y":0}',
+  created_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  "order" INTEGER DEFAULT 0
+);
+
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+
+-- Items: qualquer membro pode ver, só narrator/editors podem modificar
+CREATE POLICY "Members can view items" ON items
+  FOR SELECT USING (
+    game_id IS NULL OR
+    EXISTS (
+      SELECT 1 FROM game_members 
+      WHERE game_id = items.game_id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Narradores can manage items" ON items
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM game_members gm
+      WHERE gm.game_id = items.game_id 
+        AND gm.user_id = auth.uid()
+        AND gm.role IN ('narrador', 'assistente')
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_items_game ON items(game_id);
+CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
+CREATE INDEX IF NOT EXISTS idx_items_order ON items("order");
+
+-- ============================================
+-- Firebase Migration: Chat Messages
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID REFERENCES games(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  type TEXT DEFAULT 'user' CHECK (type IN ('user', 'system')),
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Members can view chat" ON chat_messages
+  FOR SELECT USING (
+    game_id IS NULL OR
+    EXISTS (
+      SELECT 1 FROM game_members 
+      WHERE game_id = chat_messages.game_id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Members can insert chat" ON chat_messages
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE INDEX IF NOT EXISTS idx_chat_game ON chat_messages(game_id);
+CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_messages(created_at);
+
+-- ============================================
+-- Firebase Migration: Dice Rolls
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS dice_rolls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID REFERENCES games(id) ON DELETE CASCADE,
+  user_name TEXT NOT NULL,
+  formula TEXT NOT NULL,
+  result INTEGER NOT NULL,
+  details JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE dice_rolls ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Members can view rolls" ON dice_rolls
+  FOR SELECT USING (
+    game_id IS NULL OR
+    EXISTS (
+      SELECT 1 FROM game_members 
+      WHERE game_id = dice_rolls.game_id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Members can insert rolls" ON dice_rolls
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE INDEX IF NOT EXISTS idx_rolls_game ON dice_rolls(game_id);
+CREATE INDEX IF NOT EXISTS idx_rolls_created ON dice_rolls(created_at DESC);
+
+-- ============================================
+-- Firebase Migration: Audio (YouTube Player)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS audio_state (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID REFERENCES games(id) ON DELETE CASCADE UNIQUE,
+  video_id TEXT,
+  status TEXT DEFAULT 'stopped' CHECK (status IN ('playing', 'paused', 'stopped')),
+  current_time DOUBLE PRECISION DEFAULT 0,
+  volume INTEGER DEFAULT 80,
+  created_by TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE audio_state ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Members can view audio" ON audio_state
+  FOR SELECT USING (
+    game_id IS NULL OR
+    EXISTS (
+      SELECT 1 FROM game_members 
+      WHERE game_id = audio_state.game_id AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Narradores can manage audio" ON audio_state
+  FOR ALL USING (
+    game_id IS NULL OR
+    EXISTS (
+      SELECT 1 FROM game_members gm
+      WHERE gm.game_id = audio_state.game_id 
+        AND gm.user_id = auth.uid()
+        AND gm.role IN ('narrador', 'assistente')
+    )
+  );
+
+-- ============================================
+-- Firebase Migration: Settings (site-wide)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+
+-- Qualquer um pode ver, só auth pode editar
+CREATE POLICY "Anyone can view settings" ON site_settings
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated can update settings" ON site_settings
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated can insert settings" ON site_settings
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Insert default settings
+INSERT INTO site_settings (key, value) VALUES 
+  ('main', '{"siteTitle": "GameBoard", "theme": "dark"}')
+ON CONFLICT (key) DO NOTHING;

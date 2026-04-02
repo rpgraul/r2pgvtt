@@ -1,43 +1,28 @@
-import { 
-  doc, 
-  onSnapshot, 
-  setDoc, 
-  updateDoc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '$lib/firebase/config.js';
-import { authState } from './auth.svelte.ts';
+import { db } from '$lib/supabase/tables';
 
-const AUDIO_COLLECTION = 'audio';
-const DEFAULT_GAME_ID = 'default';
-
-interface AudioState {
-  currentVideoId: string | null;
+interface AudioStateData {
+  video_id: string | null;
   status: 'playing' | 'paused' | 'stopped';
-  serverTime: number | null;
-  startTimeOffset: number;
+  current_time: number;
   volume: number;
-  createdBy: string;
 }
 
 function createAudioStore() {
-  let gameId = $state(DEFAULT_GAME_ID);
+  let gameId = $state<string | null>(null);
   
-  let audioState = $state<AudioState>({
-    currentVideoId: null,
+  let audioState = $state<AudioStateData>({
+    video_id: null,
     status: 'stopped',
-    serverTime: null,
-    startTimeOffset: 0,
-    volume: 80,
-    createdBy: ''
+    current_time: 0,
+    volume: 80
   });
   
   let isLocalPlaying = $state(false);
   let isLoading = $state(true);
-  let unsubscribe = null;
   let player = $state<YT.Player | null>(null);
   let playerReady = $state(false);
   let syncInterval: ReturnType<typeof setInterval> | null = null;
+  let lastServerTime = $state<number | null>(null);
 
   function extractYouTubeId(url: string): string | null {
     if (!url) return null;
@@ -107,18 +92,18 @@ function createAudioStore() {
   }
 
   function getCurrentPosition(): number {
-    if (audioState.status !== 'playing' || !audioState.serverTime) {
-      return audioState.startTimeOffset;
+    if (audioState.status !== 'playing' || !lastServerTime) {
+      return audioState.current_time;
     }
     
     const now = Date.now() / 1000;
-    const serverNow = audioState.serverTime / 1000;
+    const serverNow = lastServerTime / 1000;
     const offset = now - serverNow;
-    return audioState.startTimeOffset + offset;
+    return audioState.current_time + offset;
   }
 
   function syncPlayer() {
-    if (!player || !playerReady || !audioState.currentVideoId) return;
+    if (!player || !playerReady || !audioState.video_id) return;
 
     const currentPos = getCurrentPosition();
     const playerState = player.getPlayerState();
@@ -153,100 +138,118 @@ function createAudioStore() {
     }
   }
 
-  function subscribeToAudio() {
-    if (unsubscribe) return;
+  async function loadAudioState() {
+    if (!gameId) return;
     
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
-    
-    unsubscribe = onSnapshot(audioRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+    try {
+      const data = await db.getAudioState(gameId);
+      if (data) {
         audioState = {
-          currentVideoId: data.currentVideoId || null,
-          status: data.status || 'stopped',
-          serverTime: data.serverTime?.toMillis?.() || data.serverTime || null,
-          startTimeOffset: data.startTimeOffset || 0,
-          volume: data.volume ?? 80,
-          createdBy: data.createdBy || ''
+          video_id: data.video_id,
+          status: data.status,
+          current_time: data.current_time || 0,
+          volume: data.volume ?? 80
         };
+        lastServerTime = new Date(data.updated_at).getTime() / 1000;
         
         if (audioState.status === 'playing') {
           startSyncLoop();
-        } else {
-          stopSyncLoop();
         }
-      } else {
-        audioState = {
-          currentVideoId: null,
-          status: 'stopped',
-          serverTime: null,
-          startTimeOffset: 0,
-          volume: 80,
-          createdBy: ''
-        };
       }
-      isLoading = false;
-    });
+    } catch (e) {
+      console.warn('Failed to load audio state:', e);
+    }
+    isLoading = false;
   }
 
   async function play(videoIdOrUrl: string) {
+    if (!gameId) return;
+    
     const videoId = extractYouTubeId(videoIdOrUrl);
     if (!videoId) return;
 
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
-    const now = Date.now();
+    lastServerTime = Date.now() / 1000;
     
-    await setDoc(audioRef, {
-      currentVideoId: videoId,
+    await db.updateAudioState(gameId, {
+      video_id: videoId,
       status: 'playing',
-      serverTime: serverTimestamp(),
-      startTimeOffset: 0,
-      volume: audioState.volume,
-      createdBy: authState.displayName || 'anonymous'
-    }, { merge: true });
+      current_time: 0,
+      volume: audioState.volume
+    });
+
+    audioState = {
+      ...audioState,
+      video_id: videoId,
+      status: 'playing',
+      current_time: 0
+    };
 
     if (player && playerReady) {
       player.loadVideoById({ videoId, startSeconds: 0 });
     }
+    
+    startSyncLoop();
   }
 
   async function pause() {
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
-    const currentPos = getCurrentPosition();
-    const now = Date.now();
+    if (!gameId) return;
     
-    await updateDoc(audioRef, {
+    const currentPos = getCurrentPosition();
+    
+    await db.updateAudioState(gameId, {
       status: 'paused',
-      startTimeOffset: currentPos,
-      serverTime: serverTimestamp()
+      current_time: currentPos
     });
+
+    audioState = {
+      ...audioState,
+      status: 'paused',
+      current_time: currentPos
+    };
 
     if (player && playerReady) {
       player.pauseVideo();
     }
+    
+    stopSyncLoop();
   }
 
   async function resume() {
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
+    if (!gameId) return;
     
-    await updateDoc(audioRef, {
-      status: 'playing',
-      serverTime: serverTimestamp()
+    lastServerTime = Date.now() / 1000;
+    
+    await db.updateAudioState(gameId, {
+      status: 'playing'
     });
+
+    audioState = {
+      ...audioState,
+      status: 'playing'
+    };
 
     if (player && playerReady) {
       player.playVideo();
     }
+    
+    startSyncLoop();
   }
 
   async function stop() {
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
+    if (!gameId) return;
     
-    await updateDoc(audioRef, {
-      currentVideoId: null,
+    await db.updateAudioState(gameId, {
+      video_id: null,
       status: 'stopped',
-      startTimeOffset: 0
+      current_time: 0
     });
+
+    audioState = {
+      video_id: null,
+      status: 'stopped',
+      current_time: 0,
+      volume: audioState.volume
+    };
 
     if (player && playerReady) {
       player.stopVideo();
@@ -263,57 +266,62 @@ function createAudioStore() {
       player.setVolume(clampedVolume);
     }
 
-    try {
-      const audioRef = doc(db, AUDIO_COLLECTION, gameId);
-      await updateDoc(audioRef, { volume: clampedVolume });
-    } catch (e) {
-      console.warn('Failed to sync volume to Firestore');
+    if (gameId) {
+      try {
+        await db.updateAudioState(gameId, { volume: clampedVolume });
+      } catch (e) {
+        console.warn('Failed to sync volume to Supabase');
+      }
     }
   }
 
   async function seekTo(seconds: number) {
-    const audioRef = doc(db, AUDIO_COLLECTION, gameId);
-    const now = Date.now();
+    if (!gameId) return;
     
-    await updateDoc(audioRef, {
-      startTimeOffset: seconds,
-      serverTime: serverTimestamp()
+    await db.updateAudioState(gameId, {
+      current_time: seconds
     });
+
+    audioState = {
+      ...audioState,
+      current_time: seconds
+    };
 
     if (player && playerReady) {
       player.seekTo(seconds, true);
     }
   }
 
-  function setGameId(id: string) {
+  function setGameId(id: string | null) {
     gameId = id;
-    if (unsubscribe) {
-      unsubscribe();
-      subscribeToAudio();
+    if (id) {
+      loadAudioState();
     }
   }
 
-  function init() {
+  function init(gameIdParam?: string) {
     isLoading = true;
+    if (gameIdParam) {
+      gameId = gameIdParam;
+    }
     initYoutubePlayer();
-    subscribeToAudio();
+    if (gameId) {
+      loadAudioState();
+    }
   }
 
   function destroy() {
     stopSyncLoop();
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
     if (player) {
       player.destroy();
       player = null;
     }
+    playerReady = false;
   }
 
   return {
     get audioState() { return audioState; },
-    get currentVideoId() { return audioState.currentVideoId; },
+    get currentVideoId() { return audioState.video_id; },
     get status() { return audioState.status; },
     get volume() { return audioState.volume; },
     get isLoading() { return isLoading; },

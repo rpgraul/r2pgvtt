@@ -1,4 +1,4 @@
-import { audioState } from '../state/audio.svelte.js';
+import { audioState } from '../state/audio.svelte.ts';
 
 let youtubeApiLoaded = false;
 let youtubeApiResolve = null;

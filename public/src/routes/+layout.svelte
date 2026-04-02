@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { ModeWatcher } from 'mode-watcher';
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import { audioStore } from '$lib/state/audio.svelte.ts';
   import { diceStore } from '$lib/state/diceStore.svelte.js';
   import Header from '$components/Header.svelte';

@@ -1,10 +1,8 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import { authState } from '$lib/state/auth.svelte.ts';
   import { toast } from '$lib/stores/toast.js';
-  import { doc, setDoc, onSnapshot } from 'firebase/firestore';
-  import { db } from '$lib/firebase/config.js';
   import Button from '$components/ui/Button.svelte';
   import { Tooltip } from '$components/ui/tooltip/index.js';
   import { 

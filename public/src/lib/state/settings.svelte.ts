@@ -1,5 +1,6 @@
-import { getDoc, doc } from 'firebase/firestore';
-import { db } from '$lib/firebase/config.js';
+import { db } from '$lib/supabase/tables';
+
+const SETTINGS_KEY = 'gameboard_settings';
 
 function createSettingsStore() {
   let settings = $state({
@@ -10,16 +11,13 @@ function createSettingsStore() {
   });
   
   let isLoading = $state(true);
-  let unsubscribe = null;
-
+  
   async function loadSettings() {
     isLoading = true;
     
     try {
-      const docSnap = await getDoc(doc(db, 'config', 'mainSettings'));
-      
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+      const data = await db.getSettings('main');
+      if (data) {
         settings = {
           siteTitle: data.siteTitle || 'GameBoard',
           imgbbApiKey: data.imgbbApiKey || '',
@@ -28,28 +26,36 @@ function createSettingsStore() {
         };
       }
     } catch (error) {
-      console.warn('Failed to load settings, using defaults:', error);
+      console.warn('Failed to load settings, using localStorage:', error);
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        try {
+          settings = JSON.parse(stored);
+        } catch (e) {
+          console.warn('Failed to parse stored settings');
+        }
+      }
     } finally {
       isLoading = false;
     }
   }
 
   async function saveSettings(newSettings: Partial<typeof settings>) {
+    const updated = { ...settings, ...newSettings };
+    settings = updated;
+    
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+    }
+    
     try {
-      const { updateDoc } = await import('firebase/firestore');
-      await updateDoc(doc(db, 'config', 'mainSettings'), newSettings);
-      settings = { ...settings, ...newSettings };
+      await db.updateSettings('main', updated);
     } catch (error) {
-      console.error('Failed to save settings:', error);
-      throw error;
+      console.warn('Failed to sync settings to Supabase, saved locally');
     }
   }
 
   function destroy() {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
   }
 
   return {

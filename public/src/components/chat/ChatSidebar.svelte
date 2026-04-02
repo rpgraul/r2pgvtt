@@ -1,6 +1,6 @@
 <script>
   import { tick } from 'svelte';
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import { diceStore } from '$lib/state/diceStore.svelte.js';
   import { X, Send } from 'lucide-svelte';
   

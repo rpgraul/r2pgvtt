@@ -1,5 +1,5 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import Card from './Card.svelte';
   import CardDialog from './CardDialog.svelte';
   import { cn } from '$lib/utils/cn.js';

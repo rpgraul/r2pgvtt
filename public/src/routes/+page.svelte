@@ -1,5 +1,5 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.js';
+  import { gameState } from '$lib/state/game.svelte.ts';
   import SearchInput from '$components/SearchInput.svelte';
   import CategoryFilters from '$components/CategoryFilters.svelte';
   import TagFilters from '$components/TagFilters.svelte';
