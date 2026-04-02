@@ -1,153 +1,190 @@
-# GameBoard v2
+# GameBoard v2 — Spec-Driven Development
 
 Web App modular para RPG de mesa com foco em **Reatividade** e **Performance**.
 
+> **Nota:** Este projeto segue o workflow **Spec-Driven Development (SDD)**. Leia o Constitution em `.specify/memory/constitution.md` antes de fazer alterações significativas.
+
 ---
 
-## Stack Atualizada (v2)
+## Stack Tecnológica
 
 | Camada | Tecnologia |
-|---|---|
+|--------|------------|
 | Framework | Svelte 5 (Runes: `$state`, `$derived`, `$effect`) |
 | Bundler | Vite |
-| UI & Components | Bits UI (Headless) + Tailwind CSS (Estilo Shadcn/Dark) |
-| Icons | Lucide Svelte *(substituindo FontAwesome 5)* |
-| Backend | Firebase v11.3.0 (Firestore + Storage + Auth + Hosting) |
-| Grid & Layout | Muuri `@0.9.5` *(encapsulado em Svelte Actions)* |
-| Editor | Tiptap 2.0+ |
-| 3D Dice | `@3d-dice/dice-box` `@1.1.4` |
-| Whiteboard | Fabric.js v6.x |
-| Áudio | YouTube IFrame API |
+| UI & Components | Bits UI (Headless) + Tailwind CSS v4 |
+| Icons | Lucide Svelte |
+| Backend | **Supabase** (Postgres + Auth + Realtime) |
+| Linting | Biome |
+| Grid/Layout | Muuri |
+| Editor | Tiptap 2 |
+| 3D Dice | @3d-dice/dice-box |
+| Whiteboard | Fabric.js v6 |
+| Deploy | Vercel/Netlify |
 
 ---
 
-## Arquitetura de Estado
-
-O projeto migrou de manipulação direta de DOM para **Svelte Runes**.
-
-- **Global State:** Gerenciado em `src/lib/state/game.svelte.js`.
-- **Firebase Sync:** O Firestore alimenta as Runes do Svelte, disparando atualizações de UI automaticamente.
-
----
-
-## Estrutura de Diretórios (SPA)
+## Estrutura de Diretórios
 
 ```text
-src/
-├── assets/
-│   ├── app.css
-│   └── asset/
-├── components/
-│   ├── ui/
-│   ├── grid/
-│   ├── dice/
-│   ├── whiteboard/
-│   ├── chat/
-│   └── editor/
-├── lib/
-│   ├── firebase/
-│   ├── state/
-│   ├── utils/
-│   └── actions/
-├── routes/
-│   ├── Dashboard
-│   ├── SheetMode
-│   ├── TextMode
-│   ├── WhiteboardView
-│   ├── ChatView
-│   └── UploadView
-├── App.svelte
-└── main.js
+public/
+├── .specify/           # SpecKit SDD artifacts
+│   ├── memory/
+│   │   └── constitution.md    # Princípios do projeto
+│   ├── templates/      # Templates SDD
+│   └── integrations/   # Integração com agentes
+├── specs/              # SPECs por feature
+│   └── 001-feature-name/
+│       ├── spec.md
+│       ├── plan.md
+│       └── tasks.md
+├── docs/               # Documentação adicional
+│   └── adr/           # Architecture Decision Records
+├── src/
+│   ├── components/
+│   │   ├── ui/        # Componentes base (Button, Input, etc)
+│   │   ├── grid/      # Cards e grid de jogos
+│   │   ├── dice/      # Sistema de dados
+│   │   ├── whiteboard/# Quadro colaborativo
+│   │   ├── chat/      # Chat em tempo real
+│   │   └── editor/    # Editor de texto rico
+│   ├── lib/
+│   │   ├── supabase/  # Cliente Supabase
+│   │   ├── state/     # Estado global (Runes)
+│   │   └── utils/     # Utilitários
+│   └── routes/        # Páginas SvelteKit
+└── package.json
 ```
 
 ---
 
-## Modelo de Dados Firestore
+## Workflow SDD
 
-```js
-// Coleção: users
-users/{uid}: {
-  displayName: string,
-  email: string,
-  role: "narrador" | "jogador"
-}
+Para **toda feature nova**:
 
-// Coleção: games
-games/{gameId}: {
-  nome: string,
-  criadoEm: timestamp
-}
-
-// Sub-coleção: cards
-games/{gameId}/cards/{cardId}: {
-  titulo: string,
-  conteudo: string,
-  tags: string[],
-  category: string,
-  isVisibleToPlayers: boolean,
-  imagemUrl: string,
-  posicao: object
-}
-
-// Sub-coleção: chat
-games/{gameId}/chat/{messageId}: {
-  uid: string,
-  autor: string,
-  mensagem: string,
-  timestamp: timestamp,
-  tipo: string
-}
-
-// Sub-coleção: rolls
-games/{gameId}/rolls/{rollId}: {
-  uid: string,
-  autor: string,
-  expressao: string,
-  resultado: number,
-  detalhes: object,
-  timestamp: timestamp
-}
 ```
+1. /speckit.specify  → Criar SPEC.md da feature
+2. /speckit.plan     → Criar plano técnico
+3. /speckit.tasks    → Decompor em tarefas
+4. /speckit.implement → Implementar
+```
+
+### Comandos SpecKit
+
+| Comando | Descrição |
+|---------|-----------|
+| `/speckit.constitution` | Revisar/atualizar princípios |
+| `/speckit.specify` | Criar especificação |
+| `/speckit.plan` | Plano de implementação |
+| `/speckit.tasks` | Lista de tarefas |
+| `/speckit.implement` | Executar implementação |
+
+### Comandos Opcionais
+
+| Comando | Descrição |
+|---------|-----------|
+| `/speckit.clarify` | Perguntas para desambiguar |
+| `/speckit.analyze` | Verificar consistência |
+| `/speckit.checklist` | Checklist de qualidade |
 
 ---
 
-## Diretrizes de Implementação
+## Princípios Fundamentais
 
-1. **Estilo:** Proibido Bulma. Use **Tailwind CSS** (Tema `Zinc-950`).
-2. **UI:** Seguir padrão **Shadcn/UI** (Clean/Dark).
-3. **Bits UI:** Consultar [bits-ui.com/docs/llms.txt](https://bits-ui.com/docs/llms.txt).
-4. **Reatividade:** Usar Runes (`$state`, `$derived`, `$effect`). **Proibido** `getElementById`.
-5. **Firebase:** Limpar listeners (`onSnapshot`) na destruição do componente.
+### Reatividade
+- Usar **Runes** (`$state`, `$derived`, `$effect`)
+- **Proibido**: `document.getElementById`, `document.querySelector`
+
+### Componentes
+- Props tipadas com `$props()`
+- Interface `Props` explícita
+- Componentes de UI em `src/components/ui/`
+
+### Estado
+- Factory pattern com `init()` e `destroy()`
+- Limpar subscriptions no `destroy()`
+- Getters para expor estado (não `$state` diretamente)
+
+### Estilo
+- **Proibido** Bulma — usar **Tailwind CSS v4** (tema `Zinc-950`)
+- Estilo **Shadcn/UI** dark
+
+### Linting
+- `biome format --write` antes de commits
+- `biome lint` deve passar
+
+---
+
+## Modelo de Dados (Supabase)
+
+### Schema Principal
+
+```sql
+-- Profiles (via Supabase Auth)
+profiles {
+  id: uuid (PK)
+  display_name: text
+  role: 'narrador' | 'jogador'
+}
+
+-- Games
+games {
+  id: uuid (PK)
+  nome: text
+  owner_id: uuid (FK -> profiles)
+}
+
+-- Cards
+cards {
+  id: uuid (PK)
+  game_id: uuid (FK -> games)
+  titulo: text
+  conteudo: text
+  tags: text[]
+  category: text
+  is_visible_to_players: boolean
+}
+```
+
+### RLS Policies
+- Jogadores veem apenas cards `is_visible_to_players = true`
+- Narradores veem todos os cards
 
 ---
 
 ## Shortcodes RPG
 
 | Shortcode | Descrição |
-|---|---|
-| `[hp:atual/max:mod]` | Pontos de vida com modificador |
-| `[stat:Nome:valor:mod:save]` | Atributo com valor, modificador e saving throw |
-| `[money:100po,50pp]` | Dinheiro em múltiplas moedas |
-| `[count:inicial:inc:max]` | Contador configurável |
-| `[xp:atual/total:prox]` | Experiência atual, total e próximo nível |
-| `[container:tipo]...[/container]` | Container de layout |
-| `[card:nome:label]` | Card referenciável |
+|-----------|-----------|
+| `[hp:atual/max:mod]` | Pontos de vida |
+| `[stat:Nome:valor:mod:save]` | Atributo |
+| `[money:100po,50pp]` | Dinheiro |
+| `[count:inicial:inc:max]` | Contador |
+| `[xp:atual/total:prox]` | Experiência |
 
 ---
 
 ## Comandos
 
 ```bash
-# Instalar dependências
-npm install
-
-# Servidor de desenvolvimento
+# Desenvolvimento
 npm run dev
 
-# Build de produção
+# Build
 npm run build
 
-# Deploy para Firebase Hosting
-firebase deploy
+# Linting
+biome format --write
+biome lint
+
+# Deploy (Vercel/Netlify)
+vercel deploy
 ```
-  
+
+---
+
+## Migration Firebase → Supabase
+
+Ver `docs/migration/001-firebase-to-supabase.md` para detalhes.
+
+**Status**: Em progresso

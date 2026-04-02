@@ -1,0 +1,160 @@
+# REFERÊNCIAS TÉCNICAS E GUIA DE ESTILO (SVELTE 5 + SHADCN + TIPTAP)
+
+Este documento contém os padrões estritos que DEVEM ser usados durante a migração deste projeto. NUNCA use sintaxe do Svelte 4.
+
+## 1. ESTADO E REATIVIDADE (SVELTE 5 RUNES)
+NÃO USE: `export let`, `$:`, ou `import { writable } from 'svelte/store'`.
+USE SEMPRE: `$state`, `$derived`, `$effect`, e `$props`.
+
+### Exemplo de Store Global (ex: src/lib/stores/auth.svelte.ts)
+```typescript
+export const authState = $state({
+  user: null,
+  isNarrator: false,
+  isLoading: true
+});
+
+export function loginAsNarrator() {
+  authState.isNarrator = true;
+  authState.user = { name: 'Mestre' };
+}
+Exemplo de Componente (ex: src/components/Card.svelte)
+
+Svelte
+<script lang="ts">
+  // Props no Svelte 5
+  let { title, content, onSave } = $props<{
+    title: string;
+    content: string;
+    onSave: (data: string) => void;
+  }>();
+
+  // Estado local
+  let isEditing = $state(false);
+  
+  // Reatividade
+  let charCount = $derived(content.length);
+
+  // Efeitos
+  $effect(() => {
+    if (isEditing) console.log("Modo de edição ativado!");
+  });
+</script>
+
+<div>
+  <h1>{title}</h1>
+  <button onclick={() => isEditing = !isEditing}>Editar</button>
+</div>
+2. SHADCN-SVELTE E BITS UI
+Use os componentes do Shadcn-Svelte importando sempre do diretório correto (geralmente $lib/components/ui/...).
+O Shadcn no Svelte 5 usa fortemente {#snippet} (Snippets) em vez de <slot />.
+Exemplo de Dialog (Shadcn)
+
+Svelte
+<script lang="ts">
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger>
+    {#snippet child({ props })}
+      <Button {...props}>Abrir Modal</Button>
+    {/snippet}
+  </Dialog.Trigger>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Título do Modal</Dialog.Title>
+      <Dialog.Description>Descrição aqui.</Dialog.Description>
+    </Dialog.Header>
+  </Dialog.Content>
+</Dialog.Root>
+3. INTEGRAÇÃO TIPTAP NO SVELTE 5
+Ao migrar as extensões Vanilla (HpNode, MoneyNode, etc.), use o SvelteNodeViewRenderer do @tiptap/svelte para renderizar componentes Svelte REAIS dentro do editor.
+Exemplo Base de Extensão Tiptap (src/lib/tiptap/HpNode.ts)
+
+TypeScript
+import { Node, mergeAttributes } from '@tiptap/core';
+import { SvelteNodeViewRenderer } from '@tiptap/svelte';
+import HpNodeComponent from './HpNodeComponent.svelte';
+
+export default Node.create({
+  name: 'hpNode',
+  group: 'inline',
+  inline: true,
+  atom: true,
+
+  addAttributes() {
+    return {
+      current: { default: 100 },
+      max: { default: 100 }
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'span[data-node-type="hpNode"]' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return['span', mergeAttributes(HTMLAttributes, { 'data-node-type': 'hpNode' })];
+  },
+
+  addNodeView() {
+    // É AQUI QUE O SVELTE ENTRA EM AÇÃO
+    return SvelteNodeViewRenderer(HpNodeComponent);
+  },
+});
+Exemplo do Componente NodeView (src/lib/tiptap/HpNodeComponent.svelte)
+
+Svelte
+<script lang="ts">
+  import { NodeViewWrapper } from '@tiptap/svelte';
+  
+  // O Tiptap passa a prop 'node' e 'updateAttributes' automaticamente
+  let { node, updateAttributes } = $props();
+  
+  let current = $derived(node.attrs.current);
+  let max = $derived(node.attrs.max);
+
+  function takeDamage() {
+    updateAttributes({ current: Math.max(0, current - 1) });
+  }
+</script>
+
+<NodeViewWrapper class="inline-block">
+  <div class="flex items-center gap-2 bg-slate-800 text-white p-1 rounded">
+    <span>HP: {current} / {max}</span>
+    <button onclick={takeDamage}>-1</button>
+  </div>
+</NodeViewWrapper>
+4. DRAG AND DROP (svelte-dnd-action)
+Para a reordenação dos cards e playlists, use svelte-dnd-action.
+NÃO USE manipuladores DOM diretos. Modifique a lista e deixe o Svelte renderizar.
+
+Svelte
+<script lang="ts">
+  import { dndzone } from 'svelte-dnd-action';
+  
+  let items = $state([
+    { id: 1, name: 'Card 1' },
+    { id: 2, name: 'Card 2' }
+  ]);
+
+  function handleDndConsider(e: CustomEvent) {
+    items = e.detail.items;
+  }
+
+  function handleDndFinalize(e: CustomEvent) {
+    items = e.detail.items;
+    // Aqui chama a Store/Firebase para salvar a nova ordem
+  }
+</script>
+
+<section use:dndzone={{items}} onconsider={handleDndConsider} onfinalize={handleDndFinalize}>
+  {#each items as item (item.id)}
+    <div>{item.name}</div>
+  {/each}
+</section>
+
+
+***
