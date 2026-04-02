@@ -1,82 +1,117 @@
-const NARRATOR_PASSWORDS = ['dimitrinho', 'tomatinho'];
-const STORAGE_KEY = 'isNarrator';
-const USER_NAME_KEY = 'rpgboard_user_name';
+import { supabase } from '$lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
+import type { Profile } from '$lib/supabase/types';
 
-function createAuthStore() {
-  let user = $state(null);
-  let userName = $state('');
-  let isNarrator = $state(false);
+function createAuthState() {
+  let user = $state<User | null>(null);
+  let profile = $state<Profile | null>(null);
   let isLoading = $state(true);
+  let isInitialized = $state(false);
 
-  function init() {
+  async function init() {
+    if (isInitialized) return;
+    isInitialized = true;
     isLoading = true;
-    
-    const storedNarrator = localStorage.getItem(STORAGE_KEY);
-    const storedName = localStorage.getItem(USER_NAME_KEY);
-    
-    if (storedName) {
-      userName = storedName;
-      user = { name: storedName };
+
+    const { data } = await supabase.auth.getSession();
+    user = data.session?.user ?? null;
+
+    if (user) {
+      await loadProfile();
     }
-    
-    isNarrator = storedNarrator === 'true';
+
     isLoading = false;
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      user = session?.user ?? null;
+
+      if (user && event === 'SIGNED_IN') {
+        await loadProfile();
+      } else if (event === 'SIGNED_OUT') {
+        profile = null;
+      }
+    });
   }
 
-  function getUserName(): string {
-    if (userName) return userName;
-    const stored = localStorage.getItem(USER_NAME_KEY);
-    if (stored) return stored;
-    return 'Visitante';
+  async function loadProfile() {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    profile = data;
   }
 
-  function validateNarratorPassword(pwd: string): boolean {
-    return !!pwd && NARRATOR_PASSWORDS.some(p => p === pwd);
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    if (error) throw error;
   }
 
-  function loginAsNarrator() {
-    localStorage.setItem(STORAGE_KEY, 'true');
-    localStorage.setItem(USER_NAME_KEY, 'Mestre');
-    isNarrator = true;
-    userName = 'Mestre';
-    user = { name: 'Mestre' };
+  async function signInWithEmail(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (error) throw error;
+    return data;
   }
 
-  function loginAsPlayer(name: string) {
-    localStorage.setItem(STORAGE_KEY, 'false');
-    localStorage.setItem(USER_NAME_KEY, name);
-    isNarrator = false;
-    userName = name;
-    user = { name };
+  async function signUp(email: string, password: string, displayName: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: displayName }
+      }
+    });
+    if (error) throw error;
+    return data;
   }
 
-  function logout() {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(USER_NAME_KEY);
-    isNarrator = false;
-    userName = '';
-    user = null;
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }
 
-  function setUserName(name: string) {
-    userName = name;
-    localStorage.setItem(USER_NAME_KEY, name);
-    user = { name };
+  async function updateProfile(updates: Partial<Profile>) {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    profile = data;
+    return data;
+  }
+
+  function destroy() {
+    isInitialized = false;
   }
 
   return {
     get user() { return user; },
-    get userName() { return userName; },
-    get isNarrator() { return isNarrator; },
+    get profile() { return profile; },
     get isLoading() { return isLoading; },
-    getUserName,
-    validateNarratorPassword,
-    loginAsNarrator,
-    loginAsPlayer,
-    logout,
-    setUserName,
-    init
+    get isAuthenticated() { return !!user; },
+    get role() { return profile?.role ?? 'jogador'; },
+    get displayName() { return profile?.display_name ?? user?.email?.split('@')[0] ?? 'Usuário'; },
+    init,
+    destroy,
+    signInWithGoogle,
+    signInWithEmail,
+    signUp,
+    signOut,
+    updateProfile,
+    loadProfile
   };
 }
 
-export const auth = createAuthStore();
+export const authState = createAuthState();

@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { gameState } from '$lib/state/game.svelte.js';
-  import { auth } from '$lib/state/auth.svelte.ts';
+  import { authState } from '$lib/state/auth.svelte.ts';
   import { toast } from '$lib/stores/toast.js';
   import { doc, setDoc, onSnapshot } from 'firebase/firestore';
   import { db } from '$lib/firebase/config.js';
@@ -37,7 +37,7 @@
     '#3b82f6', '#eab308', '#a855f7', '#ec4899'
   ];
   
-  const isNarrator = $derived(auth.isNarrator);
+  const isNarrator = $derived(authState.role === 'narrador');
   
   onMount(async () => {
     const fabric = await import('fabric');

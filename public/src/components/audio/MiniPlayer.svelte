@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { audioStore } from '$lib/state/audio.svelte.ts';
-  import { auth } from '$lib/state/auth.svelte.ts';
+  import { authState } from '$lib/state/auth.svelte.ts';
   import { Play, Pause, Volume2, VolumeX, Settings, RefreshCw, Music } from 'lucide-svelte';
   import { cn } from '$lib/utils/cn.js';
   import Button from '$components/ui/Button.svelte';
@@ -10,7 +10,7 @@
   let showSettings = $state(false);
   let videoUrl = $state('');
   
-  const isNarrator = $derived(auth.isNarrator);
+  const isNarrator = $derived(authState.role === 'narrador');
   const currentVideoId = $derived(audioStore.currentVideoId);
   const status = $derived(audioStore.status);
   const volume = $derived(audioStore.volume);

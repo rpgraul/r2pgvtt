@@ -1,5 +1,5 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
-import { auth } from './auth.svelte.ts';
+import { authState } from './auth.svelte.ts';
 import { parseFormula, evaluateRolls } from '../utils/diceLogic.js';
 
 function createDiceStore() {
@@ -38,7 +38,7 @@ function createDiceStore() {
   }
 
   function getUserName() {
-    return auth.getUserName();
+    return authState.displayName;
   }
 
   function generateId() {

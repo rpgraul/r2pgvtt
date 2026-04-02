@@ -1,6 +1,6 @@
 <script>
   import { gameState } from '$lib/state/game.svelte.js';
-  import { auth } from '$lib/state/auth.svelte.ts';
+  import { authState } from '$lib/state/auth.svelte.ts';
   import Badge from '$components/ui/Badge.svelte';
   import Button from '$components/ui/Button.svelte';
   import RichTextEditor from '$components/editor/RichTextEditor.svelte';

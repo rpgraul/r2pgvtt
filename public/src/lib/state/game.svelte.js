@@ -8,7 +8,7 @@ import {
   addChatMessage,
   addRoll
 } from '../firebase/firestore.js';
-import { auth } from './auth.svelte.ts';
+import { authState } from './auth.svelte.ts';
 import { diceStore } from './diceStore.svelte.js';
 
 function createGameState() {
@@ -35,7 +35,7 @@ function createGameState() {
   
   function init() {
     isLoading = true;
-    auth.init();
+    authState.init();
     
     unsubscribeItems = subscribeToItems((cards) => {
       items = cards;
@@ -135,14 +135,14 @@ function createGameState() {
   async function createCard(cardData) {
     return await addItem({
       ...cardData,
-      createdBy: auth.userName
+      createdBy: authState.displayName
     });
   }
 
   async function editCard(cardId, cardData) {
     await updateItem(cardId, {
       ...cardData,
-      updatedBy: auth.userName
+      updatedBy: authState.displayName
     });
   }
 
@@ -162,8 +162,8 @@ function createGameState() {
   }
 
   async function sendMessage(text) {
-    if (!auth.userName) return;
-    await addChatMessage(text, 'user', auth.userName, diceStore.currentDiceColor);
+    if (!authState.displayName) return;
+    await addChatMessage(text, 'user', authState.displayName, diceStore.currentDiceColor);
   }
 
   async function sendSystemMessage(text) {
@@ -171,9 +171,9 @@ function createGameState() {
   }
 
   async function sendRoll(formula, result, details) {
-    if (!auth.userName) return;
+    if (!authState.displayName) return;
     await addRoll({
-      userName: auth.userName,
+      userName: authState.displayName,
       formula,
       result,
       ...details
@@ -187,10 +187,10 @@ function createGameState() {
   }
 
   return {
-    get user() { return auth.user; },
-    get userName() { return auth.userName; },
-    getUserName: () => auth.getUserName(),
-    get isNarrator() { return auth.isNarrator; },
+    get user() { return authState.user; },
+    get userName() { return authState.displayName; },
+    getUserName: () => authState.displayName,
+    get isNarrator() { return authState.role === 'narrador'; },
     get isLoading() { return isLoading; },
     get items() { return items; },
     get chatMessages() { return chatMessages; },
@@ -214,10 +214,10 @@ function createGameState() {
     sendMessage,
     sendSystemMessage,
     sendRoll,
-    setUserName: (name) => auth.setUserName(name),
-    setNarrator: (value) => auth.loginAsNarrator(),
+    setUserName: (name) => authState.updateProfile({ display_name: name }),
+    setNarrator: () => authState.updateProfile({ role: 'narrador' }),
     onRollReceived,
-    logout: () => auth.logout(),
+    logout: () => authState.signOut(),
     destroy
   };
 }

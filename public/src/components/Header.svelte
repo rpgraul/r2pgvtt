@@ -1,22 +1,12 @@
 <script>
   import { page } from '$app/stores';
-  import { auth } from '$lib/state/auth.svelte.ts';
+  import { authState } from '$lib/state/auth.svelte';
   import { diceStore } from '$lib/state/diceStore.svelte.js';
   import { toast } from '$lib/stores/toast.js';
+  import { goto } from '$app/navigation';
   import Button from './ui/Button.svelte';
   import ThemeToggle from './ui/ThemeToggle.svelte';
-  import Dialog from './ui/Dialog.svelte';
-  import DialogTrigger from './ui/DialogTrigger.svelte';
-  import DialogContent from './ui/DialogContent.svelte';
-  import DialogTitle from './ui/DialogTitle.svelte';
-  import Input from './ui/Input.svelte';
-  
-  let authDialogOpen = $state(false);
-  let userName = $state('');
-  let narratorPassword = $state('');
-  let error = $state('');
-  let mode = $state('login');
-  let mobileMenuOpen = $state(false);
+  import { User, LogOut, Gamepad2 } from 'lucide-svelte';
   
   const navItems = [
     { href: '/', label: 'Grid' },
@@ -25,38 +15,10 @@
     { href: '/drawing-mode', label: 'Quadro' }
   ];
   
-  function handleLogin() {
-    if (!userName.trim()) {
-      error = 'Digite seu nome';
-      return;
-    }
-    auth.loginAsPlayer(userName.trim());
-    toast.success(`Bem-vindo, ${userName}!`);
-    authDialogOpen = false;
-    error = '';
-    userName = '';
-  }
-  
-  function handleNarratorLogin() {
-    if (!userName.trim()) {
-      error = 'Digite seu nome';
-      return;
-    }
-    if (!auth.validateNarratorPassword(narratorPassword)) {
-      error = 'Senha incorreta';
-      return;
-    }
-    auth.loginAsNarrator();
-    toast.success('Login como Narrador realizado!');
-    authDialogOpen = false;
-    error = '';
-    narratorPassword = '';
-    userName = '';
-  }
-  
-  function handleLogout() {
-    auth.logout();
-    toast.info('Você saiu do sistema.');
+  async function handleLogout() {
+    await authState.signOut();
+    toast.success('Você saiu do sistema.');
+    await goto('/');
   }
 </script>
 
@@ -81,7 +43,16 @@
     
     <div class="flex items-center gap-3">
       <ThemeToggle />
-      {#if auth.userName}
+      
+      {#if authState.isAuthenticated}
+        <a 
+          href="/games"
+          class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        >
+          <Gamepad2 class="w-4 h-4" />
+          <span class="hidden sm:inline">Mesas</span>
+        </a>
+        
         <div class="flex items-center gap-2">
           <input 
             type="color" 
@@ -91,82 +62,29 @@
             title="Sua cor de Dado"
             aria-label="Selecionar cor do dado"
           />
-          <span class="text-sm text-muted-foreground mr-1">
-            {auth.userName}
-          </span>
-          {#if auth.isNarrator}
-            <span class="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded">
-              Narrador
+          <div class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-md bg-muted">
+            <User class="w-4 h-4 text-muted-foreground" />
+            <span class="text-sm text-foreground">
+              {authState.displayName}
             </span>
-          {:else}
-            <span class="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
-              Jogador
-            </span>
-          {/if}
+            {#if authState.role !== 'jogador'}
+              <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
+                {authState.role === 'narrador' ? 'Mestre' : 'Assistente'}
+              </span>
+            {/if}
+          </div>
         </div>
+        
         <Button variant="ghost" size="sm" onclick={handleLogout}>
-          Sair
+          <LogOut class="w-4 h-4 mr-1" />
+          <span class="hidden sm:inline">Sair</span>
         </Button>
       {:else}
-        <Dialog bind:open={authDialogOpen}>
-          <DialogTrigger>
-            <Button variant="default" size="sm">
-              Entrar
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogTitle>Identificação</DialogTitle>
-            
-            <div class="space-y-4">
-              <div class="flex gap-2">
-                <button
-                  onclick={() => mode = 'login'}
-                  class="flex-1 py-2 text-sm rounded-md {mode === 'login' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}"
-                >
-                  Jogador
-                </button>
-                <button
-                  onclick={() => mode = 'narrator'}
-                  class="flex-1 py-2 text-sm rounded-md {mode === 'narrator' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}"
-                >
-                  Narrador
-                </button>
-              </div>
-              
-              <div class="space-y-2">
-                <label class="text-sm font-medium text-foreground" for="auth-name">Nome</label>
-                <Input
-                  id="auth-name"
-                  bind:value={userName}
-                  placeholder="Seu nome"
-                />
-              </div>
-              
-              {#if mode === 'narrator'}
-                <div class="space-y-2">
-                  <label class="text-sm font-medium text-foreground" for="auth-password">Senha do Narrador</label>
-                  <Input
-                    id="auth-password"
-                    type="password"
-                    bind:value={narratorPassword}
-                    placeholder="Senha"
-                  />
-                </div>
-              {/if}
-              
-              {#if error}
-                <p class="text-sm text-destructive">{error}</p>
-              {/if}
-              
-              <Button 
-                onclick={mode === 'narrator' ? handleNarratorLogin : handleLogin}
-                class="w-full"
-              >
-                {mode === 'narrator' ? 'Entrar como Narrador' : 'Entrar'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <a href="/auth/login">
+          <Button variant="default" size="sm">
+            Entrar
+          </Button>
+        </a>
       {/if}
     </div>
   </div>

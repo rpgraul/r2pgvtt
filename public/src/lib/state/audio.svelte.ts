@@ -6,7 +6,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '$lib/firebase/config.js';
-import { auth } from './auth.svelte.js';
+import { authState } from './auth.svelte.ts';
 
 const AUDIO_COLLECTION = 'audio';
 const DEFAULT_GAME_ID = 'default';
@@ -202,7 +202,7 @@ function createAudioStore() {
       serverTime: serverTimestamp(),
       startTimeOffset: 0,
       volume: audioState.volume,
-      createdBy: auth.userName || 'anonymous'
+      createdBy: authState.displayName || 'anonymous'
     }, { merge: true });
 
     if (player && playerReady) {
