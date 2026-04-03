@@ -1,0 +1,34 @@
+.env
+.env.*
+node_modules/
+.DS_Store
+dist/
+build/
+.svelte-kit/
+*.log
+
+# Firebase (ignore config - keep in .env for local)
+.firebaserc
+firebase-debug.log
+firebase.json
+.firebase/
+dataconnect/
+
+# IDE
+.idea/
+.vscode/
+
+# Reference files (docs for AI, not for git)
+bits.txt
+shadcn-svelte.txt
+referencias-tecnic*.txt
+AGENTS.md
+contexto.txt
+
+# SpecKit & OpenCode
+.specify/
+.opencode/
+
+# Backups & Misc
+backup.zip
+.gemini/
