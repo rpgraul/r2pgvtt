@@ -169,15 +169,29 @@ export const db = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
+    
+    if (data) {
+      return {
+        ...data,
+        current_time: data.current_video_time
+      };
+    }
     return data;
   },
 
   async updateAudioState(gameId: string, updates: any) {
+    const mappedUpdates: any = { ...updates };
+    
+    if ('current_time' in mappedUpdates) {
+      mappedUpdates.current_video_time = mappedUpdates.current_time;
+      delete mappedUpdates.current_time;
+    }
+    
     const { data, error } = await supabase
       .from('audio_state')
       .upsert({
         game_id: gameId,
-        ...updates,
+        ...mappedUpdates,
         updated_at: new Date().toISOString(),
         created_by: authState.displayName
       }, { onConflict: 'game_id' })

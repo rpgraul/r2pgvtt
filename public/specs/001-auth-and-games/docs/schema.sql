@@ -1,5 +1,5 @@
 -- ============================================
--- GameBoard v2 - Supabase Schema
+-- R2PG VTT - Supabase Schema
 -- Execute no Supabase Dashboard > SQL Editor
 -- ============================================
 
@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS games (
   nome TEXT NOT NULL,
   owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   invite_code CHAR(8) UNIQUE NOT NULL,
-  sistema TEXT DEFAULT 'RPG Genérico',
-  moeda_padrao TEXT DEFAULT 'moedas de ouro',
+  sistema TEXT DEFAULT 'RPG',
+  moeda_padrao TEXT DEFAULT 'PO',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS audio_state (
   game_id UUID REFERENCES games(id) ON DELETE CASCADE UNIQUE,
   video_id TEXT,
   status TEXT DEFAULT 'stopped' CHECK (status IN ('playing', 'paused', 'stopped')),
-  current_time DOUBLE PRECISION DEFAULT 0,
+  current_video_time DOUBLE PRECISION DEFAULT 0,
   volume INTEGER DEFAULT 80,
   created_by TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW()
