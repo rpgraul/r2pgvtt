@@ -80,7 +80,7 @@
 </script>
 
 <svelte:head>
-  <title>Configurações - {game?.nome ?? 'Mesa'} - GameBoard</title>
+  <title>Configurações - {game?.nome ?? 'Mesa'} - R2PG VTT</title>
 </svelte:head>
 
 <div class="min-h-screen bg-background">

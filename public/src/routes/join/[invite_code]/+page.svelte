@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-  <title>Entrar na Mesa - GameBoard</title>
+  <title>Entrar na Mesa - R2PG VTT</title>
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center bg-background px-4">

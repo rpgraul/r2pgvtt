@@ -58,7 +58,7 @@
 </script>
 
 <svelte:head>
-  <title>{game?.nome ?? 'Mesa'} - GameBoard</title>
+  <title>{game?.nome ?? 'Mesa'} - R2PG VTT</title>
 </svelte:head>
 
 <div class="min-h-screen bg-background">

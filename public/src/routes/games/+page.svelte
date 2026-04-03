@@ -26,14 +26,14 @@
 </script>
 
 <svelte:head>
-  <title>Minhas Mesas - GameBoard</title>
+  <title>Minhas Mesas - R2PG VTT</title>
 </svelte:head>
 
 <div class="min-h-screen bg-background">
   <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
     <div class="container px-4 py-4 flex items-center justify-between">
       <a href="/games" class="text-xl font-bold text-foreground">
-        GameBoard
+        R2PG VTT
       </a>
 
       <div class="flex items-center gap-4">

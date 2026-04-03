@@ -1,10 +1,16 @@
 import { db } from '$lib/supabase/tables';
 
-const SETTINGS_KEY = 'gameboard_settings';
+const SETTINGS_KEY = 'r2pg_settings';
+const DEFAULT_SETTINGS = {
+  siteTitle: 'R2PG VTT',
+  imgbbApiKey: '',
+  siteDescription: '',
+  theme: 'dark'
+};
 
 function createSettingsStore() {
   let settings = $state({
-    siteTitle: 'GameBoard',
+    siteTitle: 'R2PG VTT',
     imgbbApiKey: '',
     siteDescription: '',
     theme: 'dark'
@@ -19,7 +25,7 @@ function createSettingsStore() {
       const data = await db.getSettings('main');
       if (data) {
         settings = {
-          siteTitle: data.siteTitle || 'GameBoard',
+          siteTitle: data.siteTitle || 'R2PG VTT',
           imgbbApiKey: data.imgbbApiKey || '',
           siteDescription: data.siteDescription || '',
           theme: data.theme || 'dark'

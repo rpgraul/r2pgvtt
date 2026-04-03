@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-  <title>{isLogin ? 'Entrar' : 'Criar Conta'} - GameBoard</title>
+  <title>{isLogin ? 'Entrar' : 'Criar Conta'} - R2PG VTT</title>
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center bg-background px-4">

@@ -87,7 +87,7 @@
 <ModeWatcher />
 
 <svelte:head>
-  <title>GameBoard v2</title>
+  <title>R2PG VTT</title>
 </svelte:head>
 
 <YouTubeAudioPlayer />

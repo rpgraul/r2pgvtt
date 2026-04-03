@@ -26,7 +26,7 @@
   <div class="container flex h-16 items-center justify-between px-4">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center space-x-2">
-        <span class="text-xl font-bold text-foreground">GameBoard</span>
+        <span class="text-xl font-bold text-foreground">R2PG VTT</span>
       </a>
       
       <nav class="hidden md:flex items-center gap-1">
