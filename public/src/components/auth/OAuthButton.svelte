@@ -1,7 +1,6 @@
 <script lang="ts">
   import { authState } from '$lib/state/auth.svelte';
   import { goto } from '$app/navigation';
-  import { GoogleIcon } from 'lucide-svelte';
 
   let loading = $state(false);
 
