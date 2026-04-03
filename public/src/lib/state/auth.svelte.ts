@@ -36,7 +36,7 @@ function createAuthState() {
   async function loadProfile() {
     if (!user) return;
     const { data } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
@@ -82,7 +82,7 @@ function createAuthState() {
   async function updateProfile(updates: Partial<Profile>) {
     if (!user) return;
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .update(updates)
       .eq('id', user.id)
       .select()

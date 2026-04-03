@@ -85,7 +85,7 @@ export const db = {
       .from('game_members')
       .select(`
         *,
-        profile:user_profiles(id, display_name)
+        profile:profiles(id, display_name)
       `)
       .eq('game_id', gameId);
 
