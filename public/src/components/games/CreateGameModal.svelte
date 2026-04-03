@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState } from '$lib/state/game.svelte';
+  import { db } from '$lib/supabase/tables';
   import Button from '$components/ui/Button.svelte';
   import Input from '$components/ui/Input.svelte';
   import { X } from 'lucide-svelte';
@@ -23,14 +23,14 @@
     error = '';
 
     try {
-      const game = await gameState.createGame(nome.trim());
-      if (game) {
+      const gameId = await db.createGame(nome.trim());
+      if (gameId) {
         open = false;
         nome = '';
-        await goto(`/games/${game.id}`);
+        await goto(`/games/${gameId}`);
       }
     } catch (err: any) {
-      error = err.message;
+      error = err.message || 'Erro ao criar mesa';
     } finally {
       loading = false;
     }

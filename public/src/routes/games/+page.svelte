@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { gameState } from '$lib/state/game.svelte';
   import { authState } from '$lib/state/auth.svelte';
   import { onMount } from 'svelte';
+  import { db } from '$lib/supabase/tables';
   import GameList from '$components/games/GameList.svelte';
   import { LogOut, User } from 'lucide-svelte';
   import Button from '$components/ui/Button.svelte';
   import { goto } from '$app/navigation';
 
   let isLoading = $state(true);
+  let games = $state([]);
 
   onMount(async () => {
     if (!authState.isAuthenticated) {
@@ -15,7 +16,7 @@
       return;
     }
     
-    await gameState.init();
+    games = await db.getUserGames();
     isLoading = false;
   });
 
@@ -63,7 +64,7 @@
         <div class="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
       </div>
     {:else}
-      <GameList />
+      <GameList {games} />
     {/if}
   </main>
 </div>

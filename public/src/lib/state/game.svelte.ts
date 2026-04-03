@@ -1,4 +1,5 @@
 import { db } from '$lib/supabase/tables';
+import { supabase } from '$lib/supabase/client';
 import { authState } from './auth.svelte.ts';
 
 function createGameState() {
@@ -175,6 +176,40 @@ function createGameState() {
     });
   }
 
+  async function getGameById(gameId: string) {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+    
+    if (error) return null;
+    return data;
+  }
+
+  async function getGameMembers(gameId: string) {
+    return await db.getGameMembers(gameId);
+  }
+
+  async function checkUserGameMembership(gameId: string) {
+    const userId = authState.user?.id;
+    if (!userId) return null;
+
+    const { data } = await supabase
+      .from('game_members')
+      .select('role')
+      .eq('game_id', gameId)
+      .eq('user_id', userId)
+      .single();
+
+    return data?.role || null;
+  }
+
+  async function leaveGame(gameId: string) {
+    await db.leaveGame(gameId);
+    return true;
+  }
+
   function destroy() {
     if (unsubItems) unsubItems();
     if (unsubChat) unsubChat();
@@ -217,6 +252,10 @@ function createGameState() {
     sendRoll,
     setUserName: (name) => authState.updateProfile({ display_name: name }),
     setNarrator: () => authState.updateProfile({ role: 'narrador' }),
+    getGameById,
+    getGameMembers,
+    checkUserGameMembership,
+    leaveGame,
     onRollReceived,
     logout: () => authState.signOut()
   };

@@ -2,6 +2,117 @@ import { supabase } from './client';
 import { authState } from '$lib/state/auth.svelte';
 
 export const db = {
+  // Games
+  async getUserGames() {
+    const { data, error } = await supabase
+      .from('games')
+      .select(`
+        *,
+        user_role:game_members(role)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading games:', error);
+      return [];
+    }
+
+    return data || [];
+  },
+
+  async createGame(nome: string) {
+    const userId = authState.user?.id;
+    if (!userId) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase.rpc('create_game_with_owner', {
+      p_nome: nome,
+      p_owner_id: userId
+    });
+
+    if (error) {
+      console.error('Error creating game:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async joinGame(inviteCode: string) {
+    const userId = authState.user?.id;
+    if (!userId) throw new Error('Not authenticated');
+
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('id')
+      .eq('invite_code', inviteCode.toUpperCase())
+      .single();
+
+    if (gameError || !game) {
+      throw new Error('Código de convite inválido');
+    }
+
+    const { error: memberError } = await supabase
+      .from('game_members')
+      .insert({
+        game_id: game.id,
+        user_id: userId,
+        role: 'jogador'
+      });
+
+    if (memberError) {
+      console.error('Error joining game:', memberError);
+      throw memberError;
+    }
+
+    return game.id;
+  },
+
+  async leaveGame(gameId: string) {
+    const userId = authState.user?.id;
+    if (!userId) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('game_members')
+      .delete()
+      .eq('game_id', gameId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  },
+
+  async getGameMembers(gameId: string) {
+    const { data, error } = await supabase
+      .from('game_members')
+      .select(`
+        *,
+        profile:profiles(id, display_name)
+      `)
+      .eq('game_id', gameId);
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async deleteGame(gameId: string) {
+    const { error } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', gameId);
+
+    if (error) throw error;
+  },
+
+  async getInviteCode(gameId: string) {
+    const { data, error } = await supabase
+      .from('games')
+      .select('invite_code')
+      .eq('id', gameId)
+      .single();
+
+    if (error) throw error;
+    return data?.invite_code;
+  },
+
   // Items (Cards)
   async subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
     let query = supabase
