@@ -1,11 +1,17 @@
 .env
 .env.*
+!.env.example
 node_modules/
 .DS_Store
 dist/
 build/
 .svelte-kit/
 *.log
+
+
+# Pastas de build geradas automaticamente
+public/.svelte-kit/
+public/dist/
 
 # Firebase (ignore config - keep in .env for local)
 .firebaserc
