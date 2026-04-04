@@ -264,14 +264,23 @@ export const db = {
 
     const channelName = `items:${gameId || 'global'}`;
 
-    const filter = gameId ? `game_id=eq.${gameId}&deleted_at=is.null` : 'deleted_at=is.null';
+    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+
+    console.log('[subscribeToItems] Subscribing with filter:', filter);
 
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter }, () => {
-        loadItems();
-      })
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter },
+        (payload) => {
+          console.log('[subscribeToItems] Received change:', payload);
+          loadItems();
+        },
+      )
+      .subscribe((status) => {
+        console.log('[subscribeToItems] Subscription status:', status);
+      });
 
     if (onChannelCreated) {
       onChannelCreated(channel);
