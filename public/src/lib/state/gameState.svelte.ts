@@ -152,6 +152,10 @@ class GameState {
   }
 
   async createCard(cardData: any) {
+    if (!authState.isAuthenticated || !authState.displayName) {
+      console.warn('Cannot create card: not authenticated');
+      return null;
+    }
     return await db.addItem({
       game_id: this.currentGameId,
       ...cardData,
@@ -176,16 +180,17 @@ class GameState {
   }
 
   async sendMessage(text: string) {
-    if (!authState.displayName) return;
+    if (!authState.isAuthenticated || !authState.displayName) return;
     await db.addChatMessage(text, 'user', authState.displayName);
   }
 
   async sendSystemMessage(text: string) {
+    if (!authState.isAuthenticated) return;
     await db.addChatMessage(text, 'system', 'Sistema');
   }
 
   async sendRoll(formula: string, result: number, details: any) {
-    if (!authState.displayName) return;
+    if (!authState.isAuthenticated || !authState.displayName) return;
     await db.addRoll({
       userName: authState.displayName,
       formula,

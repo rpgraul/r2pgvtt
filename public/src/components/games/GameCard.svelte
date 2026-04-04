@@ -87,7 +87,8 @@ async function handleCopyLink(e: Event) {
 
 const isDeleted = $derived(!!game.deleted_at);
 const isNarrator = userRole === 'narrador';
-const showCopyLink = $derived(!!game.invite_code && !isDeleted);
+const canInvite = $derived(userRole === 'narrador' || userRole === 'assistente');
+const showCopyLink = $derived(!!game.invite_code && !isDeleted && canInvite);
 </script>
 
 {#if isDeleted}

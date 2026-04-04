@@ -8,7 +8,8 @@ import UserMenu from './ui/UserMenu.svelte';
 let { minimal = false } = $props();
 
 const isGamesPage = $derived($page.url.pathname.startsWith('/games'));
-const showUserMenu = $derived(minimal || isGamesPage);
+const isRootPage = $derived($page.url.pathname === '/');
+const showUserMenu = $derived(minimal || isGamesPage || isRootPage);
 </script>
 
 <header class="sticky top-0 z-40 w-full border-b border-border bg-popover">
