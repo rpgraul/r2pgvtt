@@ -1,24 +1,24 @@
 <script lang="ts">
-  import type { Game } from '$lib/supabase/types';
-  import { Share2, Check } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
+import type { Game } from '$lib/supabase/types';
+import { Share2, Check } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 
-  interface Props {
-    game: Game | null;
-  }
+interface Props {
+  game: Game | null;
+}
 
-  let { game }: Props = $props();
+let { game }: Props = $props();
 
-  let copied = $state(false);
+let copied = $state(false);
 
-  async function copyLink() {
-    if (!game) return;
-    
-    const link = `${window.location.origin}/join/${game.invite_code}`;
-    await navigator.clipboard.writeText(link);
-    copied = true;
-    setTimeout(() => copied = false, 2000);
-  }
+async function copyLink() {
+  if (!game) return;
+
+  const link = `${window.location.origin}/join/${game.invite_code}`;
+  await navigator.clipboard.writeText(link);
+  copied = true;
+  setTimeout(() => (copied = false), 2000);
+}
 </script>
 
 <Button variant="outline" size="sm" onclick={copyLink}>

@@ -1,48 +1,48 @@
 <script>
-  import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  
-  let { onInsert, onClose } = $props();
-  
-  let activeTab = $state('hp');
-  
-  let hpCurrent = $state(100);
-  let hpMax = $state(100);
-  
-  let statName = $state('FOR');
-  let statValue = $state(10);
-  let statMod = $state(0);
-  
-  let moneyCurrent = $state(0);
-  let moneyCurrency = $state('po');
-  
-  let countName = $state('Items');
-  let countCurrent = $state(0);
-  let countMax = $state(10);
-  
-  let xpCurrent = $state(0);
-  let xpTotal = $state(1000);
-  
-  function insert() {
-    switch (activeTab) {
-      case 'hp':
-        onInsert('hp', { current: hpCurrent, max: hpMax });
-        break;
-      case 'stat':
-        onInsert('stat', { name: statName, value: statValue, mod: statMod });
-        break;
-      case 'money':
-        onInsert('money', { current: moneyCurrent, currency: moneyCurrency });
-        break;
-      case 'count':
-        onInsert('count', { name: countName, current: countCurrent, max: countMax });
-        break;
-      case 'xp':
-        onInsert('xp', { current: xpCurrent, total: xpTotal });
-        break;
-    }
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+
+let { onInsert, onClose } = $props();
+
+let activeTab = $state('hp');
+
+let hpCurrent = $state(100);
+let hpMax = $state(100);
+
+let statName = $state('FOR');
+let statValue = $state(10);
+let statMod = $state(0);
+
+let moneyCurrent = $state(0);
+let moneyCurrency = $state('po');
+
+let countName = $state('Items');
+let countCurrent = $state(0);
+let countMax = $state(10);
+
+let xpCurrent = $state(0);
+let xpTotal = $state(1000);
+
+function insert() {
+  switch (activeTab) {
+    case 'hp':
+      onInsert('hp', { current: hpCurrent, max: hpMax });
+      break;
+    case 'stat':
+      onInsert('stat', { name: statName, value: statValue, mod: statMod });
+      break;
+    case 'money':
+      onInsert('money', { current: moneyCurrent, currency: moneyCurrency });
+      break;
+    case 'count':
+      onInsert('count', { name: countName, current: countCurrent, max: countMax });
+      break;
+    case 'xp':
+      onInsert('xp', { current: xpCurrent, total: xpTotal });
+      break;
   }
+}
 </script>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center">

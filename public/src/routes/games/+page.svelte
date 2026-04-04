@@ -1,29 +1,45 @@
 <script lang="ts">
-  import { authState } from '$lib/state/auth.svelte';
-  import { onMount } from 'svelte';
-  import { db } from '$lib/supabase/tables';
-  import GameList from '$components/games/GameList.svelte';
-  import { LogOut, User } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
-  import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
+import { onMount } from 'svelte';
+import { db } from '$lib/supabase/tables';
+import GameList from '$components/games/GameList.svelte';
+import { LogOut, User } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
+import { goto } from '$app/navigation';
 
-  let isLoading = $state(true);
-  let games = $state([]);
+let isLoading = $state(true);
+let games = $state([]);
+let error = $state('');
+let authReady = $derived(!authState.isLoading && authState.isAuthenticated);
 
-  onMount(async () => {
-    if (!authState.isAuthenticated) {
-      await goto('/auth/login');
-      return;
-    }
-    
-    games = await db.getUserGames();
-    isLoading = false;
-  });
-
-  async function handleLogout() {
-    await authState.signOut();
-    await goto('/');
+$effect(() => {
+  if (authReady) {
+    loadGames();
   }
+});
+
+async function loadGames() {
+  try {
+    error = '';
+    games = await db.getUserGames();
+  } catch (err) {
+    console.error('Error loading games:', err);
+    error = 'Erro ao carregar jogos. Tente novamente.';
+  } finally {
+    isLoading = false;
+  }
+}
+
+onMount(() => {
+  if (!authState.isAuthenticated && !authState.isLoading) {
+    goto('/auth/login');
+  }
+});
+
+async function handleLogout() {
+  await authState.signOut();
+  await goto('/');
+}
 </script>
 
 <svelte:head>
@@ -59,9 +75,14 @@
   </header>
 
   <main class="container px-4 py-8">
-    {#if isLoading}
+    {#if authState.isLoading || isLoading}
       <div class="flex items-center justify-center py-12">
         <div class="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    {:else if error}
+      <div class="text-center py-12">
+        <p class="text-red-500 mb-4">{error}</p>
+        <Button onclick={loadGames}>Tentar novamente</Button>
       </div>
     {:else}
       <GameList {games} />

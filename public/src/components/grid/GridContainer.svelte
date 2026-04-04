@@ -1,65 +1,65 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Card from './Card.svelte';
-  import CardDialog from './CardDialog.svelte';
-  import { cn } from '$lib/utils/cn.js';
-  import { Plus } from 'lucide-svelte';
-  
-  const items = $derived(gameState.filteredItems);
-  
-  let showCardDialog = $state(false);
-  let editingCard = $state(null);
-  let draggedItem = $state(null);
-  let dragOverIndex = $state(-1);
-  
-  function openNewCard() {
-    editingCard = null;
-    showCardDialog = true;
-  }
-  
-  function openEditCard(item) {
-    editingCard = item;
-    showCardDialog = true;
-  }
-  
-  function handleDragStart(e, item, index) {
-    draggedItem = { item, index };
-    e.dataTransfer.effectAllowed = 'move';
-  }
-  
-  function handleDragOver(e, index) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    dragOverIndex = index;
-  }
-  
-  function handleDragLeave() {
-    dragOverIndex = -1;
-  }
-  
-  function handleDrop(e, targetIndex) {
-    e.preventDefault();
-    
-    if (!draggedItem || draggedItem.index === targetIndex) {
-      draggedItem = null;
-      dragOverIndex = -1;
-      return;
-    }
-    
-    const newItems = [...items];
-    const [removed] = newItems.splice(draggedItem.index, 1);
-    newItems.splice(targetIndex, 0, removed);
-    
-    gameState.reorderCards(newItems);
-    
+import { gameState } from '$lib/state/game.svelte.ts';
+import Card from './Card.svelte';
+import CardDialog from './CardDialog.svelte';
+import { cn } from '$lib/utils/cn.js';
+import { Plus } from 'lucide-svelte';
+
+const items = $derived(gameState.filteredItems);
+
+let showCardDialog = $state(false);
+let editingCard = $state(null);
+let draggedItem = $state(null);
+let dragOverIndex = $state(-1);
+
+function openNewCard() {
+  editingCard = null;
+  showCardDialog = true;
+}
+
+function openEditCard(item) {
+  editingCard = item;
+  showCardDialog = true;
+}
+
+function handleDragStart(e, item, index) {
+  draggedItem = { item, index };
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e, index) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  dragOverIndex = index;
+}
+
+function handleDragLeave() {
+  dragOverIndex = -1;
+}
+
+function handleDrop(e, targetIndex) {
+  e.preventDefault();
+
+  if (!draggedItem || draggedItem.index === targetIndex) {
     draggedItem = null;
     dragOverIndex = -1;
+    return;
   }
-  
-  function handleDragEnd() {
-    draggedItem = null;
-    dragOverIndex = -1;
-  }
+
+  const newItems = [...items];
+  const [removed] = newItems.splice(draggedItem.index, 1);
+  newItems.splice(targetIndex, 0, removed);
+
+  gameState.reorderCards(newItems);
+
+  draggedItem = null;
+  dragOverIndex = -1;
+}
+
+function handleDragEnd() {
+  draggedItem = null;
+  dragOverIndex = -1;
+}
 </script>
 
 <div class="space-y-4">

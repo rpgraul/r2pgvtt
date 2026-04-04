@@ -1,60 +1,60 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { gameState } from '$lib/state/game.svelte';
-  import { authState } from '$lib/state/auth.svelte';
-  import type { Game, GameMemberWithProfile } from '$lib/supabase/types';
-  import { Settings, Users, Share2, ArrowLeft, LogOut } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
-  import InviteLink from '$components/games/InviteLink.svelte';
-  import MemberList from '$components/games/MemberList.svelte';
+import { page } from '$app/stores';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { gameState } from '$lib/state/game.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import type { Game, GameMemberWithProfile } from '$lib/supabase/types';
+import { Settings, Users, Share2, ArrowLeft, LogOut } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
+import InviteLink from '$components/games/InviteLink.svelte';
+import MemberList from '$components/games/MemberList.svelte';
 
-  let game = $state<Game | null>(null);
-  let members = $state<GameMemberWithProfile[]>([]);
-  let userRole = $state<string | null>(null);
-  let isLoading = $state(true);
+let game = $state<Game | null>(null);
+let members = $state<GameMemberWithProfile[]>([]);
+let userRole = $state<string | null>(null);
+let isLoading = $state(true);
 
-  const gameId = $derived($page.params.id);
+const gameId = $derived($page.params.id);
 
-  onMount(async () => {
-    if (!authState.isAuthenticated) {
-      await goto('/auth/login');
-      return;
-    }
-
-    await loadGame();
-    isLoading = false;
-  });
-
-  async function loadGame() {
-    game = await gameState.getGameById(gameId);
-    if (!game) {
-      await goto('/games');
-      return;
-    }
-
-    members = await gameState.getGameMembers(gameId);
-    userRole = await gameState.checkUserGameMembership(gameId);
-
-    if (!userRole) {
-      await goto('/games');
-      return;
-    }
+onMount(async () => {
+  if (!authState.isAuthenticated) {
+    await goto('/auth/login');
+    return;
   }
 
-  async function handleLeave() {
-    if (!confirm('Tem certeza que deseja sair desta mesa?')) return;
+  await loadGame();
+  isLoading = false;
+});
 
-    const success = await gameState.leaveGame(gameId);
-    if (success) {
-      await goto('/games');
-    }
+async function loadGame() {
+  game = await gameState.getGameById(gameId);
+  if (!game) {
+    await goto('/games');
+    return;
   }
 
-  function canManageSettings(): boolean {
-    return userRole === 'narrador' || userRole === 'assistente';
+  members = await gameState.getGameMembers(gameId);
+  userRole = await gameState.checkUserGameMembership(gameId);
+
+  if (!userRole) {
+    await goto('/games');
+    return;
   }
+}
+
+async function handleLeave() {
+  if (!confirm('Tem certeza que deseja sair desta mesa?')) return;
+
+  const success = await gameState.leaveGame(gameId);
+  if (success) {
+    await goto('/games');
+  }
+}
+
+function canManageSettings(): boolean {
+  return userRole === 'narrador' || userRole === 'assistente';
+}
 </script>
 
 <svelte:head>

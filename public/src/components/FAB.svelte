@@ -1,137 +1,159 @@
 <script>
-  import { goto } from '$app/navigation';
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import { diceStore } from '$lib/state/diceStore.svelte.js';
-  import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet/index.js';
-  import Dialog from './ui/Dialog.svelte';
-  import DialogContent from './ui/DialogContent.svelte';
-  import DialogTitle from './ui/DialogTitle.svelte';
-  import MiniPlayer from './audio/MiniPlayer.svelte';
-  import ChatSidebar from './chat/ChatSidebar.svelte';
-  
-  import { 
-    Plus, Dices, Music, MessageCircle, X, Settings, ListChecks, 
-    Layers, HelpCircle, Users, Palette, IdCard
-  } from 'lucide-svelte';
-  
-  let { currentPath = '/' } = $props();
-  
-  let showChat = $state(false);
-  let showAudio = $state(false);
-  let showAddCard = $state(false);
-  let showSettings = $state(false);
-  let showHelp = $state(false);
-  let showBulkEdit = $state(false);
-  let isExpanded = $state(false);
-  let diceHovered = $state(false);
-  let diceHoverTimeout = null;
-  
-  const mode = $derived(() => {
-    const p = currentPath;
-    if (p.includes('sheet-mode')) return 'sheet';
-    if (p.includes('text-mode')) return 'notas';
-    if (p.includes('drawing-mode')) return 'whiteboard';
-    return 'grid';
-  });
-  
-  const buttons = $derived(() => {
-    const m = mode();
-    const isNarrator = gameState.isNarrator;
-    const btns = [];
-    
-    if (m === 'sheet') {
-      btns.push('audio', 'dice', 'chat', 'help');
-    } else     if (m === 'grid') {
-      btns.push('audio', 'dice', 'chat', 'converter');
-      if (isNarrator) btns.push('bulk-edit', 'settings');
-      btns.push('help');
-    } else if (m === 'notas' || m === 'whiteboard') {
-      btns.push('audio', 'dice', 'chat');
-      if (isNarrator) btns.push('settings');
-      btns.push('help');
-    }
-    
-    return btns;
-  });
-  
-  function toggle() {
-    isExpanded = !isExpanded;
+import { goto } from '$app/navigation';
+import { gameState } from '$lib/state/game.svelte.ts';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet/index.js';
+import Dialog from './ui/Dialog.svelte';
+import DialogContent from './ui/DialogContent.svelte';
+import DialogTitle from './ui/DialogTitle.svelte';
+import MiniPlayer from './audio/MiniPlayer.svelte';
+import ChatSidebar from './chat/ChatSidebar.svelte';
+
+import {
+  Plus,
+  Dices,
+  Music,
+  MessageCircle,
+  X,
+  Settings,
+  ListChecks,
+  Layers,
+  HelpCircle,
+  Users,
+  Palette,
+  IdCard,
+} from 'lucide-svelte';
+
+let { currentPath = '/' } = $props();
+
+let showChat = $state(false);
+let showAudio = $state(false);
+let showAddCard = $state(false);
+let showSettings = $state(false);
+let showHelp = $state(false);
+let showBulkEdit = $state(false);
+let isExpanded = $state(false);
+let diceHovered = $state(false);
+let diceHoverTimeout = null;
+
+const mode = $derived(() => {
+  const p = currentPath;
+  if (p.includes('sheet-mode')) return 'sheet';
+  if (p.includes('text-mode')) return 'notas';
+  if (p.includes('drawing-mode')) return 'whiteboard';
+  return 'grid';
+});
+
+const buttons = $derived(() => {
+  const m = mode();
+  const isNarrator = gameState.isNarrator;
+  const btns = [];
+
+  if (m === 'sheet') {
+    btns.push('audio', 'dice', 'chat', 'help');
+  } else if (m === 'grid') {
+    btns.push('audio', 'dice', 'chat', 'converter');
+    if (isNarrator) btns.push('bulk-edit', 'settings');
+    btns.push('help');
+  } else if (m === 'notas' || m === 'whiteboard') {
+    btns.push('audio', 'dice', 'chat');
+    if (isNarrator) btns.push('settings');
+    btns.push('help');
   }
-  
-  function handleAction(action) {
-    isExpanded = false;
-    
-    switch(action) {
-      case 'chat':
-        showChat = true;
-        break;
-      case 'audio':
-        showAudio = true;
-        break;
-      case 'dice':
-        break;
-      case 'd4': case 'd6': case 'd8': case 'd10': case 'd12': case 'd20': case 'd100':
-        isExpanded = false;
-        diceStore.rollDice(`1${action}`).then(result => {
+
+  return btns;
+});
+
+function toggle() {
+  isExpanded = !isExpanded;
+}
+
+function handleAction(action) {
+  isExpanded = false;
+
+  switch (action) {
+    case 'chat':
+      showChat = true;
+      break;
+    case 'audio':
+      showAudio = true;
+      break;
+    case 'dice':
+      break;
+    case 'd4':
+    case 'd6':
+    case 'd8':
+    case 'd10':
+    case 'd12':
+    case 'd20':
+    case 'd100':
+      isExpanded = false;
+      diceStore
+        .rollDice(`1${action}`)
+        .then((result) => {
           gameState.sendMessage(`🎲 Rolou ${result.formula || `1${action}`}: ${result.textual}`);
-          gameState.sendRoll(result.formula || `1${action}`, result.total, { rolls: result.rolls, diceType: action });
-        }).catch(err => console.error('[FAB] Dice error:', err));
-        break;
-      case 'add-card':
-        showAddCard = true;
-        break;
-      case 'settings':
-        showSettings = true;
-        break;
-      case 'help':
-        showHelp = true;
-        break;
-      case 'bulk-edit':
-        showBulkEdit = true;
-        break;
-      case 'converter':
-        goto('/converter');
-        break;
-      case 'sheet-mode':
-        goto('/sheet-mode');
-        break;
-      case 'drawing-mode':
-        goto('/drawing-mode');
-        break;
-    }
+          gameState.sendRoll(result.formula || `1${action}`, result.total, {
+            rolls: result.rolls,
+            diceType: action,
+          });
+        })
+        .catch((err) => console.error('[FAB] Dice error:', err));
+      break;
+    case 'add-card':
+      showAddCard = true;
+      break;
+    case 'settings':
+      showSettings = true;
+      break;
+    case 'help':
+      showHelp = true;
+      break;
+    case 'bulk-edit':
+      showBulkEdit = true;
+      break;
+    case 'converter':
+      goto('/converter');
+      break;
+    case 'sheet-mode':
+      goto('/sheet-mode');
+      break;
+    case 'drawing-mode':
+      goto('/drawing-mode');
+      break;
   }
-  
-  const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
-  
-  function getButtonColor(key) {
-    const colors = {
-      'settings': 'bg-secondary text-secondary-foreground',
-      'bulk-edit': 'bg-accent text-accent-foreground',
-      'converter': 'bg-warning text-warning-foreground',
-      'help': 'bg-muted text-muted-foreground',
-      'chat': 'bg-info text-info-foreground',
-      'audio': 'bg-warning text-warning-foreground',
-      'dice': 'bg-primary text-primary-foreground',
-      'add-card': 'bg-secondary text-secondary-foreground'
-    };
-    return colors[key] || 'bg-muted text-muted-foreground';
-  }
-  
-  function getButtonIcon(key) {
-    const icons = {
-      'settings': Settings,
-      'bulk-edit': ListChecks,
-      'converter': Layers,
-      'help': HelpCircle,
-      'chat': MessageCircle,
-      'audio': Music,
-      'dice': Dices,
-      'add-card': Plus,
-      'sheet-mode': IdCard,
-      'drawing-mode': Palette
-    };
-    return icons[key];
-  }
+}
+
+const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+
+function getButtonColor(key) {
+  const colors = {
+    settings: 'bg-secondary text-secondary-foreground',
+    'bulk-edit': 'bg-accent text-accent-foreground',
+    converter: 'bg-warning text-warning-foreground',
+    help: 'bg-muted text-muted-foreground',
+    chat: 'bg-info text-info-foreground',
+    audio: 'bg-warning text-warning-foreground',
+    dice: 'bg-primary text-primary-foreground',
+    'add-card': 'bg-secondary text-secondary-foreground',
+  };
+  return colors[key] || 'bg-muted text-muted-foreground';
+}
+
+function getButtonIcon(key) {
+  const icons = {
+    settings: Settings,
+    'bulk-edit': ListChecks,
+    converter: Layers,
+    help: HelpCircle,
+    chat: MessageCircle,
+    audio: Music,
+    dice: Dices,
+    'add-card': Plus,
+    'sheet-mode': IdCard,
+    'drawing-mode': Palette,
+  };
+  return icons[key];
+}
 </script>
 
 <div 

@@ -1,75 +1,78 @@
 <script>
-  import { onMount } from 'svelte';
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  import Badge from '$components/ui/Badge.svelte';
-  
-  let textInput = $state('');
-  let jsonOutput = $state('');
-  let notification = $state('');
-  let notificationType = $state('success');
-  
-  function showNotification(message, type = 'success') {
-    notification = message;
-    notificationType = type;
-    setTimeout(() => {
-      notification = '';
-    }, 3000);
+import { onMount } from 'svelte';
+import { gameState } from '$lib/state/game.svelte.ts';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+import Badge from '$components/ui/Badge.svelte';
+
+let textInput = $state('');
+let jsonOutput = $state('');
+let notification = $state('');
+let notificationType = $state('success');
+
+function showNotification(message, type = 'success') {
+  notification = message;
+  notificationType = type;
+  setTimeout(() => {
+    notification = '';
+  }, 3000);
+}
+
+function handleConversion() {
+  if (!textInput.trim()) {
+    showNotification('O campo de texto não pode estar vazio.', 'warning');
+    return;
   }
-  
-  function handleConversion() {
-    if (!textInput.trim()) {
-      showNotification('O campo de texto não pode estar vazio.', 'warning');
-      return;
-    }
-    
-    jsonOutput = '';
-    
-    const cardBlocks = textInput.split(/^\s*---\s*$/m);
-    const cardsArray = [];
-    
-    cardBlocks.forEach((block, index) => {
-      const trimmedBlock = block.trim();
-      if (!trimmedBlock) return;
-      
-      const cardObject = {};
-      const lines = trimmedBlock.split('\n');
-      
-      lines.forEach(line => {
-        const colonIndex = line.indexOf(':');
-        if (colonIndex === -1) return;
-        
-        const key = line.substring(0, colonIndex).trim().toLowerCase();
-        const value = line.substring(colonIndex + 1).trim();
-        
-        if (key === 'title' || key === 'titulo') {
-          cardObject.titulo = value;
-        } else if (key === 'content' || key === 'conteudo') {
-          cardObject.conteudo = value;
-        } else if (key === 'tags') {
-          cardObject.tags = value.split(',').map(t => t.trim()).filter(t => t);
-        } else if (key === 'category') {
-          cardObject.category = value;
-        } else if (key === 'visible' || key === 'visivel') {
-          cardObject.isVisibleToPlayers = value.toLowerCase() === 'true';
-        }
-      });
-      
-      if (Object.keys(cardObject).length > 0) {
-        cardsArray.push(cardObject);
+
+  jsonOutput = '';
+
+  const cardBlocks = textInput.split(/^\s*---\s*$/m);
+  const cardsArray = [];
+
+  cardBlocks.forEach((block, index) => {
+    const trimmedBlock = block.trim();
+    if (!trimmedBlock) return;
+
+    const cardObject = {};
+    const lines = trimmedBlock.split('\n');
+
+    lines.forEach((line) => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) return;
+
+      const key = line.substring(0, colonIndex).trim().toLowerCase();
+      const value = line.substring(colonIndex + 1).trim();
+
+      if (key === 'title' || key === 'titulo') {
+        cardObject.titulo = value;
+      } else if (key === 'content' || key === 'conteudo') {
+        cardObject.conteudo = value;
+      } else if (key === 'tags') {
+        cardObject.tags = value
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t);
+      } else if (key === 'category') {
+        cardObject.category = value;
+      } else if (key === 'visible' || key === 'visivel') {
+        cardObject.isVisibleToPlayers = value.toLowerCase() === 'true';
       }
     });
-    
-    jsonOutput = JSON.stringify(cardsArray, null, 2);
-    showNotification(`${cardsArray.length} card(s) convertido(s) com sucesso!`, 'success');
-  }
-  
-  function copyToClipboard() {
-    if (!jsonOutput) return;
-    navigator.clipboard.writeText(jsonOutput);
-    showNotification('Copiado para a área de transferência!', 'success');
-  }
+
+    if (Object.keys(cardObject).length > 0) {
+      cardsArray.push(cardObject);
+    }
+  });
+
+  jsonOutput = JSON.stringify(cardsArray, null, 2);
+  showNotification(`${cardsArray.length} card(s) convertido(s) com sucesso!`, 'success');
+}
+
+function copyToClipboard() {
+  if (!jsonOutput) return;
+  navigator.clipboard.writeText(jsonOutput);
+  showNotification('Copiado para a área de transferência!', 'success');
+}
 </script>
 
 <main class="container px-4 py-6 max-w-4xl">

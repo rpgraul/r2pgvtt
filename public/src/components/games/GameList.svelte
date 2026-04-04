@@ -1,16 +1,16 @@
 <script lang="ts">
-  import GameCard from './GameCard.svelte';
-  import CreateGameModal from './CreateGameModal.svelte';
-  import { Plus } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
+import GameCard from './GameCard.svelte';
+import CreateGameModal from './CreateGameModal.svelte';
+import { Plus } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 
-  interface Props {
-    games: any[];
-  }
+interface Props {
+  games: any[];
+}
 
-  let { games = [] }: Props = $props();
-  let showCreateModal = $state(false);
-  let canCreateMore = $derived(games.length < 3);
+let { games = [] }: Props = $props();
+let showCreateModal = $state(false);
+let canCreateMore = $derived(games.length < 3);
 </script>
 
 <div class="space-y-6">

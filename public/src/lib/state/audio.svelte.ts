@@ -9,14 +9,14 @@ interface AudioStateData {
 
 function createAudioStore() {
   let gameId = $state<string | null>(null);
-  
+
   let audioState = $state<AudioStateData>({
     video_id: null,
     status: 'stopped',
     current_time: 0,
-    volume: 80
+    volume: 80,
   });
-  
+
   let isLocalPlaying = $state(false);
   let isLoading = $state(true);
   let player = $state<YT.Player | null>(null);
@@ -26,14 +26,15 @@ function createAudioStore() {
 
   function extractYouTubeId(url: string): string | null {
     if (!url) return null;
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const regex =
+      /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
   }
 
   async function initYoutubePlayer() {
     if (player) return;
-    
+
     return new Promise<void>((resolve) => {
       if ((window as any).YT && (window as any).YT.Player) {
         createPlayer();
@@ -66,7 +67,7 @@ function createAudioStore() {
           modestbranding: 1,
           rel: 0,
           showinfo: 0,
-          enablejsapi: 1
+          enablejsapi: 1,
         },
         events: {
           onReady: () => {
@@ -75,8 +76,8 @@ function createAudioStore() {
               player?.setVolume(audioState.volume);
             }
           },
-          onStateChange: onPlayerStateChange
-        }
+          onStateChange: onPlayerStateChange,
+        },
       });
     }
   }
@@ -95,7 +96,7 @@ function createAudioStore() {
     if (audioState.status !== 'playing' || !lastServerTime) {
       return audioState.current_time;
     }
-    
+
     const now = Date.now() / 1000;
     const serverNow = lastServerTime / 1000;
     const offset = now - serverNow;
@@ -140,7 +141,7 @@ function createAudioStore() {
 
   async function loadAudioState() {
     if (!gameId) return;
-    
+
     try {
       const data = await db.getAudioState(gameId);
       if (data) {
@@ -148,10 +149,10 @@ function createAudioStore() {
           video_id: data.video_id,
           status: data.status,
           current_time: data.current_time || 0,
-          volume: data.volume ?? 80
+          volume: data.volume ?? 80,
         };
         lastServerTime = new Date(data.updated_at).getTime() / 1000;
-        
+
         if (audioState.status === 'playing') {
           startSyncLoop();
         }
@@ -164,104 +165,104 @@ function createAudioStore() {
 
   async function play(videoIdOrUrl: string) {
     if (!gameId) return;
-    
+
     const videoId = extractYouTubeId(videoIdOrUrl);
     if (!videoId) return;
 
     lastServerTime = Date.now() / 1000;
-    
+
     await db.updateAudioState(gameId, {
       video_id: videoId,
       status: 'playing',
       current_time: 0,
-      volume: audioState.volume
+      volume: audioState.volume,
     });
 
     audioState = {
       ...audioState,
       video_id: videoId,
       status: 'playing',
-      current_time: 0
+      current_time: 0,
     };
 
     if (player && playerReady) {
       player.loadVideoById({ videoId, startSeconds: 0 });
     }
-    
+
     startSyncLoop();
   }
 
   async function pause() {
     if (!gameId) return;
-    
+
     const currentPos = getCurrentPosition();
-    
+
     await db.updateAudioState(gameId, {
       status: 'paused',
-      current_time: currentPos
+      current_time: currentPos,
     });
 
     audioState = {
       ...audioState,
       status: 'paused',
-      current_time: currentPos
+      current_time: currentPos,
     };
 
     if (player && playerReady) {
       player.pauseVideo();
     }
-    
+
     stopSyncLoop();
   }
 
   async function resume() {
     if (!gameId) return;
-    
+
     lastServerTime = Date.now() / 1000;
-    
+
     await db.updateAudioState(gameId, {
-      status: 'playing'
+      status: 'playing',
     });
 
     audioState = {
       ...audioState,
-      status: 'playing'
+      status: 'playing',
     };
 
     if (player && playerReady) {
       player.playVideo();
     }
-    
+
     startSyncLoop();
   }
 
   async function stop() {
     if (!gameId) return;
-    
+
     await db.updateAudioState(gameId, {
       video_id: null,
       status: 'stopped',
-      current_time: 0
+      current_time: 0,
     });
 
     audioState = {
       video_id: null,
       status: 'stopped',
       current_time: 0,
-      volume: audioState.volume
+      volume: audioState.volume,
     };
 
     if (player && playerReady) {
       player.stopVideo();
     }
-    
+
     stopSyncLoop();
   }
 
   async function setVolume(volume: number) {
     const clampedVolume = Math.max(0, Math.min(100, volume));
     audioState.volume = clampedVolume;
-    
+
     if (player && playerReady) {
       player.setVolume(clampedVolume);
     }
@@ -277,14 +278,14 @@ function createAudioStore() {
 
   async function seekTo(seconds: number) {
     if (!gameId) return;
-    
+
     await db.updateAudioState(gameId, {
-      current_time: seconds
+      current_time: seconds,
     });
 
     audioState = {
       ...audioState,
-      current_time: seconds
+      current_time: seconds,
     };
 
     if (player && playerReady) {
@@ -320,13 +321,27 @@ function createAudioStore() {
   }
 
   return {
-    get audioState() { return audioState; },
-    get currentVideoId() { return audioState.video_id; },
-    get status() { return audioState.status; },
-    get volume() { return audioState.volume; },
-    get isLoading() { return isLoading; },
-    get playerReady() { return playerReady; },
-    get currentPosition() { return getCurrentPosition(); },
+    get audioState() {
+      return audioState;
+    },
+    get currentVideoId() {
+      return audioState.video_id;
+    },
+    get status() {
+      return audioState.status;
+    },
+    get volume() {
+      return audioState.volume;
+    },
+    get isLoading() {
+      return isLoading;
+    },
+    get playerReady() {
+      return playerReady;
+    },
+    get currentPosition() {
+      return getCurrentPosition();
+    },
     play,
     pause,
     resume,
@@ -335,7 +350,7 @@ function createAudioStore() {
     seekTo,
     setGameId,
     init,
-    destroy
+    destroy,
   };
 }
 

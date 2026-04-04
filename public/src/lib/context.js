@@ -1,7 +1,7 @@
 import { gameState } from './state/game.svelte.ts';
 
 export const GameContext = {
-  provide: () => gameState
+  provide: () => gameState,
 };
 
 export function getGameState() {

@@ -1,9 +1,9 @@
 <script>
-  import { diceStore } from '$lib/state/diceStore.svelte.js';
-  import { Dices } from 'lucide-svelte';
-  import { fly } from 'svelte/transition';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { Dices } from 'lucide-svelte';
+import { fly } from 'svelte/transition';
 
-  let alerts = $derived(diceStore.displayedAlerts);
+let alerts = $derived(diceStore.displayedAlerts);
 </script>
 
 <div class="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-2 pointer-events-none">

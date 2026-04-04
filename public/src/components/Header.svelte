@@ -1,25 +1,25 @@
 <script>
-  import { page } from '$app/stores';
-  import { authState } from '$lib/state/auth.svelte';
-  import { diceStore } from '$lib/state/diceStore.svelte.js';
-  import { toast } from '$lib/stores/toast.js';
-  import { goto } from '$app/navigation';
-  import Button from './ui/Button.svelte';
-  import ThemeToggle from './ui/ThemeToggle.svelte';
-  import { User, LogOut, Gamepad2 } from 'lucide-svelte';
-  
-  const navItems = [
-    { href: '/', label: 'Grid' },
-    { href: '/text-mode', label: 'Notas' },
-    { href: '/sheet-mode', label: 'Ficha' },
-    { href: '/drawing-mode', label: 'Quadro' }
-  ];
-  
-  async function handleLogout() {
-    await authState.signOut();
-    toast.success('Você saiu do sistema.');
-    await goto('/');
-  }
+import { page } from '$app/stores';
+import { authState } from '$lib/state/auth.svelte';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { toast } from '$lib/stores/toast.js';
+import { goto } from '$app/navigation';
+import Button from './ui/Button.svelte';
+import ThemeToggle from './ui/ThemeToggle.svelte';
+import { User, LogOut, Gamepad2 } from 'lucide-svelte';
+
+const navItems = [
+  { href: '/', label: 'Grid' },
+  { href: '/text-mode', label: 'Notas' },
+  { href: '/sheet-mode', label: 'Ficha' },
+  { href: '/drawing-mode', label: 'Quadro' },
+];
+
+async function handleLogout() {
+  await authState.signOut();
+  toast.success('Você saiu do sistema.');
+  await goto('/');
+}
 </script>
 
 <header class="sticky top-0 z-40 w-full border-b border-border bg-popover">

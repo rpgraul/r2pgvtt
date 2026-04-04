@@ -1,13 +1,9 @@
 <script>
-  import { Dialog } from 'bits-ui';
-  import { cn } from '$lib/utils/cn.js';
-  import { X } from 'lucide-svelte';
-  
-  let {
-    class: className = '',
-    children,
-    ...restProps
-  } = $props();
+import { Dialog } from 'bits-ui';
+import { cn } from '$lib/utils/cn.js';
+import { X } from 'lucide-svelte';
+
+let { class: className = '', children, ...restProps } = $props();
 </script>
 
 <Dialog.Portal>

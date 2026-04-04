@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { authState } from '$lib/state/auth.svelte';
-  import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
+import { goto } from '$app/navigation';
 
-  let loading = $state(false);
+let loading = $state(false);
 
-  async function handleGoogleSignIn() {
-    loading = true;
-    try {
-      await authState.signInWithGoogle();
-    } catch (err) {
-      console.error('Google sign in error:', err);
-      loading = false;
-    }
+async function handleGoogleSignIn() {
+  loading = true;
+  try {
+    await authState.signInWithGoogle();
+  } catch (err) {
+    console.error('Google sign in error:', err);
+    loading = false;
   }
+}
 </script>
 
 <button

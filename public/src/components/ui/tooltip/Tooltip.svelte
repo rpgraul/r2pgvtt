@@ -1,13 +1,9 @@
 <script>
-  import { cn } from '$lib/utils/cn';
-  
-  let {
-    content,
-    class: className,
-    children
-  } = $props();
-  
-  let show = $state(false);
+import { cn } from '$lib/utils/cn';
+
+let { content, class: className, children } = $props();
+
+let show = $state(false);
 </script>
 
 <div class={cn("relative inline-block", className)}>

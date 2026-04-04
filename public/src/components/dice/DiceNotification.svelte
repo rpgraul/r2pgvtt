@@ -1,23 +1,23 @@
 <script>
-  import { cn } from '$lib/utils/cn.js';
-  import { Dices } from 'lucide-svelte';
-  
-  let { visible = false, userName = '', formula = '', result = 0 } = $props();
-  
-  let timeoutId = null;
-  
-  $effect(() => {
-    if (visible) {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        visible = false;
-      }, 4000);
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  });
+import { cn } from '$lib/utils/cn.js';
+import { Dices } from 'lucide-svelte';
+
+let { visible = false, userName = '', formula = '', result = 0 } = $props();
+
+let timeoutId = null;
+
+$effect(() => {
+  if (visible) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      visible = false;
+    }, 4000);
+  }
+
+  return () => {
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+});
 </script>
 
 {#if visible}

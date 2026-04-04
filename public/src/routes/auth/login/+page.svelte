@@ -1,40 +1,40 @@
 <script lang="ts">
-  import { authState } from '$lib/state/auth.svelte';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  import OAuthButton from '$components/auth/OAuthButton.svelte';
-  import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+import OAuthButton from '$components/auth/OAuthButton.svelte';
+import { goto } from '$app/navigation';
 
-  let isLogin = $state(true);
-  let email = $state('');
-  let password = $state('');
-  let displayName = $state('');
-  let error = $state('');
-  let loading = $state(false);
+let isLogin = $state(true);
+let email = $state('');
+let password = $state('');
+let displayName = $state('');
+let error = $state('');
+let loading = $state(false);
 
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-    error = '';
-    loading = true;
+async function handleSubmit(e: Event) {
+  e.preventDefault();
+  error = '';
+  loading = true;
 
-    try {
-      if (isLogin) {
-        await authState.signInWithEmail(email, password);
-      } else {
-        await authState.signUp(email, password, displayName);
-      }
-      await goto('/games');
-    } catch (err: any) {
-      error = err.message || 'Erro ao processar solicitação';
-    } finally {
-      loading = false;
+  try {
+    if (isLogin) {
+      await authState.signInWithEmail(email, password);
+    } else {
+      await authState.signUp(email, password, displayName);
     }
+    await goto('/games');
+  } catch (err: any) {
+    error = err.message || 'Erro ao processar solicitação';
+  } finally {
+    loading = false;
   }
+}
 
-  function toggleMode() {
-    isLogin = !isLogin;
-    error = '';
-  }
+function toggleMode() {
+  isLogin = !isLogin;
+  error = '';
+}
 </script>
 
 <svelte:head>

@@ -21,7 +21,7 @@ export function createDiceBoxManager(container, options = {}) {
     settleTimeout = 3000,
     theme = 'default',
     themeColor = '#0000ff',
-    onRollComplete = () => { }
+    onRollComplete = () => {},
   } = options;
 
   const containerId = container?.id || 'dice-box-wrapper';
@@ -55,21 +55,21 @@ export function createDiceBoxManager(container, options = {}) {
             const firstGroup = Array.isArray(rollResult) ? rollResult[0] : rollResult;
 
             if (firstGroup && currentRollResolve && currentRollData) {
-              const rolls = (firstGroup.rolls || []).map(r => r.value || r.result || 0);
+              const rolls = (firstGroup.rolls || []).map((r) => r.value || r.result || 0);
               let total = firstGroup.value || 0;
               const diceType = extractDiceType(currentRollData.formula);
-              
+
               // Ajuste automático para d100 (se 00 e 0 resultarem em 0, é 100 no RPG clássico)
               if (diceType === 'd100') {
-                 if (total === 0) total = 100;
+                if (total === 0) total = 100;
               }
-              
+
               const result = {
                 total,
                 rolls,
                 formula: currentRollData.originalFormula || currentRollData.formula,
                 diceType,
-                shouldSum: currentRollData.shouldSum || false
+                shouldSum: currentRollData.shouldSum || false,
               };
 
               currentRollResolve(result);
@@ -84,7 +84,7 @@ export function createDiceBoxManager(container, options = {}) {
             setTimeout(() => {
               diceDismissLocked = false;
             }, 3000);
-          }
+          },
         });
 
         await diceBoxInstance.init();
@@ -113,22 +113,22 @@ export function createDiceBoxManager(container, options = {}) {
 
       let shouldSum = false;
       let effectiveFormula = formula.trim();
-      
+
       if (effectiveFormula.endsWith('+')) {
         shouldSum = true;
         effectiveFormula = effectiveFormula.slice(0, -1).trim();
       }
 
       currentRollResolve = resolve;
-      currentRollData = { 
-        formula: effectiveFormula, 
+      currentRollData = {
+        formula: effectiveFormula,
         originalFormula: formula,
-        shouldSum 
+        shouldSum,
       };
 
       try {
         diceBoxInstance.show();
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise((r) => setTimeout(r, 50));
         diceBoxInstance.roll(effectiveFormula);
       } catch (error) {
         console.error('[Dice3D] Roll error:', error);
@@ -187,7 +187,7 @@ export function createDiceBoxManager(container, options = {}) {
     isInitialized,
     updateConfig,
     init,
-    getInstance: () => diceBoxInstance
+    getInstance: () => diceBoxInstance,
   };
 }
 

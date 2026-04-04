@@ -1,64 +1,64 @@
 <script>
-  import { onMount } from 'svelte';
-  
-  let { open = $bindable(false), onRollComplete = () => {} } = $props();
-  
-  let diceContainer;
-  let diceBox = null;
-  let isRolling = false;
-  
-  async function initDice() {
-    if (diceBox) return diceBox;
-    
-    const { default: DiceBox } = await import('@3d-dice/dice-box');
-    
-    diceBox = new DiceBox(diceContainer, {
-      assetPath: '/assets/dice-box',
-      scale: 6,
-      gravity: 1,
-      friction: 0.8,
-      restitution: 0,
-      settleTimeout: 3000,
-      theme: 'default',
-      onBeforeRoll: () => {
-        isRolling = true;
-      },
-      onRollComplete: (result) => {
-        isRolling = false;
-        
-        if (result && result[0]) {
-          const rollResult = result[0];
-          const rolls = (rollResult.rolls || []).map(r => r.value || r.result || 0);
-          const total = rollResult.value || 0;
-          
-          onRollComplete({
-            formula: rollResult.label || '1d20',
-            total,
-            rolls,
-            diceType: rollResult.diceType || 'd20'
-          });
-        }
-        
-        open = false;
+import { onMount } from 'svelte';
+
+let { open = $bindable(false), onRollComplete = () => {} } = $props();
+
+let diceContainer;
+let diceBox = null;
+let isRolling = false;
+
+async function initDice() {
+  if (diceBox) return diceBox;
+
+  const { default: DiceBox } = await import('@3d-dice/dice-box');
+
+  diceBox = new DiceBox(diceContainer, {
+    assetPath: '/assets/dice-box',
+    scale: 6,
+    gravity: 1,
+    friction: 0.8,
+    restitution: 0,
+    settleTimeout: 3000,
+    theme: 'default',
+    onBeforeRoll: () => {
+      isRolling = true;
+    },
+    onRollComplete: (result) => {
+      isRolling = false;
+
+      if (result && result[0]) {
+        const rollResult = result[0];
+        const rolls = (rollResult.rolls || []).map((r) => r.value || r.result || 0);
+        const total = rollResult.value || 0;
+
+        onRollComplete({
+          formula: rollResult.label || '1d20',
+          total,
+          rolls,
+          diceType: rollResult.diceType || 'd20',
+        });
       }
-    });
-    
-    await diceBox.init();
-    return diceBox;
-  }
-  
-  export async function roll(formula) {
-    await initDice();
-    if (diceBox) {
-      diceBox.roll(formula);
-    }
-  }
-  
-  function handleOverlayClick(e) {
-    if (e.target === e.currentTarget && !isRolling) {
+
       open = false;
-    }
+    },
+  });
+
+  await diceBox.init();
+  return diceBox;
+}
+
+export async function roll(formula) {
+  await initDice();
+  if (diceBox) {
+    diceBox.roll(formula);
   }
+}
+
+function handleOverlayClick(e) {
+  if (e.target === e.currentTarget && !isRolling) {
+    open = false;
+  }
+}
 </script>
 
 {#if open}

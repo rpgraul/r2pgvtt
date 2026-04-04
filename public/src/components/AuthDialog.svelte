@@ -1,35 +1,35 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Button from './ui/Button.svelte';
-  import Input from './ui/Input.svelte';
-  
-  let { onSuccess } = $props();
-  
-  let isLogin = $state(true);
-  let email = $state('');
-  let password = $state('');
-  let displayName = $state('');
-  let error = $state('');
-  let loading = $state(false);
-  
-  async function handleSubmit(e) {
-    e.preventDefault();
-    error = '';
-    loading = true;
-    
-    try {
-      if (isLogin) {
-        await gameState.login(email, password);
-      } else {
-        await gameState.register(email, password, displayName);
-      }
-      onSuccess?.();
-    } catch (err) {
-      error = err.message || 'Erro ao processar solicitação';
-    } finally {
-      loading = false;
+import { gameState } from '$lib/state/game.svelte.ts';
+import Button from './ui/Button.svelte';
+import Input from './ui/Input.svelte';
+
+let { onSuccess } = $props();
+
+let isLogin = $state(true);
+let email = $state('');
+let password = $state('');
+let displayName = $state('');
+let error = $state('');
+let loading = $state(false);
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  error = '';
+  loading = true;
+
+  try {
+    if (isLogin) {
+      await gameState.login(email, password);
+    } else {
+      await gameState.register(email, password, displayName);
     }
+    onSuccess?.();
+  } catch (err) {
+    error = err.message || 'Erro ao processar solicitação';
+  } finally {
+    loading = false;
   }
+}
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-4">

@@ -1,46 +1,46 @@
 <script lang="ts">
-  import { db } from '$lib/supabase/tables';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  import { X } from 'lucide-svelte';
-  import { goto } from '$app/navigation';
+import { db } from '$lib/supabase/tables';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+import { X } from 'lucide-svelte';
+import { goto } from '$app/navigation';
 
-  interface Props {
-    open: boolean;
-  }
+interface Props {
+  open: boolean;
+}
 
-  let { open = $bindable() }: Props = $props();
+let { open = $bindable() }: Props = $props();
 
-  let nome = $state('');
-  let loading = $state(false);
-  let error = $state('');
+let nome = $state('');
+let loading = $state(false);
+let error = $state('');
 
-  async function handleSubmit(e: Event) {
-    e.preventDefault();
-    if (!nome.trim()) return;
+async function handleSubmit(e: Event) {
+  e.preventDefault();
+  if (!nome.trim()) return;
 
-    loading = true;
-    error = '';
+  loading = true;
+  error = '';
 
-    try {
-      const gameId = await db.createGame(nome.trim());
-      if (gameId) {
-        open = false;
-        nome = '';
-        await goto(`/games/${gameId}`);
-      }
-    } catch (err: any) {
-      error = err.message || 'Erro ao criar mesa';
-    } finally {
-      loading = false;
+  try {
+    const gameId = await db.createGame(nome.trim());
+    if (gameId) {
+      open = false;
+      nome = '';
+      await goto(`/games/${gameId}`);
     }
+  } catch (err: any) {
+    error = err.message || 'Erro ao criar mesa';
+  } finally {
+    loading = false;
   }
+}
 
-  function handleClose() {
-    open = false;
-    nome = '';
-    error = '';
-  }
+function handleClose() {
+  open = false;
+  nome = '';
+  error = '';
+}
 </script>
 
 {#if open}

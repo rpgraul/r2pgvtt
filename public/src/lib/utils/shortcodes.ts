@@ -4,7 +4,7 @@ export function parseArguments(str: string): string[] {
   const args: string[] = [];
   let match;
   while ((match = regex.exec(str)) !== null) {
-    args.push(match[1] !== undefined ? match[1] : (match[2] !== undefined ? match[2] : match[0]));
+    args.push(match[1] !== undefined ? match[1] : match[2] !== undefined ? match[2] : match[0]);
   }
   return args;
 }
@@ -25,7 +25,7 @@ export function parseKeyValueArgs(input: string | string[]): Record<string, stri
     args = input;
   }
 
-  args.forEach(arg => {
+  args.forEach((arg) => {
     if (typeof arg !== 'string') return;
     const parts = arg.split('=');
     if (parts.length === 2) {
@@ -46,7 +46,7 @@ export const shortcodeRegexes = {
 
 export function formatNumber(num: number | string): string {
   if (typeof num !== 'number' && typeof num !== 'string') return String(num);
-  return new Intl.NumberFormat("pt-BR", {
+  return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(Number(num));
@@ -100,7 +100,7 @@ export function extractShortcodes(content: string): ShortcodeData[] {
   if (!content) return [];
   const results: ShortcodeData[] = [];
   let match;
-  
+
   const regex = new RegExp(genericShortcodeRegex.source, 'g');
   while ((match = regex.exec(content)) !== null) {
     const full = match[0];
@@ -108,19 +108,19 @@ export function extractShortcodes(content: string): ShortcodeData[] {
     const args = parseArguments(inner);
     const commandRaw = args[0] || '';
     const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
-    
+
     if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) continue;
-    
+
     const isHidden = commandRaw.startsWith('#') || args.includes('#');
     const params = parseKeyValueArgs(args.slice(1));
-    
+
     results.push({
       command,
       full,
       args: args.slice(1),
       params,
       isHidden,
-      index: match.index
+      index: match.index,
     });
   }
   return results;
@@ -134,11 +134,27 @@ export interface ParsedShortcodes {
   details: string;
 }
 
-export function parseAllShortcodes(item: { id: string; conteudo?: string }, options: { isPlayerSheet?: boolean; defaultCurrency?: string } = {}): ParsedShortcodes {
-  if (!item || !item.conteudo) return { all: [], left: "", right: "", bottom: "", details: "" };
+export function parseAllShortcodes(
+  item: { id: string; conteudo?: string },
+  options: { isPlayerSheet?: boolean; defaultCurrency?: string } = {},
+): ParsedShortcodes {
+  if (!item || !item.conteudo) return { all: [], left: '', right: '', bottom: '', details: '' };
 
-  const result = { all: [], left: [] as string[], right: [] as string[], bottom: [] as string[], details: [] as string[] };
-  const commandOrder: Record<string, number> = { stat: 1, money: 2, hp: 3, count: 4, xp: 5, default: 99 };
+  const result = {
+    all: [],
+    left: [] as string[],
+    right: [] as string[],
+    bottom: [] as string[],
+    details: [] as string[],
+  };
+  const commandOrder: Record<string, number> = {
+    stat: 1,
+    money: 2,
+    hp: 3,
+    count: 4,
+    xp: 5,
+    default: 99,
+  };
   const content = item.conteudo;
 
   const foundShortcodes: { full: string; inner: string; index: number }[] = [];
@@ -162,34 +178,39 @@ export function parseAllShortcodes(item: { id: string; conteudo?: string }, opti
     }
   }
 
-  const parsedShortcodes = foundShortcodes.map(sc => {
-    const args = parseArguments(sc.inner);
-    const commandRaw = args[0] || '';
-    const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
+  const parsedShortcodes = foundShortcodes
+    .map((sc) => {
+      const args = parseArguments(sc.inner);
+      const commandRaw = args[0] || '';
+      const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
-    if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) return null;
+      if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) return null;
 
-    const isHashHidden = commandRaw.startsWith('#');
-    const isArgHidden = args.includes('#');
-    const isInsideHideBlock = hiddenRanges.some(range => sc.index >= range.start && sc.index < range.end);
+      const isHashHidden = commandRaw.startsWith('#');
+      const isArgHidden = args.includes('#');
+      const isInsideHideBlock = hiddenRanges.some(
+        (range) => sc.index >= range.start && sc.index < range.end,
+      );
 
-    let finalArgs = args.slice(1);
-    if (isArgHidden) {
-      finalArgs = finalArgs.filter(arg => arg !== '#');
-    }
+      let finalArgs = args.slice(1);
+      if (isArgHidden) {
+        finalArgs = finalArgs.filter((arg) => arg !== '#');
+      }
 
-    return {
-      command,
-      args: finalArgs,
-      originalShortcode: sc.full,
-      isHidden: isHashHidden || isArgHidden || isInsideHideBlock,
-      order: commandOrder[command] || commandOrder.default
-    };
-  }).filter(Boolean) as any[];
+      return {
+        command,
+        args: finalArgs,
+        originalShortcode: sc.full,
+        isHidden: isHashHidden || isArgHidden || isInsideHideBlock,
+        order: commandOrder[command] || commandOrder.default,
+      };
+    })
+    .filter(Boolean) as any[];
 
   parsedShortcodes.sort((a: any, b: any) => a.order - b.order);
 
-  const wrapIfHidden = (html: string, isHidden: boolean) => isHidden ? `<div class="is-hidden-from-players">${html}</div>` : html;
+  const wrapIfHidden = (html: string, isHidden: boolean) =>
+    isHidden ? `<div class="is-hidden-from-players">${html}</div>` : html;
 
   const processShortcode = (sc: any, html: string, position: string | null) => {
     const wrapped = wrapIfHidden(html, sc.isHidden);
@@ -203,30 +224,31 @@ export function parseAllShortcodes(item: { id: string; conteudo?: string }, opti
 
   parsedShortcodes.forEach((sc: any) => {
     let position: string | null = null;
-    if (sc.args.includes("left")) position = "left";
-    else if (sc.args.includes("right")) position = "right";
-    else if (sc.args.includes("bottom")) position = "bottom";
+    if (sc.args.includes('left')) position = 'left';
+    else if (sc.args.includes('right')) position = 'right';
+    else if (sc.args.includes('bottom')) position = 'bottom';
 
     const finalArgs = options.isPlayerSheet ? [...sc.args, 'isPlayerSheet'] : sc.args;
 
     switch (sc.command) {
-      case "stat":
+      case 'stat': {
         const statLabel = sc.args.length > 1 ? sc.args.slice(0, -1).join(' ') : '';
         const statValue = sc.args[sc.args.length - 1] || '';
         const htmlStat = `<div class="shortcode-stat is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
-          ${statLabel ? `<strong>${statLabel}:</strong> ` : ""}
+          ${statLabel ? `<strong>${statLabel}:</strong> ` : ''}
           <span class="stat-value-display">${statValue}</span>
         </div>`;
-        processShortcode(sc, htmlStat, position || "left");
+        processShortcode(sc, htmlStat, position || 'left');
         break;
+      }
 
-      case "hp":
+      case 'hp': {
         const params = parseKeyValueArgs(finalArgs);
         const maxHp = parseInt(params.max, 10) || 100;
         const currentHp = params.current !== undefined ? parseInt(params.current, 10) : maxHp;
         const finalCurrentHp = Math.max(-10, Math.min(currentHp, maxHp));
         const percent = finalCurrentHp > 0 ? Math.round((finalCurrentHp / maxHp) * 100) : 0;
-        
+
         let colorClass = 'is-high';
         if (finalCurrentHp <= 0) colorClass = 'is-dead';
         else if (percent < 15) colorClass = 'is-critical';
@@ -244,55 +266,63 @@ export function parseAllShortcodes(item: { id: string; conteudo?: string }, opti
             </div>
           </div>
         </div>`;
-        processShortcode(sc, htmlHp, position || "bottom");
+        processShortcode(sc, htmlHp, position || 'bottom');
         break;
+      }
 
-      case "money":
+      case 'money': {
         const moneyParams = parseKeyValueArgs(finalArgs);
-        const currentRaw = (moneyParams.current || "").replace(/[^\d.\-]/g, '');
+        const currentRaw = (moneyParams.current || '').replace(/[^\d.-]/g, '');
         const currentValue = parseFloat(currentRaw) || 0;
-        const currency = moneyParams.currency || finalArgs.find((arg: string) => !arg.includes('=')) || options.defaultCurrency || '';
-        
+        const currency =
+          moneyParams.currency ||
+          finalArgs.find((arg: string) => !arg.includes('=')) ||
+          options.defaultCurrency ||
+          '';
+
         const htmlMoney = `<div class="shortcode-money is-interactive" data-item-id="${item.id}">
           <i class="fas fa-coins"></i>
           <span class="money-value-display">${formatNumber(currentValue)}</span>
           <span class="money-currency">${currency}</span>
         </div>`;
-        processShortcode(sc, htmlMoney, position || "left");
+        processShortcode(sc, htmlMoney, position || 'left');
         break;
+      }
 
-      case "count":
+      case 'count': {
         const countParams = parseKeyValueArgs(finalArgs);
         const name = sc.args.find((arg: string) => !arg.includes('=')) || '';
         const max = parseInt(countParams.max, 10) || 0;
         const current = Math.max(0, Math.min(parseInt(countParams.current, 10) || max, max));
-        
-        const isResource = sc.originalShortcode.includes("[*count");
-        
+
+        const isResource = sc.originalShortcode.includes('[*count');
+
         const htmlCount = `<div class="shortcode-count is-interactive" data-item-id="${item.id}">
           ${name ? `<strong class="count-name">${name}:</strong> ` : ''}
           <span class="count-current-value">${current}</span>/<span class="count-max-value">${max}</span>
         </div>`;
-        
+
         if (isResource) {
-          processShortcode(sc, htmlCount, position || "right");
+          processShortcode(sc, htmlCount, position || 'right');
         } else if (position) {
           result[position].push(wrapIfHidden(htmlCount, sc.isHidden));
         } else {
           result.details.push(wrapIfHidden(htmlCount, sc.isHidden));
         }
         break;
+      }
 
-      case "xp":
+      case 'xp': {
         const xpParams = parseKeyValueArgs(finalArgs);
-        const xpValue = parseInt((xpParams.current || "0").replace(/[^\d.\-]/g, ''), 10) || 0;
-        
+        const xpValue = parseInt((xpParams.current || '0').replace(/[^\d.-]/g, ''), 10) || 0;
+
         const htmlXp = `<div class="shortcode-xp is-interactive" data-item-id="${item.id}">
           <i class="fas fa-star"></i>
           <span class="xp-value-display">${xpValue} XP</span>
         </div>`;
-        processShortcode(sc, htmlXp, position || "left");
+        processShortcode(sc, htmlXp, position || 'left');
         break;
+      }
     }
   });
 
@@ -301,27 +331,31 @@ export function parseAllShortcodes(item: { id: string; conteudo?: string }, opti
     left: result.left.join(''),
     right: result.right.join(''),
     bottom: result.bottom.join(''),
-    details: result.details.join('')
+    details: result.details.join(''),
   };
 }
 
 export function parseMainContent(content: string): string {
-  if (!content) return "";
+  if (!content) return '';
   let t = content;
-  t = t.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, "$1");
-  t = t.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, "$1");
-  t = t.replace(/\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi,
+  t = t.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, '$1');
+  t = t.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, '$1');
+  t = t.replace(
+    /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi,
     (_, title, hash, inner) =>
-      `<div class="shortcode-nota ${hash ? "is-hidden-from-players" : ""}">
+      `<div class="shortcode-nota ${hash ? 'is-hidden-from-players' : ''}">
         <div class="nota-header">
           <span class="nota-title">${title}</span>
         </div>
         <div class="nota-content">${inner.trim()}</div>
-      </div>`);
-  t = t.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi,
-    (full, open, inner, close) =>
-      open.toLowerCase() !== close.toLowerCase() ? full : `<div class="is-hidden-from-players">${inner}</div>`);
-  t = t.replace(/\[(\*?)(stat|hp|count|money|xp)\s.*?\]/gi, "");
-  t = t.replace(/<p>\s*<\/p>/gi, "");
+      </div>`,
+  );
+  t = t.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (full, open, inner, close) =>
+    open.toLowerCase() !== close.toLowerCase()
+      ? full
+      : `<div class="is-hidden-from-players">${inner}</div>`,
+  );
+  t = t.replace(/\[(\*?)(stat|hp|count|money|xp)\s.*?\]/gi, '');
+  t = t.replace(/<p>\s*<\/p>/gi, '');
   return t.trim();
 }

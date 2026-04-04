@@ -1,14 +1,9 @@
 <script>
-  import { cn } from '$lib/utils/cn';
-  
-  let {
-    value,
-    activeValue = $bindable(''),
-    class: className,
-    children
-  } = $props();
-  
-  let isActive = $derived(activeValue === value);
+import { cn } from '$lib/utils/cn';
+
+let { value, activeValue = $bindable(''), class: className, children } = $props();
+
+let isActive = $derived(activeValue === value);
 </script>
 
 <button

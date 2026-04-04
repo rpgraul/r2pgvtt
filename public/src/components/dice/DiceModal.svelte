@@ -1,68 +1,68 @@
 <script>
-  import { cn } from '$lib/utils/cn.js';
-  import { X, Dices } from 'lucide-svelte';
-  
-  let { open = $bindable(false), onRollComplete = () => {} } = $props();
-  
-  let formula = $state('');
-  let result = $state(null);
-  let isRolling = $state(false);
-  
-  const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
-  
-  async function roll(dice) {
-    isRolling = true;
-    formula = `1${dice}`;
-    
-    const rollResult = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
+import { cn } from '$lib/utils/cn.js';
+import { X, Dices } from 'lucide-svelte';
+
+let { open = $bindable(false), onRollComplete = () => {} } = $props();
+
+let formula = $state('');
+let result = $state(null);
+let isRolling = $state(false);
+
+const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+
+async function roll(dice) {
+  isRolling = true;
+  formula = `1${dice}`;
+
+  const rollResult = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
+  result = {
+    formula,
+    total: rollResult,
+    rolls: [rollResult],
+    diceType: dice,
+  };
+
+  onRollComplete(result);
+
+  setTimeout(() => {
+    isRolling = false;
+    open = false;
+  }, 1500);
+}
+
+async function rollCustom() {
+  if (!formula.trim()) return;
+
+  isRolling = true;
+
+  const match = formula.match(/(\d+)d(\d+)/i);
+  if (match) {
+    const count = parseInt(match[1]);
+    const sides = parseInt(match[2]);
+    let total = 0;
+    const rolls = [];
+
+    for (let i = 0; i < count; i++) {
+      const r = Math.floor(Math.random() * sides) + 1;
+      rolls.push(r);
+      total += r;
+    }
+
     result = {
       formula,
-      total: rollResult,
-      rolls: [rollResult],
-      diceType: dice
+      total,
+      rolls,
+      diceType: `d${sides}`,
     };
-    
+
     onRollComplete(result);
-    
-    setTimeout(() => {
-      isRolling = false;
-      open = false;
-    }, 1500);
   }
-  
-  async function rollCustom() {
-    if (!formula.trim()) return;
-    
-    isRolling = true;
-    
-    const match = formula.match(/(\d+)d(\d+)/i);
-    if (match) {
-      const count = parseInt(match[1]);
-      const sides = parseInt(match[2]);
-      let total = 0;
-      const rolls = [];
-      
-      for (let i = 0; i < count; i++) {
-        const r = Math.floor(Math.random() * sides) + 1;
-        rolls.push(r);
-        total += r;
-      }
-      
-      result = {
-        formula,
-        total,
-        rolls,
-        diceType: `d${sides}`
-      };
-      
-      onRollComplete(result);
-    }
-    
-    setTimeout(() => {
-      isRolling = false;
-      open = false;
-    }, 1500);
-  }
+
+  setTimeout(() => {
+    isRolling = false;
+    open = false;
+  }, 1500);
+}
 </script>
 
 {#if open}

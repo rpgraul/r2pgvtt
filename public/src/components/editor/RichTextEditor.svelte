@@ -1,168 +1,178 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
-  import { Editor } from '@tiptap/core';
-  import StarterKit from '@tiptap/starter-kit';
-  import Placeholder from '@tiptap/extension-placeholder';
-  import Highlight from '@tiptap/extension-highlight';
-  import Link from '@tiptap/extension-link';
-  import TextAlign from '@tiptap/extension-text-align';
-  import Underline from '@tiptap/extension-underline';
-  import HpNode from '$lib/tiptap/extensions/HpNode.js';
-  import MoneyNode from '$lib/tiptap/extensions/MoneyNode.js';
-  import StatNode from '$lib/tiptap/extensions/StatNode.js';
-  import CountNode from '$lib/tiptap/extensions/CountNode.js';
-  import XpNode from '$lib/tiptap/extensions/XpNode.js';
-  
-  import { 
-    Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
-    List, ListOrdered, Quote, Code, Heading1, Heading2, Heading3,
-    AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Highlighter,
-    Undo, Redo
-  } from 'lucide-svelte';
-  
-  import Button from '$components/ui/Button.svelte';
-  import ShortcodeInserter from './ShortcodeInserter.svelte';
-  
-  let { 
-    content = $bindable(''),
-    editable = true,
-    placeholder = ''
-  } = $props();
-  
-  let element;
-  let editor = $state(null);
-  let showShortcodeModal = $state(false);
-  let linkUrl = $state('');
-  let showLinkInput = $state(false);
-  
-  onMount(() => {
-    editor = new Editor({
-      element: element,
-      extensions: [
-        StarterKit,
-        Placeholder.configure({
-          placeholder: placeholder || ' '
-        }),
-        Highlight,
-        Link.configure({
-          openOnClick: false
-        }),
-        TextAlign,
-        Underline,
-        HpNode,
-        MoneyNode,
-        StatNode,
-        CountNode,
-        XpNode
-      ],
-      content: content,
-      editable: editable,
-      onUpdate: ({ editor }) => {
-        content = editor.getHTML();
-      }
-    });
+import { onMount, onDestroy } from 'svelte';
+import { Editor } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import Highlight from '@tiptap/extension-highlight';
+import Link from '@tiptap/extension-link';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import HpNode from '$lib/tiptap/extensions/HpNode.js';
+import MoneyNode from '$lib/tiptap/extensions/MoneyNode.js';
+import StatNode from '$lib/tiptap/extensions/StatNode.js';
+import CountNode from '$lib/tiptap/extensions/CountNode.js';
+import XpNode from '$lib/tiptap/extensions/XpNode.js';
+
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  List,
+  ListOrdered,
+  Quote,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link as LinkIcon,
+  Highlighter,
+  Undo,
+  Redo,
+} from 'lucide-svelte';
+
+import Button from '$components/ui/Button.svelte';
+import ShortcodeInserter from './ShortcodeInserter.svelte';
+
+let { content = $bindable(''), editable = true, placeholder = '' } = $props();
+
+let element;
+let editor = $state(null);
+let showShortcodeModal = $state(false);
+let linkUrl = $state('');
+let showLinkInput = $state(false);
+
+onMount(() => {
+  editor = new Editor({
+    element: element,
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: placeholder || ' ',
+      }),
+      Highlight,
+      Link.configure({
+        openOnClick: false,
+      }),
+      TextAlign,
+      Underline,
+      HpNode,
+      MoneyNode,
+      StatNode,
+      CountNode,
+      XpNode,
+    ],
+    content: content,
+    editable: editable,
+    onUpdate: ({ editor }) => {
+      content = editor.getHTML();
+    },
   });
-  
-  onDestroy(() => {
-    if (editor) {
-      editor.destroy();
-    }
-  });
-  
-  function toggleBold() {
-    editor?.chain().focus().toggleBold().run();
+});
+
+onDestroy(() => {
+  if (editor) {
+    editor.destroy();
   }
-  
-  function toggleItalic() {
-    editor?.chain().focus().toggleItalic().run();
+});
+
+function toggleBold() {
+  editor?.chain().focus().toggleBold().run();
+}
+
+function toggleItalic() {
+  editor?.chain().focus().toggleItalic().run();
+}
+
+function toggleUnderline() {
+  editor?.chain().focus().toggleUnderline().run();
+}
+
+function toggleStrike() {
+  editor?.chain().focus().toggleStrike().run();
+}
+
+function toggleBulletList() {
+  editor?.chain().focus().toggleBulletList().run();
+}
+
+function toggleOrderedList() {
+  editor?.chain().focus().toggleOrderedList().run();
+}
+
+function toggleBlockquote() {
+  editor?.chain().focus().toggleBlockquote().run();
+}
+
+function toggleCode() {
+  editor?.chain().focus().toggleCode().run();
+}
+
+function setHeading(level) {
+  editor?.chain().focus().toggleHeading({ level }).run();
+}
+
+function setTextAlign(align) {
+  editor?.chain().focus().setTextAlign(align).run();
+}
+
+function toggleHighlight() {
+  editor?.chain().focus().toggleHighlight().run();
+}
+
+function setLink() {
+  if (linkUrl) {
+    editor?.chain().focus().setLink({ href: linkUrl }).run();
+  } else {
+    editor?.chain().focus().unsetLink().run();
   }
-  
-  function toggleUnderline() {
-    editor?.chain().focus().toggleUnderline().run();
+  showLinkInput = false;
+  linkUrl = '';
+}
+
+function undo() {
+  editor?.chain().focus().undo().run();
+}
+
+function redo() {
+  editor?.chain().focus().redo().run();
+}
+
+function insertShortcode(type, data) {
+  let html = '';
+
+  switch (type) {
+    case 'hp':
+      html = `<span data-type="hp" data-current="${data.current || 100}" data-max="${data.max || 100}">[hp current="${data.current || 100}" max="${data.max || 100}"]</span> `;
+      break;
+    case 'stat':
+      html = `<span data-type="stat" data-name="${data.name || 'FOR'}" data-value="${data.value || 10}" data-mod="${data.mod || 0}">[stat "${data.name || 'FOR'}" ${data.value || 10}]</span> `;
+      break;
+    case 'money':
+      html = `<span data-type="money" data-current="${data.current || 0}" data-currency="${data.currency || 'po'}">[money ${data.current || 0} ${data.currency || 'po'}]</span> `;
+      break;
+    case 'count':
+      html = `<span data-type="count" data-name="${data.name || 'Items'}" data-current="${data.current || 0}" data-max="${data.max || 10}">[count "${data.name || 'Items'}" current="${data.current || 0}" max="${data.max || 10}"]</span> `;
+      break;
+    case 'xp':
+      html = `<span data-type="xp" data-current="${data.current || 0}" data-total="${data.total || 1000}">[xp ${data.current || 0}/${data.total || 1000}]</span> `;
+      break;
   }
-  
-  function toggleStrike() {
-    editor?.chain().focus().toggleStrike().run();
+
+  if (html && editor) {
+    editor.chain().focus().insertContent(html).run();
   }
-  
-  function toggleBulletList() {
-    editor?.chain().focus().toggleBulletList().run();
-  }
-  
-  function toggleOrderedList() {
-    editor?.chain().focus().toggleOrderedList().run();
-  }
-  
-  function toggleBlockquote() {
-    editor?.chain().focus().toggleBlockquote().run();
-  }
-  
-  function toggleCode() {
-    editor?.chain().focus().toggleCode().run();
-  }
-  
-  function setHeading(level) {
-    editor?.chain().focus().toggleHeading({ level }).run();
-  }
-  
-  function setTextAlign(align) {
-    editor?.chain().focus().setTextAlign(align).run();
-  }
-  
-  function toggleHighlight() {
-    editor?.chain().focus().toggleHighlight().run();
-  }
-  
-  function setLink() {
-    if (linkUrl) {
-      editor?.chain().focus().setLink({ href: linkUrl }).run();
-    } else {
-      editor?.chain().focus().unsetLink().run();
-    }
-    showLinkInput = false;
-    linkUrl = '';
-  }
-  
-  function undo() {
-    editor?.chain().focus().undo().run();
-  }
-  
-  function redo() {
-    editor?.chain().focus().redo().run();
-  }
-  
-  function insertShortcode(type, data) {
-    let html = '';
-    
-    switch (type) {
-      case 'hp':
-        html = `<span data-type="hp" data-current="${data.current || 100}" data-max="${data.max || 100}">[hp current="${data.current || 100}" max="${data.max || 100}"]</span> `;
-        break;
-      case 'stat':
-        html = `<span data-type="stat" data-name="${data.name || 'FOR'}" data-value="${data.value || 10}" data-mod="${data.mod || 0}">[stat "${data.name || 'FOR'}" ${data.value || 10}]</span> `;
-        break;
-      case 'money':
-        html = `<span data-type="money" data-current="${data.current || 0}" data-currency="${data.currency || 'po'}">[money ${data.current || 0} ${data.currency || 'po'}]</span> `;
-        break;
-      case 'count':
-        html = `<span data-type="count" data-name="${data.name || 'Items'}" data-current="${data.current || 0}" data-max="${data.max || 10}">[count "${data.name || 'Items'}" current="${data.current || 0}" max="${data.max || 10}"]</span> `;
-        break;
-      case 'xp':
-        html = `<span data-type="xp" data-current="${data.current || 0}" data-total="${data.total || 1000}">[xp ${data.current || 0}/${data.total || 1000}]</span> `;
-        break;
-    }
-    
-    if (html && editor) {
-      editor.chain().focus().insertContent(html).run();
-    }
-    
-    showShortcodeModal = false;
-  }
-  
-  const isActive = $derived((type, attrs = {}) => {
-    if (!editor) return false;
-    return editor.isActive(type, attrs);
-  });
+
+  showShortcodeModal = false;
+}
+
+const isActive = $derived((type, attrs = {}) => {
+  if (!editor) return false;
+  return editor.isActive(type, attrs);
+});
 </script>
 
 <div class="rounded-lg border bg-card">

@@ -1,49 +1,49 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import { authState } from '$lib/state/auth.svelte.ts';
-  import Badge from '$components/ui/Badge.svelte';
-  import Button from '$components/ui/Button.svelte';
-  import RichTextEditor from '$components/editor/RichTextEditor.svelte';
-  import { ScrollArea } from '$components/ui/scroll-area/index.js';
-  import { parseAllShortcodes } from '$lib/utils/shortcodes.ts';
-  import { User, Sword, Heart, Coins, Star } from 'lucide-svelte';
-  
-  let selectedCard = $state(null);
-  let editedContent = $state('');
-  let isEditing = $state(false);
-  
-  const items = $derived(gameState.items.filter(i => i.category === 'pj'));
-  const characters = $derived(items);
-  
-  function selectCard(item) {
-    selectedCard = item;
-    editedContent = item.conteudo || '';
+import { gameState } from '$lib/state/game.svelte.ts';
+import { authState } from '$lib/state/auth.svelte.ts';
+import Badge from '$components/ui/Badge.svelte';
+import Button from '$components/ui/Button.svelte';
+import RichTextEditor from '$components/editor/RichTextEditor.svelte';
+import { ScrollArea } from '$components/ui/scroll-area/index.js';
+import { parseAllShortcodes } from '$lib/utils/shortcodes.ts';
+import { User, Sword, Heart, Coins, Star } from 'lucide-svelte';
+
+let selectedCard = $state(null);
+let editedContent = $state('');
+let isEditing = $state(false);
+
+const items = $derived(gameState.items.filter((i) => i.category === 'pj'));
+const characters = $derived(items);
+
+function selectCard(item) {
+  selectedCard = item;
+  editedContent = item.conteudo || '';
+  isEditing = false;
+}
+
+async function handleSaveContent() {
+  if (!selectedCard) return;
+
+  try {
+    await gameState.editCard(selectedCard.id, {
+      conteudo: editedContent,
+    });
+    selectedCard = { ...selectedCard, conteudo: editedContent };
     isEditing = false;
+  } catch (error) {
+    console.error('Error saving:', error);
   }
-  
-  async function handleSaveContent() {
-    if (!selectedCard) return;
-    
-    try {
-      await gameState.editCard(selectedCard.id, {
-        conteudo: editedContent
-      });
-      selectedCard = { ...selectedCard, conteudo: editedContent };
-      isEditing = false;
-    } catch (error) {
-      console.error('Error saving:', error);
-    }
+}
+
+function toggleEdit() {
+  if (isEditing) {
+    handleSaveContent();
+  } else {
+    isEditing = true;
   }
-  
-  function toggleEdit() {
-    if (isEditing) {
-      handleSaveContent();
-    } else {
-      isEditing = true;
-    }
-  }
-  
-  const parsedContent = $derived(selectedCard ? parseAllShortcodes(selectedCard) : null);
+}
+
+const parsedContent = $derived(selectedCard ? parseAllShortcodes(selectedCard) : null);
 </script>
 
 <main class="container px-4 py-6">

@@ -1,15 +1,15 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import SearchInput from '$components/SearchInput.svelte';
-  import CategoryFilters from '$components/CategoryFilters.svelte';
-  import TagFilters from '$components/TagFilters.svelte';
-  import GridContainer from '$components/grid/GridContainer.svelte';
-  
-  let ready = $state(false);
-  
-  $effect(() => {
-    ready = true;
-  });
+import { gameState } from '$lib/state/game.svelte.ts';
+import SearchInput from '$components/SearchInput.svelte';
+import CategoryFilters from '$components/CategoryFilters.svelte';
+import TagFilters from '$components/TagFilters.svelte';
+import GridContainer from '$components/grid/GridContainer.svelte';
+
+let ready = $state(false);
+
+$effect(() => {
+  ready = true;
+});
 </script>
 
 <div class="min-h-screen bg-background text-foreground">

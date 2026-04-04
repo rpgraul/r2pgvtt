@@ -1,39 +1,39 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Badge from '../ui/Badge.svelte';
-  import { cn } from '$lib/utils/cn.js';
-  import { Edit, Eye, EyeOff } from 'lucide-svelte';
-  
-  let { item, onEdit = null } = $props();
-  let cardElement;
-  
-  function getCategoryVariant(cat) {
-    const variants = {
-      pj: 'default',
-      monstro: 'destructive',
-      npc: 'secondary',
-      item: 'success',
-      anotacao: 'warning'
-    };
-    return variants[cat] || 'default';
+import { gameState } from '$lib/state/game.svelte.ts';
+import Badge from '../ui/Badge.svelte';
+import { cn } from '$lib/utils/cn.js';
+import { Edit, Eye, EyeOff } from 'lucide-svelte';
+
+let { item, onEdit = null } = $props();
+let cardElement;
+
+function getCategoryVariant(cat) {
+  const variants = {
+    pj: 'default',
+    monstro: 'destructive',
+    npc: 'secondary',
+    item: 'success',
+    anotacao: 'warning',
+  };
+  return variants[cat] || 'default';
+}
+
+function getCategoryLabel(cat) {
+  const labels = {
+    pj: 'Personagem',
+    monstro: 'Monstro',
+    npc: 'NPC',
+    item: 'Item',
+    anotacao: 'Anotação',
+  };
+  return labels[cat] || cat;
+}
+
+function handleClick() {
+  if (onEdit) {
+    onEdit(item);
   }
-  
-  function getCategoryLabel(cat) {
-    const labels = {
-      pj: 'Personagem',
-      monstro: 'Monstro',
-      npc: 'NPC',
-      item: 'Item',
-      anotacao: 'Anotação'
-    };
-    return labels[cat] || cat;
-  }
-  
-  function handleClick() {
-    if (onEdit) {
-      onEdit(item);
-    }
-  }
+}
 </script>
 
 <div 

@@ -1,7 +1,7 @@
 <script>
-  import { toggleMode } from "mode-watcher";
-  import { Sun, Moon } from "lucide-svelte";
-  import Button from "./Button.svelte";
+import { toggleMode } from 'mode-watcher';
+import { Sun, Moon } from 'lucide-svelte';
+import Button from './Button.svelte';
 </script>
 
 <Button variant="ghost" size="icon" onclick={toggleMode}>

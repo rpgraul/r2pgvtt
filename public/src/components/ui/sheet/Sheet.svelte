@@ -1,19 +1,14 @@
 <script>
-  import { cn } from '$lib/utils/cn';
-  
-  let {
-    open = $bindable(false),
-    onOpenChange,
-    children,
-    class: className
-  } = $props();
-  
-  function handleKeydown(e) {
-    if (e.key === 'Escape') {
-      open = false;
-      onOpenChange?.(false);
-    }
+import { cn } from '$lib/utils/cn';
+
+let { open = $bindable(false), onOpenChange, children, class: className } = $props();
+
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
+    open = false;
+    onOpenChange?.(false);
   }
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

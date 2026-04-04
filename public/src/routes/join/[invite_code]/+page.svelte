@@ -1,56 +1,56 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { onMount } from 'svelte';
-  import { gameState } from '$lib/state/game.svelte';
-  import { authState } from '$lib/state/auth.svelte';
-  import { goto } from '$app/navigation';
-  import { Loader2, CheckCircle, XCircle, Users } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
+import { page } from '$app/stores';
+import { onMount } from 'svelte';
+import { gameState } from '$lib/state/game.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import { goto } from '$app/navigation';
+import { Loader2, CheckCircle, XCircle, Users } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 
-  let status = $state<'loading' | 'joining' | 'success' | 'error'>('loading');
-  let errorMessage = $state('');
-  let gameName = $state('');
+let status = $state<'loading' | 'joining' | 'success' | 'error'>('loading');
+let errorMessage = $state('');
+let gameName = $state('');
 
-  const inviteCode = $derived($page.params.invite_code);
+const inviteCode = $derived($page.params.invite_code);
 
-  onMount(async () => {
-    if (!authState.isAuthenticated) {
-      const redirectTo = `/join/${inviteCode}`;
-      await goto(`/auth/login?redirect_to=${encodeURIComponent(redirectTo)}`);
-      return;
-    }
-
-    await tryJoinGame();
-  });
-
-  async function tryJoinGame() {
-    status = 'joining';
-
-    const game = await gameState.getGameByInviteCode(inviteCode);
-    if (game) {
-      gameName = game.nome;
-    }
-
-    const result = await gameState.joinGame(inviteCode);
-
-    if (result.success && result.gameId) {
-      status = 'success';
-      setTimeout(() => {
-        goto(`/games/${result.gameId}`);
-      }, 1500);
-    } else {
-      status = 'error';
-      errorMessage = result.error || 'Erro ao entrar na mesa';
-    }
+onMount(async () => {
+  if (!authState.isAuthenticated) {
+    const redirectTo = `/join/${inviteCode}`;
+    await goto(`/auth/login?redirect_to=${encodeURIComponent(redirectTo)}`);
+    return;
   }
 
-  async function goToLogin() {
-    await goto(`/auth/login?redirect_to=/join/${inviteCode}`);
+  await tryJoinGame();
+});
+
+async function tryJoinGame() {
+  status = 'joining';
+
+  const game = await gameState.getGameByInviteCode(inviteCode);
+  if (game) {
+    gameName = game.nome;
   }
 
-  async function goToGames() {
-    await goto('/games');
+  const result = await gameState.joinGame(inviteCode);
+
+  if (result.success && result.gameId) {
+    status = 'success';
+    setTimeout(() => {
+      goto(`/games/${result.gameId}`);
+    }, 1500);
+  } else {
+    status = 'error';
+    errorMessage = result.error || 'Erro ao entrar na mesa';
   }
+}
+
+async function goToLogin() {
+  await goto(`/auth/login?redirect_to=/join/${inviteCode}`);
+}
+
+async function goToGames() {
+  await goto('/games');
+}
 </script>
 
 <svelte:head>

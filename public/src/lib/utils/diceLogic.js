@@ -11,10 +11,10 @@ export function parseFormula(formula) {
   if (!formula || typeof formula !== 'string') {
     return null;
   }
-  
+
   // Normalize string
-  let cleanFormula = formula.toLowerCase().replace(/\s+/g, '');
-  
+  const cleanFormula = formula.toLowerCase().replace(/\s+/g, '');
+
   const result = {
     original: formula,
     baseFormula: '1d20', // O que vai pro 3D dice
@@ -23,13 +23,14 @@ export function parseFormula(formula) {
     explode: false,
     keep: null, // { type: 'highest' | 'lowest', count: Number }
     target: null, // { operator: string, value: Number }
-    math: null // { operator: string, value: Number }
+    math: null, // { operator: string, value: Number }
   };
 
   // Matcher base: [count]d[sides]
   // Permite modificadores na sequência.
-  const regex = /^(\d*)d(\d+)(!|e)?(?:(kh|kl|v|d)(\d*))?(?:(>=|<=|>|<|=)(\d+))?(?:([\+\-\*\/])(\d+))?$/;
-  
+  const regex =
+    /^(\d*)d(\d+)(!|e)?(?:(kh|kl|v|d)(\d*))?(?:(>=|<=|>|<|=)(\d+))?(?:([+\-*/])(\d+))?$/;
+
   const match = cleanFormula.match(regex);
   if (!match) {
     // Pode ser só um modificador puro ou algo inválido, mas tentamos um fallback
@@ -46,28 +47,28 @@ export function parseFormula(formula) {
   result.count = parseInt(match[1]) || 1;
   result.sides = parseInt(match[2]);
   result.baseFormula = `${result.count}d${result.sides}`;
-  
+
   if (match[3]) {
     result.explode = true;
   }
-  
+
   if (match[4]) {
-    const type = (match[4] === 'kh' || match[4] === 'v') ? 'highest' : 'lowest';
+    const type = match[4] === 'kh' || match[4] === 'v' ? 'highest' : 'lowest';
     const count = parseInt(match[5]) || 1;
     result.keep = { type, count };
   }
-  
+
   if (match[6]) {
     result.target = {
       operator: match[6],
-      value: parseInt(match[7])
+      value: parseInt(match[7]),
     };
   }
-  
+
   if (match[8]) {
     result.math = {
       operator: match[8],
-      value: parseInt(match[9])
+      value: parseInt(match[9]),
     };
   }
 
@@ -80,23 +81,23 @@ export function parseFormula(formula) {
  */
 export function evaluateRolls(parsedData, rawRolls) {
   if (!parsedData || !rawRolls || !Array.isArray(rawRolls)) {
-    return { 
-      total: 0, 
-      successes: null, 
+    return {
+      total: 0,
+      successes: null,
       details: [],
       textual: 'Erro no cálculo',
-      rawSum: 0 
+      rawSum: 0,
     };
   }
 
-  let finalRolls = [...rawRolls];
+  const finalRolls = [...rawRolls];
   let details = [];
-  
+
   // 1. Explode (Gera dados lógicos)
-  let explodedIndices = [];
+  const explodedIndices = [];
   if (parsedData.explode) {
     let toCheck = [...rawRolls];
-    while(toCheck.length > 0) {
+    while (toCheck.length > 0) {
       const nextCheck = [];
       for (const val of toCheck) {
         if (val === parsedData.sides) {
@@ -111,34 +112,34 @@ export function evaluateRolls(parsedData, rawRolls) {
   }
 
   let keptRolls = [...finalRolls];
-  
+
   // 2. Keep Highest / Lowest
   if (parsedData.keep) {
-    let sorted = [...finalRolls].map((v, i) => ({ v, i }));
+    const sorted = [...finalRolls].map((v, i) => ({ v, i }));
     if (parsedData.keep.type === 'highest') {
-        sorted.sort((a, b) => b.v - a.v);
+      sorted.sort((a, b) => b.v - a.v);
     } else {
-        sorted.sort((a, b) => a.v - b.v);
+      sorted.sort((a, b) => a.v - b.v);
     }
-    const keptIndices = sorted.slice(0, parsedData.keep.count).map(o => o.i);
+    const keptIndices = sorted.slice(0, parsedData.keep.count).map((o) => o.i);
     keptRolls = finalRolls.filter((_, i) => keptIndices.includes(i));
-    
+
     details = finalRolls.map((v, i) => ({
       value: v,
       isKept: keptIndices.includes(i),
-      isExploded: explodedIndices.includes(i)
+      isExploded: explodedIndices.includes(i),
     }));
   } else {
-    details = finalRolls.map((v, i) => ({ 
-        value: v, 
-        isKept: true,
-        isExploded: explodedIndices.includes(i)
+    details = finalRolls.map((v, i) => ({
+      value: v,
+      isKept: true,
+      isExploded: explodedIndices.includes(i),
     }));
   }
 
   // 3. Pool Successes
   let total = keptRolls.reduce((a, b) => a + b, 0);
-  let rawSum = total;
+  const rawSum = total;
   let successes = null;
 
   if (parsedData.target) {
@@ -147,13 +148,23 @@ export function evaluateRolls(parsedData, rawRolls) {
       let isSuccess = false;
       const tVal = parsedData.target.value;
       switch (parsedData.target.operator) {
-        case '>': isSuccess = roll > tVal; break;
-        case '<': isSuccess = roll < tVal; break;
-        case '>=': isSuccess = roll >= tVal; break;
-        case '<=': isSuccess = roll <= tVal; break;
-        case '=': isSuccess = roll === tVal; break;
+        case '>':
+          isSuccess = roll > tVal;
+          break;
+        case '<':
+          isSuccess = roll < tVal;
+          break;
+        case '>=':
+          isSuccess = roll >= tVal;
+          break;
+        case '<=':
+          isSuccess = roll <= tVal;
+          break;
+        case '=':
+          isSuccess = roll === tVal;
+          break;
       }
-      
+
       if (isSuccess) {
         successes++;
       } else if (roll === 1) {
@@ -165,25 +176,33 @@ export function evaluateRolls(parsedData, rawRolls) {
   // 4. Lógica Matemática
   if (parsedData.math) {
     switch (parsedData.math.operator) {
-        case '+': total += parsedData.math.value; break;
-        case '-': total -= parsedData.math.value; break;
-        case '*': total *= parsedData.math.value; break;
-        case '/': total = Math.floor(total / parsedData.math.value); break;
+      case '+':
+        total += parsedData.math.value;
+        break;
+      case '-':
+        total -= parsedData.math.value;
+        break;
+      case '*':
+        total *= parsedData.math.value;
+        break;
+      case '/':
+        total = Math.floor(total / parsedData.math.value);
+        break;
     }
   }
 
   // Format textual representation
-  let rollStr = `[${details.map(d => d.isKept ? d.value : '~~'+d.value+'~~').join(', ')}]`;
-  
+  let rollStr = `[${details.map((d) => (d.isKept ? d.value : '~~' + d.value + '~~')).join(', ')}]`;
+
   if (parsedData.math) {
-     rollStr += ` ${parsedData.math.operator} ${parsedData.math.value}`;
+    rollStr += ` ${parsedData.math.operator} ${parsedData.math.value}`;
   }
-  
+
   if (successes !== null) {
-      const p = successes !== 1 ? 's' : '';
-      rollStr += ` ➞ !!!${successes} Sucesso${p}!!!`;
+    const p = successes !== 1 ? 's' : '';
+    rollStr += ` ➞ !!!${successes} Sucesso${p}!!!`;
   } else {
-      rollStr += ` = !!!${total}!!!`;
+    rollStr += ` = !!!${total}!!!`;
   }
 
   return {
@@ -192,6 +211,6 @@ export function evaluateRolls(parsedData, rawRolls) {
     successes,
     details,
     textual: rollStr,
-    parsedData
+    parsedData,
   };
 }

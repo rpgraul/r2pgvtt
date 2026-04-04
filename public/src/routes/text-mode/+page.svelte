@@ -1,50 +1,50 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Button from '$components/ui/Button.svelte';
-  import Badge from '$components/ui/Badge.svelte';
-  import { ScrollArea } from '$components/ui/scroll-area/index.js';
-  import RichTextEditor from '$components/editor/RichTextEditor.svelte';
-  import { FileText, Save, Plus } from 'lucide-svelte';
-  import CardDialog from '$components/grid/CardDialog.svelte';
-  
-  let selectedItem = $state(null);
-  let editedContent = $state('');
-  let isEditing = $state(false);
-  let showNewCardDialog = $state(false);
-  
-  const items = $derived(gameState.items);
-  
-  function selectItem(item) {
-    selectedItem = item;
-    editedContent = item.conteudo || '';
+import { gameState } from '$lib/state/game.svelte.ts';
+import Button from '$components/ui/Button.svelte';
+import Badge from '$components/ui/Badge.svelte';
+import { ScrollArea } from '$components/ui/scroll-area/index.js';
+import RichTextEditor from '$components/editor/RichTextEditor.svelte';
+import { FileText, Save, Plus } from 'lucide-svelte';
+import CardDialog from '$components/grid/CardDialog.svelte';
+
+let selectedItem = $state(null);
+let editedContent = $state('');
+let isEditing = $state(false);
+let showNewCardDialog = $state(false);
+
+const items = $derived(gameState.items);
+
+function selectItem(item) {
+  selectedItem = item;
+  editedContent = item.conteudo || '';
+  isEditing = false;
+}
+
+async function handleSaveContent() {
+  if (!selectedItem) return;
+
+  try {
+    await gameState.editCard(selectedItem.id, {
+      conteudo: editedContent,
+    });
+    selectedItem = { ...selectedItem, conteudo: editedContent };
     isEditing = false;
+  } catch (error) {
+    console.error('Error saving:', error);
   }
-  
-  async function handleSaveContent() {
-    if (!selectedItem) return;
-    
-    try {
-      await gameState.editCard(selectedItem.id, {
-        conteudo: editedContent
-      });
-      selectedItem = { ...selectedItem, conteudo: editedContent };
-      isEditing = false;
-    } catch (error) {
-      console.error('Error saving:', error);
-    }
+}
+
+function toggleEdit() {
+  if (isEditing) {
+    handleSaveContent();
+  } else {
+    isEditing = true;
   }
-  
-  function toggleEdit() {
-    if (isEditing) {
-      handleSaveContent();
-    } else {
-      isEditing = true;
-    }
-  }
-  
-  function getCategoryIcon(cat) {
-    return '📝';
-  }
+}
+
+function getCategoryIcon(cat) {
+  return '📝';
+}
 </script>
 
 <main class="container px-4 py-6 h-[calc(100vh-64px)]">

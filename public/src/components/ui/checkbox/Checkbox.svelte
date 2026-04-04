@@ -1,17 +1,13 @@
 <script>
-  import { cn } from '$lib/utils/cn';
-  import { Check } from 'lucide-svelte';
-  
-  let {
-    checked = $bindable(false),
-    onCheckedChange,
-    class: className
-  } = $props();
-  
-  function toggle() {
-    checked = !checked;
-    onCheckedChange?.(checked);
-  }
+import { cn } from '$lib/utils/cn';
+import { Check } from 'lucide-svelte';
+
+let { checked = $bindable(false), onCheckedChange, class: className } = $props();
+
+function toggle() {
+  checked = !checked;
+  onCheckedChange?.(checked);
+}
 </script>
 
 <button

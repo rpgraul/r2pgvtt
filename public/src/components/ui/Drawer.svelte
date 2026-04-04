@@ -1,24 +1,24 @@
 <script>
-  import { cn } from '$lib/utils/cn.js';
-  import { X } from 'lucide-svelte';
-  
-  let {
-    open = $bindable(false),
-    side = 'right',
-    class: className = '',
-    children,
-    ...restProps
-  } = $props();
-  
-  function handleOverlayClick() {
+import { cn } from '$lib/utils/cn.js';
+import { X } from 'lucide-svelte';
+
+let {
+  open = $bindable(false),
+  side = 'right',
+  class: className = '',
+  children,
+  ...restProps
+} = $props();
+
+function handleOverlayClick() {
+  open = false;
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
     open = false;
   }
-  
-  function handleKeydown(e) {
-    if (e.key === 'Escape') {
-      open = false;
-    }
-  }
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

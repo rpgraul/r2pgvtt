@@ -1,22 +1,22 @@
 <script>
-  import { cn } from '$lib/utils/cn';
-  import { ChevronDown } from 'lucide-svelte';
-  
-  let {
-    value = $bindable(''),
-    placeholder = 'Select option',
-    items = [],
-    onValueChange,
-    class: className
-  } = $props();
-  
-  let open = $state(false);
-  
-  function selectItem(item) {
-    value = item.value;
-    open = false;
-    onValueChange?.(item.value);
-  }
+import { cn } from '$lib/utils/cn';
+import { ChevronDown } from 'lucide-svelte';
+
+let {
+  value = $bindable(''),
+  placeholder = 'Select option',
+  items = [],
+  onValueChange,
+  class: className,
+} = $props();
+
+let open = $state(false);
+
+function selectItem(item) {
+  value = item.value;
+  open = false;
+  onValueChange?.(item.value);
+}
 </script>
 
 <div class={cn("relative", className)}>

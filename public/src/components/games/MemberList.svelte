@@ -1,58 +1,58 @@
 <script lang="ts">
-  import type { GameMemberWithProfile } from '$lib/supabase/types';
-  import { gameState } from '$lib/state/game.svelte';
-  import { Trash2 } from 'lucide-svelte';
+import type { GameMemberWithProfile } from '$lib/supabase/types';
+import { gameState } from '$lib/state/game.svelte';
+import { Trash2 } from 'lucide-svelte';
 
-  interface Props {
-    members: GameMemberWithProfile[];
-    currentUserId: string;
-    userRole: string | null;
-    gameId: string;
-    onMemberRemoved?: () => void;
+interface Props {
+  members: GameMemberWithProfile[];
+  currentUserId: string;
+  userRole: string | null;
+  gameId: string;
+  onMemberRemoved?: () => void;
+}
+
+let { members, currentUserId, userRole, gameId, onMemberRemoved }: Props = $props();
+
+function getRoleBadgeClass(role: string): string {
+  switch (role) {
+    case 'narrador':
+      return 'bg-purple-500/20 text-purple-400';
+    case 'assistente':
+      return 'bg-blue-500/20 text-blue-400';
+    default:
+      return 'bg-green-500/20 text-green-400';
   }
+}
 
-  let { members, currentUserId, userRole, gameId, onMemberRemoved }: Props = $props();
-
-  function getRoleBadgeClass(role: string): string {
-    switch (role) {
-      case 'narrador':
-        return 'bg-purple-500/20 text-purple-400';
-      case 'assistente':
-        return 'bg-blue-500/20 text-blue-400';
-      default:
-        return 'bg-green-500/20 text-green-400';
-    }
+function getRoleLabel(role: string): string {
+  switch (role) {
+    case 'narrador':
+      return 'Mestre';
+    case 'assistente':
+      return 'Assistente';
+    default:
+      return 'Jogador';
   }
+}
 
-  function getRoleLabel(role: string): string {
-    switch (role) {
-      case 'narrador':
-        return 'Mestre';
-      case 'assistente':
-        return 'Assistente';
-      default:
-        return 'Jogador';
-    }
-  }
+function canRemove(targetRole: string, targetUserId: string): boolean {
+  if (targetUserId === currentUserId) return false;
 
-  function canRemove(targetRole: string, targetUserId: string): boolean {
-    if (targetUserId === currentUserId) return false;
-    
-    if (userRole === 'narrador') return true;
-    
-    if (userRole === 'assistente' && targetRole === 'jogador') return true;
-    
-    return false;
-  }
+  if (userRole === 'narrador') return true;
 
-  async function handleRemove(userId: string, displayName: string) {
-    if (!confirm(`Remover ${displayName} da mesa?`)) return;
-    
-    const success = await gameState.removeMember(gameId, userId);
-    if (success) {
-      onMemberRemoved?.();
-    }
+  if (userRole === 'assistente' && targetRole === 'jogador') return true;
+
+  return false;
+}
+
+async function handleRemove(userId: string, displayName: string) {
+  if (!confirm(`Remover ${displayName} da mesa?`)) return;
+
+  const success = await gameState.removeMember(gameId, userId);
+  if (success) {
+    onMemberRemoved?.();
   }
+}
 </script>
 
 <div class="space-y-3">

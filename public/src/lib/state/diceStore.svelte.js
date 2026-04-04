@@ -12,13 +12,13 @@ function createDiceStore() {
   let diceBoxInstance = null;
   let diceBoxResolve = null;
   let diceBoxData = null;
-  
+
   // Custom Dice Color
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
-    typeof window !== 'undefined' 
-      ? localStorage.getItem('rpgboard_dice_color') || defaultColor 
-      : defaultColor
+    typeof window !== 'undefined'
+      ? localStorage.getItem('rpgboard_dice_color') || defaultColor
+      : defaultColor,
   );
 
   function setDiceColor(color) {
@@ -34,7 +34,7 @@ function createDiceStore() {
   const canDismiss = $derived(pendingAlerts.length === 0 && !hasActiveRolls());
 
   function hasActiveRolls() {
-    return activeDice.some(d => d.rolling);
+    return activeDice.some((d) => d.rolling);
   }
 
   function getUserName() {
@@ -58,7 +58,7 @@ function createDiceStore() {
         if (diceBoxResolve && diceBoxData) {
           const diceId = diceBoxData.id;
           console.log('[DiceStore] Resolving dice:', diceId, result);
-          
+
           const evaluated = evaluateRolls(diceBoxData.parsedData, result.rolls);
           // Adiciona os dados passados para fallback
           evaluated.formula = diceBoxData.formula;
@@ -71,7 +71,7 @@ function createDiceStore() {
         } else {
           console.log('[DiceStore] No resolve or data, ignoring result');
         }
-      }
+      },
     });
 
     diceInitializing = diceBoxInstance.init().then(() => {
@@ -100,15 +100,18 @@ function createDiceStore() {
 
       const diceId = generateId();
       const diceType = `d${parsedData.sides}`;
-      
-      activeDice = [...activeDice, {
-        id: diceId,
-        formula,
-        parsedData, // Guarda estrutura completa
-        diceType,
-        rolling: true
-      }];
-      
+
+      activeDice = [
+        ...activeDice,
+        {
+          id: diceId,
+          formula,
+          parsedData, // Guarda estrutura completa
+          diceType,
+          rolling: true,
+        },
+      ];
+
       hasUserDismissed = false;
       isDiceVisible = true;
 
@@ -130,7 +133,7 @@ function createDiceStore() {
 
       if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
         console.error('[DiceStore] DiceBox not ready after wait');
-        activeDice = activeDice.filter(d => d.id !== diceId);
+        activeDice = activeDice.filter((d) => d.id !== diceId);
         reject(new Error('DiceBox not ready'));
         return;
       }
@@ -144,49 +147,50 @@ function createDiceStore() {
         console.error('[DiceStore] Roll error:', error);
         const fallback = fallbackRoll(parsedData);
         completeDice(diceId, fallback);
-        activeDice = activeDice.filter(d => d.id !== diceId);
+        activeDice = activeDice.filter((d) => d.id !== diceId);
         resolve(fallback);
       }
     });
   }
 
   function fallbackRoll(parsedData) {
-    let rawRolls = [];
+    const rawRolls = [];
     for (let i = 0; i < parsedData.count; i++) {
-       rawRolls.push(Math.floor(Math.random() * parsedData.sides) + 1);
+      rawRolls.push(Math.floor(Math.random() * parsedData.sides) + 1);
     }
     return evaluateRolls(parsedData, rawRolls);
   }
 
   function completeDice(id, result) {
-    activeDice = activeDice.map(d => 
-      d.id === id ? { ...d, rolling: false, result } : d
-    );
+    activeDice = activeDice.map((d) => (d.id === id ? { ...d, rolling: false, result } : d));
 
-    pendingAlerts = [...pendingAlerts, {
-      id,
-      userName: getUserName(),
-      formula: result.parsedData?.original || result.formula,
-      result: result.total,
-      successes: result.successes,
-      textual: result.textual,
-      rolls: result.details ? result.details.map(d => d.value) : result.rolls,
-      diceType: result.parsedData ? `d${result.parsedData.sides}` : result.diceType,
-      timestamp: Date.now()
-    }];
+    pendingAlerts = [
+      ...pendingAlerts,
+      {
+        id,
+        userName: getUserName(),
+        formula: result.parsedData?.original || result.formula,
+        result: result.total,
+        successes: result.successes,
+        textual: result.textual,
+        rolls: result.details ? result.details.map((d) => d.value) : result.rolls,
+        diceType: result.parsedData ? `d${result.parsedData.sides}` : result.diceType,
+        timestamp: Date.now(),
+      },
+    ];
 
     processNextAlert();
   }
 
   function processNextAlert() {
     if (alertTimeoutId) return;
-    
+
     if (pendingAlerts.length > 0) {
       const next = pendingAlerts[0];
       pendingAlerts = pendingAlerts.slice(1);
-      
+
       displayedAlerts = [...displayedAlerts, next];
-      
+
       alertTimeoutId = setTimeout(() => {
         dismissAlert(next.id);
         alertTimeoutId = null;
@@ -196,7 +200,7 @@ function createDiceStore() {
   }
 
   function dismissAlert(id) {
-    displayedAlerts = displayedAlerts.filter(a => a.id !== id);
+    displayedAlerts = displayedAlerts.filter((a) => a.id !== id);
   }
 
   function dismissAll() {
@@ -232,14 +236,28 @@ function createDiceStore() {
   }
 
   return {
-    get activeDice() { return activeDice; },
-    get pendingAlerts() { return pendingAlerts; },
-    get displayedAlerts() { return displayedAlerts; },
-    get canDismiss() { return canDismiss; },
-    get hasUserDismissed() { return hasUserDismissed; },
-    get isDiceVisible() { return isDiceVisible; },
-    get currentDiceColor() { return currentDiceColor; },
-    
+    get activeDice() {
+      return activeDice;
+    },
+    get pendingAlerts() {
+      return pendingAlerts;
+    },
+    get displayedAlerts() {
+      return displayedAlerts;
+    },
+    get canDismiss() {
+      return canDismiss;
+    },
+    get hasUserDismissed() {
+      return hasUserDismissed;
+    },
+    get isDiceVisible() {
+      return isDiceVisible;
+    },
+    get currentDiceColor() {
+      return currentDiceColor;
+    },
+
     rollDice,
     dismissAlert,
     dismissAll,
@@ -249,7 +267,7 @@ function createDiceStore() {
     getDiceBox,
     processNextAlert,
     hasActiveRolls,
-    setDiceColor
+    setDiceColor,
   };
 }
 

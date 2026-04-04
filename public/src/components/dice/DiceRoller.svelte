@@ -1,114 +1,116 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import { useDiceBox } from '$lib/actions/useDiceBox.js';
-  import Button from '../ui/Button.svelte';
-  
-  const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
-  let customFormula = $state('');
-  let lastResult = $state(null);
-  let diceContainer;
-  let diceBox = $state(null);
-  let isLoading = $state(false);
-  
-  onMount(() => {
-    if (diceContainer) {
-      diceBox = useDiceBox(diceContainer, {
-        onRollComplete: (result) => {
-          lastResult = result;
-          
-          if (gameState.user) {
-            if (result.shouldSum || result.rolls.length <= 1) {
-              if (result.rolls.length > 1) {
-                gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`);
-              } else {
-                gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
-              }
+import { onMount, onDestroy } from 'svelte';
+import { gameState } from '$lib/state/game.svelte.ts';
+import { useDiceBox } from '$lib/actions/useDiceBox.js';
+import Button from '../ui/Button.svelte';
+
+const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+let customFormula = $state('');
+let lastResult = $state(null);
+let diceContainer;
+let diceBox = $state(null);
+let isLoading = $state(false);
+
+onMount(() => {
+  if (diceContainer) {
+    diceBox = useDiceBox(diceContainer, {
+      onRollComplete: (result) => {
+        lastResult = result;
+
+        if (gameState.user) {
+          if (result.shouldSum || result.rolls.length <= 1) {
+            if (result.rolls.length > 1) {
+              gameState.sendMessage(
+                `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
+              );
             } else {
-              gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}**`);
+              gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
             }
-            gameState.sendRoll(result.formula, result.total, { 
-              rolls: result.rolls,
-              diceType: result.diceType 
-            });
+          } else {
+            gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}**`);
           }
+          gameState.sendRoll(result.formula, result.total, {
+            rolls: result.rolls,
+            diceType: result.diceType,
+          });
         }
-      });
-    }
-    
-    return () => {
-      if (diceBox) {
-        diceBox.destroy();
-      }
-    };
-  });
-  
-  async function rollDice(dice) {
-    if (!diceBox || !diceBox.isInitialized()) {
-      await fallbackRoll(dice);
-      return;
-    }
-    
-    isLoading = true;
-    try {
-      await diceBox.roll(`1${dice}`);
-    } catch (error) {
-      console.error('Dice roll error:', error);
-      await fallbackRoll(dice);
-    } finally {
-      isLoading = false;
-    }
+      },
+    });
   }
-  
-  async function rollCustom() {
-    if (!customFormula.trim()) return;
-    
-    if (!diceBox || !diceBox.isInitialized()) {
-      await fallbackCustomRoll();
-      return;
+
+  return () => {
+    if (diceBox) {
+      diceBox.destroy();
     }
-    
-    isLoading = true;
-    try {
-      await diceBox.roll(customFormula);
-    } catch (error) {
-      console.error('Dice roll error:', error);
-      await fallbackCustomRoll();
-    } finally {
-      isLoading = false;
-    }
+  };
+});
+
+async function rollDice(dice) {
+  if (!diceBox || !diceBox.isInitialized()) {
+    await fallbackRoll(dice);
+    return;
   }
-  
-  function fallbackRoll(dice) {
-    const result = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
-    lastResult = { dice, result, total: result, rolls: [result] };
-    
-    if (gameState.user) {
-      gameState.sendRoll(dice, result, { dice, rolls: [result] });
-    }
+
+  isLoading = true;
+  try {
+    await diceBox.roll(`1${dice}`);
+  } catch (error) {
+    console.error('Dice roll error:', error);
+    await fallbackRoll(dice);
+  } finally {
+    isLoading = false;
   }
-  
-  function fallbackCustomRoll() {
-    const match = customFormula.match(/(\d+)d(\d+)/i);
-    if (!match) return;
-    
-    const count = parseInt(match[1]);
-    const sides = parseInt(match[2]);
-    let total = 0;
-    const details = [];
-    
-    for (let i = 0; i < count; i++) {
-      const roll = Math.floor(Math.random() * sides) + 1;
-      details.push(roll);
-      total += roll;
-    }
-    
-    lastResult = { dice: customFormula, result: total, details };
-    
-    if (gameState.user) {
-      gameState.sendRoll(customFormula, total, { details, count, sides });
-    }
+}
+
+async function rollCustom() {
+  if (!customFormula.trim()) return;
+
+  if (!diceBox || !diceBox.isInitialized()) {
+    await fallbackCustomRoll();
+    return;
   }
+
+  isLoading = true;
+  try {
+    await diceBox.roll(customFormula);
+  } catch (error) {
+    console.error('Dice roll error:', error);
+    await fallbackCustomRoll();
+  } finally {
+    isLoading = false;
+  }
+}
+
+function fallbackRoll(dice) {
+  const result = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
+  lastResult = { dice, result, total: result, rolls: [result] };
+
+  if (gameState.user) {
+    gameState.sendRoll(dice, result, { dice, rolls: [result] });
+  }
+}
+
+function fallbackCustomRoll() {
+  const match = customFormula.match(/(\d+)d(\d+)/i);
+  if (!match) return;
+
+  const count = parseInt(match[1]);
+  const sides = parseInt(match[2]);
+  let total = 0;
+  const details = [];
+
+  for (let i = 0; i < count; i++) {
+    const roll = Math.floor(Math.random() * sides) + 1;
+    details.push(roll);
+    total += roll;
+  }
+
+  lastResult = { dice: customFormula, result: total, details };
+
+  if (gameState.user) {
+    gameState.sendRoll(customFormula, total, { details, count, sides });
+  }
+}
 </script>
 
 <div class="space-y-4">

@@ -1,30 +1,30 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import Input from './ui/Input.svelte';
-  import { Search } from 'lucide-svelte';
-  import { onDestroy } from 'svelte';
-  
-  let searchValue = $state('');
-  
-  onDestroy(() => {
-    if (debounceTimer) clearTimeout(debounceTimer);
-  });
-  let debounceTimer = null;
-  
-  function handleInput(e) {
-    searchValue = e.target.value;
-    
-    if (debounceTimer) clearTimeout(debounceTimer);
-    
-    debounceTimer = setTimeout(() => {
-      gameState.setSearch(searchValue);
-    }, 300);
-  }
-  
-  function handleClear() {
-    searchValue = '';
-    gameState.setSearch('');
-  }
+import { gameState } from '$lib/state/game.svelte.ts';
+import Input from './ui/Input.svelte';
+import { Search } from 'lucide-svelte';
+import { onDestroy } from 'svelte';
+
+let searchValue = $state('');
+
+onDestroy(() => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+});
+let debounceTimer = null;
+
+function handleInput(e) {
+  searchValue = e.target.value;
+
+  if (debounceTimer) clearTimeout(debounceTimer);
+
+  debounceTimer = setTimeout(() => {
+    gameState.setSearch(searchValue);
+  }, 300);
+}
+
+function handleClear() {
+  searchValue = '';
+  gameState.setSearch('');
+}
 </script>
 
 <div class="relative">

@@ -1,13 +1,13 @@
 <script>
-  import { cn } from '$lib/utils/cn.js';
-  
-  let {
-    class: className = '',
-    type = 'text',
-    value = $bindable(''),
-    placeholder = '',
-    ...restProps
-  } = $props();
+import { cn } from '$lib/utils/cn.js';
+
+let {
+  class: className = '',
+  type = 'text',
+  value = $bindable(''),
+  placeholder = '',
+  ...restProps
+} = $props();
 </script>
 
 <input

@@ -1,60 +1,60 @@
 <script>
-  import { onMount } from 'svelte';
-  import { audioStore } from '$lib/state/audio.svelte.ts';
-  import { authState } from '$lib/state/auth.svelte.ts';
-  import { Play, Pause, Volume2, VolumeX, Settings, RefreshCw, Music } from 'lucide-svelte';
-  import { cn } from '$lib/utils/cn.js';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  
-  let showSettings = $state(false);
-  let videoUrl = $state('');
-  
-  const isNarrator = $derived(authState.role === 'narrador');
-  const currentVideoId = $derived(audioStore.currentVideoId);
-  const status = $derived(audioStore.status);
-  const volume = $derived(audioStore.volume);
-  const isPlaying = $derived(status === 'playing');
-  const hasVideo = $derived(!!currentVideoId);
-  
-  function extractVideoId(url) {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /^([a-zA-Z0-9_-]{11})$/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    return null;
+import { onMount } from 'svelte';
+import { audioStore } from '$lib/state/audio.svelte.ts';
+import { authState } from '$lib/state/auth.svelte.ts';
+import { Play, Pause, Volume2, VolumeX, Settings, RefreshCw, Music } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn.js';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+
+let showSettings = $state(false);
+let videoUrl = $state('');
+
+const isNarrator = $derived(authState.role === 'narrador');
+const currentVideoId = $derived(audioStore.currentVideoId);
+const status = $derived(audioStore.status);
+const volume = $derived(audioStore.volume);
+const isPlaying = $derived(status === 'playing');
+const hasVideo = $derived(!!currentVideoId);
+
+function extractVideoId(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /^([a-zA-Z0-9_-]{11})$/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
   }
-  
-  function handleSetVideo() {
-    const videoId = extractVideoId(videoUrl);
-    if (videoId) {
-      audioStore.play(videoId);
-      videoUrl = '';
-      showSettings = false;
-    }
+  return null;
+}
+
+function handleSetVideo() {
+  const videoId = extractVideoId(videoUrl);
+  if (videoId) {
+    audioStore.play(videoId);
+    videoUrl = '';
+    showSettings = false;
   }
-  
-  function handlePlayPause() {
-    if (status === 'playing') {
-      audioStore.pause();
-    } else {
-      audioStore.resume();
-    }
+}
+
+function handlePlayPause() {
+  if (status === 'playing') {
+    audioStore.pause();
+  } else {
+    audioStore.resume();
   }
-  
-  function handleVolumeChange(e) {
-    const newVolume = parseFloat(e.target.value) * 100;
-    audioStore.setVolume(newVolume);
-  }
-  
-  function handleToggleMute() {
-    audioStore.setVolume(volume > 0 ? 0 : 80);
-  }
+}
+
+function handleVolumeChange(e) {
+  const newVolume = parseFloat(e.target.value) * 100;
+  audioStore.setVolume(newVolume);
+}
+
+function handleToggleMute() {
+  audioStore.setVolume(volume > 0 ? 0 : 80);
+}
 </script>
 
 <div class="space-y-4">

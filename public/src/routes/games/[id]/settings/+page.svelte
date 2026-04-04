@@ -1,82 +1,82 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { gameState } from '$lib/state/game.svelte';
-  import { authState } from '$lib/state/auth.svelte';
-  import type { Game } from '$lib/supabase/types';
-  import { ArrowLeft, Save, Copy, Check } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
-  import Input from '$components/ui/Input.svelte';
-  import InviteLink from '$components/games/InviteLink.svelte';
-  import MemberList from '$components/games/MemberList.svelte';
-  import type { GameMemberWithProfile } from '$lib/supabase/types';
+import { page } from '$app/stores';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { gameState } from '$lib/state/game.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import type { Game } from '$lib/supabase/types';
+import { ArrowLeft, Save, Copy, Check } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+import InviteLink from '$components/games/InviteLink.svelte';
+import MemberList from '$components/games/MemberList.svelte';
+import type { GameMemberWithProfile } from '$lib/supabase/types';
 
-  let game = $state<Game | null>(null);
-  let members = $state<GameMemberWithProfile[]>([]);
-  let userRole = $state<string | null>(null);
-  let isLoading = $state(true);
-  let isSaving = $state(false);
-  let saveMessage = $state('');
+let game = $state<Game | null>(null);
+let members = $state<GameMemberWithProfile[]>([]);
+let userRole = $state<string | null>(null);
+let isLoading = $state(true);
+let isSaving = $state(false);
+let saveMessage = $state('');
 
-  let nome = $state('');
-  let sistema = $state('');
-  let moedaPadrao = $state('');
+let nome = $state('');
+let sistema = $state('');
+let moedaPadrao = $state('');
 
-  const gameId = $derived($page.params.id);
+const gameId = $derived($page.params.id);
 
-  onMount(async () => {
-    if (!authState.isAuthenticated) {
-      await goto('/auth/login');
-      return;
-    }
+onMount(async () => {
+  if (!authState.isAuthenticated) {
+    await goto('/auth/login');
+    return;
+  }
 
-    userRole = await gameState.checkUserGameMembership(gameId);
+  userRole = await gameState.checkUserGameMembership(gameId);
 
-    if (!userRole || userRole === 'jogador') {
-      await goto(`/games/${gameId}`);
-      return;
-    }
+  if (!userRole || userRole === 'jogador') {
+    await goto(`/games/${gameId}`);
+    return;
+  }
 
-    await loadGame();
-    isLoading = false;
+  await loadGame();
+  isLoading = false;
+});
+
+async function loadGame() {
+  game = await gameState.getGameById(gameId);
+  if (!game) {
+    await goto('/games');
+    return;
+  }
+
+  nome = game.nome;
+  sistema = game.sistema;
+  moedaPadrao = game.moeda_padrao;
+
+  members = await gameState.getGameMembers(gameId);
+}
+
+async function handleSave() {
+  if (!nome.trim()) return;
+
+  isSaving = true;
+  saveMessage = '';
+
+  const success = await gameState.updateGame(gameId, {
+    nome: nome.trim(),
+    sistema: sistema.trim() || 'RPG Genérico',
+    moeda_padrao: moedaPadrao.trim() || 'moedas de ouro',
   });
 
-  async function loadGame() {
-    game = await gameState.getGameById(gameId);
-    if (!game) {
-      await goto('/games');
-      return;
-    }
+  isSaving = false;
 
-    nome = game.nome;
-    sistema = game.sistema;
-    moedaPadrao = game.moeda_padrao;
-
-    members = await gameState.getGameMembers(gameId);
+  if (success) {
+    saveMessage = 'Alterações salvas!';
+    setTimeout(() => (saveMessage = ''), 3000);
+  } else {
+    saveMessage = 'Erro ao salvar';
   }
-
-  async function handleSave() {
-    if (!nome.trim()) return;
-
-    isSaving = true;
-    saveMessage = '';
-
-    const success = await gameState.updateGame(gameId, {
-      nome: nome.trim(),
-      sistema: sistema.trim() || 'RPG Genérico',
-      moeda_padrao: moedaPadrao.trim() || 'moedas de ouro'
-    });
-
-    isSaving = false;
-
-    if (success) {
-      saveMessage = 'Alterações salvas!';
-      setTimeout(() => saveMessage = '', 3000);
-    } else {
-      saveMessage = 'Erro ao salvar';
-    }
-  }
+}
 </script>
 
 <svelte:head>

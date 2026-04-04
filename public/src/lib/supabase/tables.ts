@@ -26,7 +26,7 @@ export const db = {
 
     const { data, error } = await supabase.rpc('create_game_with_owner', {
       p_nome: nome,
-      p_owner_id: userId
+      p_owner_id: userId,
     });
 
     if (error) {
@@ -51,13 +51,11 @@ export const db = {
       throw new Error('Código de convite inválido');
     }
 
-    const { error: memberError } = await supabase
-      .from('game_members')
-      .insert({
-        game_id: game.id,
-        user_id: userId,
-        role: 'jogador'
-      });
+    const { error: memberError } = await supabase.from('game_members').insert({
+      game_id: game.id,
+      user_id: userId,
+      role: 'jogador',
+    });
 
     if (memberError) {
       console.error('Error joining game:', memberError);
@@ -94,10 +92,7 @@ export const db = {
   },
 
   async deleteGame(gameId: string) {
-    const { error } = await supabase
-      .from('games')
-      .delete()
-      .eq('id', gameId);
+    const { error } = await supabase.from('games').delete().eq('id', gameId);
 
     if (error) throw error;
   },
@@ -115,10 +110,7 @@ export const db = {
 
   // Items (Cards)
   async subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
-    let query = supabase
-      .from('items')
-      .select('*')
-      .order('order', { ascending: true });
+    let query = supabase.from('items').select('*').order('order', { ascending: true });
 
     if (gameId) {
       query = query.eq('game_id', gameId);
@@ -133,7 +125,8 @@ export const db = {
 
     callback(data || []);
 
-    return supabase.channel(`items:${gameId || 'global'}`)
+    return supabase
+      .channel(`items:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
         db.subscribeToItems(gameId, callback);
       })
@@ -145,7 +138,7 @@ export const db = {
       .from('items')
       .insert({
         ...itemData,
-        created_by: authState.displayName
+        created_by: authState.displayName,
       })
       .select()
       .single();
@@ -159,7 +152,7 @@ export const db = {
       .from('items')
       .update({
         ...itemData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', itemId);
 
@@ -167,10 +160,7 @@ export const db = {
   },
 
   async deleteItem(itemId: string) {
-    const { error } = await supabase
-      .from('items')
-      .delete()
-      .eq('id', itemId);
+    const { error } = await supabase.from('items').delete().eq('id', itemId);
 
     if (error) throw error;
   },
@@ -178,7 +168,7 @@ export const db = {
   async reorderItems(items: { id: string; order: number }[]) {
     const updates = items.map((item, index) => ({
       id: item.id,
-      order: index
+      order: index,
     }));
 
     const { error } = await supabase.from('items').upsert(updates, { onConflict: 'id' });
@@ -187,10 +177,7 @@ export const db = {
 
   // Chat Messages
   async subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
-    let query = supabase
-      .from('chat_messages')
-      .select('*')
-      .order('created_at', { ascending: true });
+    let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
 
     if (gameId) {
       query = query.eq('game_id', gameId);
@@ -205,7 +192,8 @@ export const db = {
 
     callback(data || []);
 
-    return supabase.channel(`chat:${gameId || 'global'}`)
+    return supabase
+      .channel(`chat:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         db.subscribeToChat(gameId, callback);
       })
@@ -218,7 +206,7 @@ export const db = {
       .insert({
         text,
         type,
-        sender: sender || authState.displayName || 'Anonymous'
+        sender: sender || authState.displayName || 'Anonymous',
       })
       .select()
       .single();
@@ -248,7 +236,8 @@ export const db = {
 
     callback(data || []);
 
-    return supabase.channel(`rolls:${gameId || 'global'}`)
+    return supabase
+      .channel(`rolls:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls' }, () => {
         db.subscribeToRolls(gameId, callback);
       })
@@ -262,7 +251,7 @@ export const db = {
         user_name: rollData.userName,
         formula: rollData.formula,
         result: rollData.result,
-        details: rollData.details || []
+        details: rollData.details || [],
       })
       .select()
       .single();
@@ -280,11 +269,11 @@ export const db = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    
+
     if (data) {
       return {
         ...data,
-        current_time: data.current_video_time
+        current_time: data.current_video_time,
       };
     }
     return data;
@@ -292,20 +281,23 @@ export const db = {
 
   async updateAudioState(gameId: string, updates: any) {
     const mappedUpdates: any = { ...updates };
-    
+
     if ('current_time' in mappedUpdates) {
       mappedUpdates.current_video_time = mappedUpdates.current_time;
       delete mappedUpdates.current_time;
     }
-    
+
     const { data, error } = await supabase
       .from('audio_state')
-      .upsert({
-        game_id: gameId,
-        ...mappedUpdates,
-        updated_at: new Date().toISOString(),
-        created_by: authState.displayName
-      }, { onConflict: 'game_id' })
+      .upsert(
+        {
+          game_id: gameId,
+          ...mappedUpdates,
+          updated_at: new Date().toISOString(),
+          created_by: authState.displayName,
+        },
+        { onConflict: 'game_id' },
+      )
       .select()
       .single();
 
@@ -326,14 +318,15 @@ export const db = {
   },
 
   async updateSettings(key: string, value: any) {
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert({
+    const { error } = await supabase.from('site_settings').upsert(
+      {
         key,
         value,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    );
 
     if (error) throw error;
-  }
+  },
 };

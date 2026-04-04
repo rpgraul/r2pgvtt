@@ -1,8 +1,8 @@
 # Migration: Firebase → Supabase
 
-**Status**: In Progress  
+**Status**: Completed  
 **Started**: 2026-04-02  
-**Target**: Complete Auth + Games flow
+**Completed**: 2026-04-03
 
 ---
 
@@ -24,10 +24,12 @@ This migration moves the application from Firebase to Supabase for:
 | `.env` | Added `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` |
 | `src/lib/supabase/client.ts` | New - Supabase client |
 | `src/lib/supabase/types.ts` | New - TypeScript types |
+| `src/lib/supabase/tables.ts` | New - Database operations |
 | `src/lib/state/auth.svelte.ts` | Refactored to use Supabase |
 | `src/lib/state/game.svelte.ts` | New - Games state with Supabase |
 | `src/routes/auth/login/+page.svelte` | New - Login page |
 | `src/routes/auth/callback/+server.ts` | New - OAuth callback |
+| `src/routes/auth/callback/+page.svelte` | New - OAuth callback page |
 | `src/routes/games/+page.svelte` | New - Games dashboard |
 | `src/routes/games/[id]/+page.svelte` | New - Game page |
 | `src/routes/games/[id]/settings/+page.svelte` | New - Settings page |
@@ -39,75 +41,68 @@ This migration moves the application from Firebase to Supabase for:
 | `src/components/games/InviteLink.svelte` | New - Copy invite link |
 | `src/components/games/MemberList.svelte` | New - Members list |
 | `src/components/Header.svelte` | Updated - Auth buttons |
-| `src/lib/state/diceStore.svelte.js` | Updated - Use authState |
-| `src/lib/state/audio.svelte.ts` | Updated - Use authState |
-| `src/lib/state/game.svelte.js` | Updated - Use authState |
+| `biome.json` | New - Biome linting configuration |
 
-### 2. Database Schema
+### 2. Database Schema (Supabase SQL Editor)
 
-| File | Content |
-|------|---------|
-| `specs/001-auth-and-games/docs/schema.sql` | Complete SQL schema |
+All tables and functions were created:
+- `profiles` - User profiles
+- `games` - Game tables
+- `game_members` - Game membership with roles
+- `generate_invite_code()` - Generate unique invite codes
+- `create_game_with_owner()` - Create game with owner
+- `can_join_game()` - Check game limit
+- RLS policies for security
+- Triggers for automatic profile creation
 
----
+### 3. Google OAuth
 
-## Remaining Tasks
-
-### Database Setup (Supabase Dashboard)
-
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your project
-3. Go to **SQL Editor**
-4. Run the contents of `specs/001-auth-and-games/docs/schema.sql`
-
-### Google OAuth Configuration
-
-1. Go to **Authentication** > **Providers** > **Google**
-2. Enable Google OAuth
-3. Add your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
-4. Add redirect URL: `https://your-project.supabase.co/auth/v1/callback`
-
-### Environment Variables
-
-Make sure your `.env` has:
-```env
-PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
----
-
-## Data Migration (Future)
-
-When ready to migrate existing data:
-
-1. Export data from Firebase Firestore
-2. Transform to match Supabase schema
-3. Import using Supabase Dashboard or CLI
-
-See `docs/migration/001-firebase-to-supabase.md` for detailed steps.
-
----
-
-## Rollback Plan
-
-If issues arise:
-
-1. Keep Firebase configuration in `.env`
-2. Feature flag to switch between Firebase/Supabase
-3. Revert to Firebase auth module if needed
+- Configured in Supabase Dashboard > Authentication > Providers > Google
+- Redirect URL configured
 
 ---
 
 ## Testing Checklist
 
-- [ ] Google OAuth login works
-- [ ] Email/password login works
-- [ ] Create account with display name works
-- [ ] Games dashboard shows user's games
-- [ ] Create game generates unique invite code
-- [ ] Join game via invite link works
-- [ ] 3-game limit is enforced
-- [ ] Settings page accessible by narrator/assistant only
-- [ ] Member removal works
-- [ ] Leave game works for players
+- [x] Google OAuth login works
+- [x] Email/password login works
+- [x] Create account with display name works
+- [x] Games dashboard shows user's games
+- [x] Create game generates unique invite code
+- [x] Join game via invite link works
+- [x] 3-game limit is enforced
+- [x] Settings page accessible by narrator/assistant only
+- [x] Member removal works
+- [x] Leave game works for players
+
+---
+
+## Linting
+
+The project now uses Biome for code quality:
+
+```bash
+# Format code
+npx biome format --write src/
+
+# Lint code
+npx biome lint src/
+```
+
+---
+
+## Rollback Plan (Archived)
+
+This section is kept for reference only. Rollback to Firebase is no longer needed.
+
+- Firebase was not actually being used in the frontend
+- All authentication flows have been migrated to Supabase
+- Database operations use Supabase exclusively
+
+---
+
+## Next Steps
+
+- Consider adding more features to the games system
+- Implement additional RLS policies as needed
+- Add more comprehensive testing

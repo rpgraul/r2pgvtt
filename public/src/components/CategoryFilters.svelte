@@ -1,23 +1,23 @@
 <script>
-  import { ToggleGroup } from 'bits-ui';
-  import { cn } from '$lib/utils/cn.js';
-  import { gameState } from '$lib/state/game.svelte.ts';
-  
-  const categories = [
-    { value: 'all', label: 'Todos', icon: null },
-    { value: 'pj', label: 'Personagem', icon: null },
-    { value: 'monstro', label: 'Monstro', icon: null },
-    { value: 'npc', label: 'NPC', icon: null },
-    { value: 'item', label: 'Item', icon: null },
-    { value: 'anotacao', label: 'Anotação', icon: null }
-  ];
-  
-  let value = $state('all');
-  
-  function handleValueChange(newValue) {
-    value = newValue;
-    gameState.setCategory(newValue === 'all' ? 'all' : newValue);
-  }
+import { ToggleGroup } from 'bits-ui';
+import { cn } from '$lib/utils/cn.js';
+import { gameState } from '$lib/state/game.svelte.ts';
+
+const categories = [
+  { value: 'all', label: 'Todos', icon: null },
+  { value: 'pj', label: 'Personagem', icon: null },
+  { value: 'monstro', label: 'Monstro', icon: null },
+  { value: 'npc', label: 'NPC', icon: null },
+  { value: 'item', label: 'Item', icon: null },
+  { value: 'anotacao', label: 'Anotação', icon: null },
+];
+
+let value = $state('all');
+
+function handleValueChange(newValue) {
+  value = newValue;
+  gameState.setCategory(newValue === 'all' ? 'all' : newValue);
+}
 </script>
 
 <div class="flex flex-wrap gap-2">

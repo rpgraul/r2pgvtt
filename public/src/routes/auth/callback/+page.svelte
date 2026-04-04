@@ -1,32 +1,32 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { authState } from '$lib/state/auth.svelte';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { authState } from '$lib/state/auth.svelte';
 
-  let status = $state<'processing' | 'success' | 'error'>('processing');
-  let message = $state('Processando login...');
+let status = $state<'processing' | 'success' | 'error'>('processing');
+let message = $state('Processando login...');
 
-  onMount(async () => {
-    // O Supabase client automaticamente processa o hash token
-    // Apenas precisamos esperar o auth state ser atualizado
-    
-    await authState.init();
-    
-    // Aguardar um momento para o auth state ser processado
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (authState.isAuthenticated) {
-      status = 'success';
-      message = 'Login realizado com sucesso!';
-      setTimeout(() => {
-        goto('/games');
-      }, 1000);
-    } else {
-      status = 'error';
-      message = 'Erro ao processar login. Tente novamente.';
-    }
-  });
+onMount(async () => {
+  // O Supabase client automaticamente processa o hash token
+  // Apenas precisamos esperar o auth state ser atualizado
+
+  await authState.init();
+
+  // Aguardar um momento para o auth state ser processado
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  if (authState.isAuthenticated) {
+    status = 'success';
+    message = 'Login realizado com sucesso!';
+    setTimeout(() => {
+      goto('/games');
+    }, 1000);
+  } else {
+    status = 'error';
+    message = 'Erro ao processar login. Tente novamente.';
+  }
+});
 </script>
 
 <svelte:head>

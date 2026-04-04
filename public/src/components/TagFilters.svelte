@@ -1,29 +1,29 @@
 <script>
-  import { gameState } from '$lib/state/game.svelte.ts';
-  import { cn } from '$lib/utils/cn.js';
-  import { Check } from 'lucide-svelte';
-  
-  let isOpen = $state(false);
-  
-  const allTags = $derived(gameState.allTags);
-  const selectedTags = $derived(gameState.filters.tags);
-  
-  function toggleTag(tag) {
-    const current = [...selectedTags];
-    const index = current.indexOf(tag);
-    
-    if (index > -1) {
-      current.splice(index, 1);
-    } else {
-      current.push(tag);
-    }
-    
-    gameState.setTags(current);
+import { gameState } from '$lib/state/game.svelte.ts';
+import { cn } from '$lib/utils/cn.js';
+import { Check } from 'lucide-svelte';
+
+let isOpen = $state(false);
+
+const allTags = $derived(gameState.allTags);
+const selectedTags = $derived(gameState.filters.tags);
+
+function toggleTag(tag) {
+  const current = [...selectedTags];
+  const index = current.indexOf(tag);
+
+  if (index > -1) {
+    current.splice(index, 1);
+  } else {
+    current.push(tag);
   }
-  
-  function clearTags() {
-    gameState.setTags([]);
-  }
+
+  gameState.setTags(current);
+}
+
+function clearTags() {
+  gameState.setTags([]);
+}
 </script>
 
 <div class="relative">

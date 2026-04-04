@@ -1,22 +1,22 @@
 <script lang="ts">
-  import type { Game } from '$lib/supabase/types';
-  import { Gamepad2, Calendar } from 'lucide-svelte';
-  import Button from '$components/ui/Button.svelte';
+import type { Game } from '$lib/supabase/types';
+import { Gamepad2, Calendar } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 
-  interface Props {
-    game: Game;
-    userRole?: string;
-  }
+interface Props {
+  game: Game;
+  userRole?: string;
+}
 
-  let { game, userRole }: Props = $props();
+let { game, userRole }: Props = $props();
 
-  function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  }
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 </script>
 
 <a
