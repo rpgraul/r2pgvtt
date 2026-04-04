@@ -276,6 +276,21 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
   - Filtrar items para não-narradores com `currentGameRole !== 'narrador'`
 - **Arquivo**: `src/lib/state/gameState.svelte.ts`
 
+### 6.23 Correção: Badge Oculto removida, borda sutil adicionada
+- **Problema**: Badge "Oculto" não estava visualmente boa
+- **Solução**: 
+  - Remover badge "Oculto" do Card
+  - Adicionar borda tracejada amber (`border-amber-500/50 border-dashed`) apenas para narrador
+- **Arquivo**: `src/components/grid/Card.svelte`
+
+### 6.24 Novo: Supabase Realtime para items
+- **Problema**: Atualizações não apareciam em tempo real para outros usuários
+- **Solução**: 
+  - Habilitar realtime com `ALTER PUBLICATION supabase_realtime ADD TABLE items`
+  - Código já configurado com subscriptions em `subscribeToItems()`
+  - Updates em tempo real via Supabase Realtime broadcast
+- **Arquivo**: `src/lib/supabase/tables.ts`
+
 ---
 
 ## 7. Arquivos Modificados

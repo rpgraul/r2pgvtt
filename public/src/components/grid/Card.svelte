@@ -3,7 +3,7 @@ import { gameState } from '$lib/state/gameState.svelte.ts';
 import { toast } from '$lib/stores/toast.js';
 import Badge from '../ui/Badge.svelte';
 import { cn } from '$lib/utils/cn.js';
-import { Edit, Trash2, Eye, EyeOff } from 'lucide-svelte';
+import { Edit, Trash2 } from 'lucide-svelte';
 
 let { item, onEdit = null } = $props();
 
@@ -53,7 +53,7 @@ async function handleDelete(e) {
 <div 
   class={cn(
     "group relative rounded-xl border bg-card text-card-foreground shadow-sm transition-all overflow-hidden",
-    !item.isVisibleToPlayers && gameState.isNarrator && "border-destructive/50"
+    !item.isVisibleToPlayers && gameState.isNarrator && "border-amber-500/50 border-dashed"
   )}
 >
   {#if item.imagemUrl}
@@ -71,15 +71,6 @@ async function handleDelete(e) {
           <Badge variant={getCategoryVariant(item.category)} class="backdrop-blur-sm">
             {getCategoryLabel(item.category)}
           </Badge>
-        </div>
-      {/if}
-      
-      {#if !item.isVisibleToPlayers && gameState.isNarrator}
-        <div class="absolute top-3 right-3">
-          <span class="text-xs bg-destructive/80 text-white px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-            <EyeOff class="w-3 h-3" />
-            Oculto
-          </span>
         </div>
       {/if}
       
@@ -121,15 +112,6 @@ async function handleDelete(e) {
               {tag}
             </span>
           {/each}
-        </div>
-      {/if}
-      
-      {#if !item.isVisibleToPlayers && gameState.isNarrator}
-        <div class="absolute top-3 right-3">
-          <span class="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded flex items-center gap-1">
-            <EyeOff class="w-3 h-3" />
-            Oculto
-          </span>
         </div>
       {/if}
     </div>
