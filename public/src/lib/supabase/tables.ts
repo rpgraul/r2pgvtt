@@ -1,5 +1,5 @@
-import { supabase } from './client';
 import { authState } from '$lib/state/auth.svelte';
+import { supabase } from './client';
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -11,8 +11,10 @@ function generateInviteCode(): string {
 }
 
 export const db = {
-  // Games
   async getUserGames() {
+    const userId = authState.user?.id;
+    if (!userId) return [];
+
     const { data, error } = await supabase
       .from('games')
       .select(`
@@ -21,6 +23,8 @@ export const db = {
         member_count:game_members(count),
         last_access:game_members(last_accessed_at)
       `)
+      .eq('game_members.user_id', userId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -31,14 +35,41 @@ export const db = {
     return data || [];
   },
 
+  async getGameByInviteCode(inviteCode: string) {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('invite_code', inviteCode.toUpperCase())
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !data) return null;
+    return data;
+  },
+
+  async getUserGameCount() {
+    const userId = authState.user?.id;
+    if (!userId) return 0;
+
+    const { count, error } = await supabase
+      .from('game_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error counting games:', error);
+      return 0;
+    }
+
+    return count || 0;
+  },
+
   async createGame(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
-    // Generate invite code
     const inviteCode = generateInviteCode();
 
-    // Create game
     const { data: game, error: gameError } = await supabase
       .from('games')
       .insert({
@@ -57,7 +88,6 @@ export const db = {
       throw gameError;
     }
 
-    // Add owner as member with narrator role
     const { error: memberError } = await supabase.from('game_members').insert({
       game_id: game.id,
       user_id: userId,
@@ -108,18 +138,14 @@ export const db = {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
-    // Check all members before removing
     const { data: membersBefore } = await supabase
       .from('game_members')
       .select('id, user_id')
       .eq('game_id', gameId);
 
     const isLastMember = membersBefore && membersBefore.length <= 1;
-
-    // Check if user is narrator
     const isNarrator = userRole === 'narrador';
 
-    // Remove the member
     const { error } = await supabase
       .from('game_members')
       .delete()
@@ -128,16 +154,13 @@ export const db = {
 
     if (error) throw error;
 
-    // If this was the last member
     if (isLastMember) {
       if (isNarrator) {
-        // Narrador saindo como último → soft delete
         await supabase
           .from('games')
           .update({ deleted_at: new Date().toISOString() })
           .eq('id', gameId);
       } else {
-        // Jogador saindo como último → delete permanently
         await supabase.from('games').delete().eq('id', gameId);
       }
     }
@@ -188,7 +211,6 @@ export const db = {
     return data?.invite_code;
   },
 
-  // Items (Cards)
   async subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
     let query = supabase.from('items').select('*').order('order', { ascending: true });
 
@@ -255,7 +277,6 @@ export const db = {
     if (error) throw error;
   },
 
-  // Chat Messages
   async subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
     let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
 
@@ -295,7 +316,6 @@ export const db = {
     return data;
   },
 
-  // Dice Rolls
   async subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
     let query = supabase
       .from('dice_rolls')
@@ -340,7 +360,6 @@ export const db = {
     return data;
   },
 
-  // Audio State
   async getAudioState(gameId: string) {
     const { data, error } = await supabase
       .from('audio_state')
@@ -385,7 +404,6 @@ export const db = {
     return data;
   },
 
-  // Settings
   async getSettings(key: string = 'main') {
     const { data, error } = await supabase
       .from('site_settings')

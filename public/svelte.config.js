@@ -10,13 +10,13 @@ const config = {
       assets: 'dist',
       fallback: 'index.html',
       precompress: false,
-      strict: true
+      strict: true,
     }),
     alias: {
       $lib: './src/lib',
-      $components: './src/components'
-    }
-  }
+      $components: './src/components',
+    },
+  },
 };
 
 export default config;

@@ -1,17 +1,17 @@
 <script>
-import { onMount } from 'svelte';
-import { page } from '$app/stores';
-import { goto } from '$app/navigation';
 import { ModeWatcher } from 'mode-watcher';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import YouTubeAudioPlayer from '$components/audio/YouTubeAudioPlayer.svelte';
+import DiceLayer from '$components/dice/DiceLayer.svelte';
+import FAB from '$components/FAB.svelte';
+import Header from '$components/Header.svelte';
+import { Toaster } from '$lib/components/ui/sonner/index.js';
 import { audioStore } from '$lib/state/audio.svelte.ts';
 import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import Header from '$components/Header.svelte';
-import FAB from '$components/FAB.svelte';
-import DiceLayer from '$components/dice/DiceLayer.svelte';
-import YouTubeAudioPlayer from '$components/audio/YouTubeAudioPlayer.svelte';
-import { Toaster } from '$lib/components/ui/sonner/index.js';
+import { gameState } from '$lib/state/game.svelte.ts';
 import '../app.css';
 
 let { children } = $props();
@@ -23,6 +23,7 @@ const publicRoutes = ['/auth/login', '/auth/callback', '/join', '/converter'];
 const isPublicRoute = $derived(publicRoutes.some((route) => currentPath.startsWith(route)));
 
 // Verificar se deve mostrar header (páginas选择了 pública)
+const isGamesPage = $derived(currentPath.startsWith('/games'));
 const showHeaderOnPublicPages = $derived(
   currentPath === '/' || currentPath === '' || currentPath === '/converter',
 );
@@ -117,7 +118,7 @@ $effect(() => {
   </div>
 {:else}
   {#if currentPath === '/' || currentPath === '' || currentPath === '/converter' || currentPath === '/auth/login' || currentPath.startsWith('/games') || currentPath.startsWith('/text-mode') || currentPath.startsWith('/sheet-mode') || currentPath.startsWith('/drawing-mode')}
-    <Header minimal={currentPath === '/auth/login'} />
+    <Header minimal={currentPath === '/auth/login' || isGamesPage} />
   {/if}
 
   <main>

@@ -7,18 +7,18 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   resolve: {
     alias: {
-      '$lib': resolve(__dirname, './src/lib'),
-      '$components': resolve(__dirname, './src/components')
-    }
+      $lib: resolve(__dirname, './src/lib'),
+      $components: resolve(__dirname, './src/components'),
+    },
   },
   server: {
     port: 5173,
     host: true,
     fs: {
-      allow: ['..']
-    }
+      allow: ['..'],
+    },
   },
   optimizeDeps: {
-    exclude: ['@3d-dice/dice-box']
-  }
+    exclude: ['@3d-dice/dice-box'],
+  },
 });

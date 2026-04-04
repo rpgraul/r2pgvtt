@@ -1,5 +1,5 @@
-import { db } from '$lib/supabase/tables';
 import { supabase } from '$lib/supabase/client';
+import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte.ts';
 
 function createGameState() {
@@ -180,6 +180,15 @@ function createGameState() {
 
     if (error) return null;
     return data;
+  }
+
+  async function getGameByInviteCode(inviteCode: string) {
+    return await db.getGameByInviteCode(inviteCode);
+  }
+
+  async function joinGame(inviteCode: string) {
+    const gameId = await db.joinGame(inviteCode);
+    return { success: true, gameId };
   }
 
   async function getGameMembers(gameId: string) {

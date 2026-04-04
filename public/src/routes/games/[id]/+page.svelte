@@ -1,14 +1,14 @@
 <script lang="ts">
-import { page } from '$app/stores';
+import { ArrowLeft, LogOut, Settings, Share2, Users } from 'lucide-svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { gameState } from '$lib/state/game.svelte';
-import { authState } from '$lib/state/auth.svelte';
-import type { Game, GameMemberWithProfile } from '$lib/supabase/types';
-import { Settings, Users, Share2, ArrowLeft, LogOut } from 'lucide-svelte';
-import Button from '$components/ui/Button.svelte';
+import { page } from '$app/stores';
 import InviteLink from '$components/games/InviteLink.svelte';
 import MemberList from '$components/games/MemberList.svelte';
+import Button from '$components/ui/Button.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import { gameState } from '$lib/state/game.svelte';
+import type { Game, GameMemberWithProfile } from '$lib/supabase/types';
 
 let game = $state<Game | null>(null);
 let members = $state<GameMemberWithProfile[]>([]);
@@ -33,6 +33,8 @@ async function loadGame() {
     await goto('/games');
     return;
   }
+
+  gameState.setGameId(gameId);
 
   members = await gameState.getGameMembers(gameId);
   userRole = await gameState.checkUserGameMembership(gameId);

@@ -6,6 +6,9 @@ import ThemeToggle from './ui/ThemeToggle.svelte';
 import UserMenu from './ui/UserMenu.svelte';
 
 let { minimal = false } = $props();
+
+const isGamesPage = $derived($page.url.pathname.startsWith('/games'));
+const showUserMenu = $derived(minimal || isGamesPage);
 </script>
 
 <header class="sticky top-0 z-40 w-full border-b border-border bg-popover">
@@ -48,15 +51,17 @@ let { minimal = false } = $props();
     <div class="flex items-center gap-3">
       <ThemeToggle />
       
-      {#if !minimal && authState.isAuthenticated}
-        <input 
-          type="color" 
-          value={diceStore.currentDiceColor} 
-          onchange={(e) => diceStore.setDiceColor(e.target.value)}
-          class="w-6 h-6 p-0 border-0 rounded cursor-pointer shrink-0 bg-transparent"
-          title="Sua cor de Dado"
-          aria-label="Selecionar cor do dado"
-        />
+      {#if showUserMenu && authState.isAuthenticated}
+        {#if !minimal}
+          <input 
+            type="color" 
+            value={diceStore.currentDiceColor} 
+            onchange={(e) => diceStore.setDiceColor(e.target.value)}
+            class="w-6 h-6 p-0 border-0 rounded cursor-pointer shrink-0 bg-transparent"
+            title="Sua cor de Dado"
+            aria-label="Selecionar cor do dado"
+          />
+        {/if}
         
         <UserMenu />
       {/if}
