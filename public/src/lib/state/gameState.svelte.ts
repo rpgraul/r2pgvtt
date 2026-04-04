@@ -3,6 +3,25 @@ import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte';
 import { fromCardDBArray } from '$lib/utils/cardMapper';
 
+const STORAGE_KEY = 'rpgboard_current_game';
+
+function getStoredGameId(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(STORAGE_KEY);
+  }
+  return null;
+}
+
+function setStoredGameId(gameId: string | null): void {
+  if (typeof window !== 'undefined') {
+    if (gameId) {
+      localStorage.setItem(STORAGE_KEY, gameId);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+}
+
 class GameState {
   isLoading = $state(true);
   currentGameId = $state<string | null>(null);
@@ -97,6 +116,11 @@ class GameState {
 
   init(gameId: string | null = null) {
     this.isLoading = true;
+
+    if (gameId === null) {
+      gameId = getStoredGameId();
+    }
+
     this.currentGameId = gameId;
     authState.init();
 
@@ -144,6 +168,7 @@ class GameState {
 
   setGameId(gameId: string | null) {
     if (this.currentGameId !== gameId) {
+      setStoredGameId(gameId);
       this.cleanupRealtimeChannels();
       this.destroy();
       this.init(gameId);

@@ -260,9 +260,11 @@ export const db = {
 
     const channelName = `items:${gameId || 'global'}`;
 
+    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter }, () => {
         loadItems();
       })
       .subscribe();
@@ -373,11 +375,17 @@ export const db = {
 
     const channelName = `chat:${gameId || 'global'}`;
 
+    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
-        loadMessages();
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages', filter },
+        () => {
+          loadMessages();
+        },
+      )
       .subscribe();
 
     if (onChannelCreated) {
@@ -434,9 +442,11 @@ export const db = {
 
     const channelName = `rolls:${gameId || 'global'}`;
 
+    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls', filter }, () => {
         loadRolls();
       })
       .subscribe();

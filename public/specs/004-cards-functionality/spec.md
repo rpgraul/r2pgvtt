@@ -180,6 +180,16 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
 - **Solução**: Verificar `typeof window !== 'undefined'` antes de acessar localStorage
 - **Arquivo**: `src/lib/state/diceStore.svelte.js` (linha 17-22)
 
+### 6.8 Correção: Persistência de gameId após F5
+- **Problema**: currentGameId era perdido no refresh da página, causando "no game selected"
+- **Solução**: Salvar gameId em localStorage com chave 'rpgboard_current_game' e restaurar no init()
+- **Arquivo**: `src/lib/state/gameState.svelte.ts`
+
+### 6.9 Correção: Realtime filtrado por game_id
+- **Problema**: Realtime recebia updates de todas as mesas, causando múltiplas recargas
+- **Solução**: Adicionar filtro `game_id=eq.{gameId}` no subscription
+- **Arquivo**: `src/lib/supabase/tables.ts`
+
 ---
 
 ## 7. Arquivos Modificados
