@@ -126,13 +126,6 @@ class GameState {
       gameId = getStoredGameId();
     }
 
-    console.log(
-      '[GameState] init called with gameId:',
-      gameId,
-      'currentGameId:',
-      this.currentGameId,
-    );
-
     if (gameId === null && this.currentGameId) {
       gameId = this.currentGameId;
     }
@@ -249,15 +242,12 @@ class GameState {
   }
 
   async createCard(cardData: any) {
-    console.log(
-      '[createCard] currentGameId:',
-      this.currentGameId,
-      'isAuthenticated:',
-      authState.isAuthenticated,
-    );
-
     if (!authState.isAuthenticated || !authState.displayName) {
       console.warn('Cannot create card: not authenticated');
+      return null;
+    }
+    if (!this.currentGameId) {
+      console.warn('Cannot create card: no game selected');
       return null;
     }
     if (!this.currentGameId) {

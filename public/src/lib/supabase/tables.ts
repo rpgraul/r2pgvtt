@@ -266,21 +266,12 @@ export const db = {
 
     const filter = gameId ? `game_id=eq.${gameId}` : undefined;
 
-    console.log('[subscribeToItems] Subscribing with filter:', filter);
-
     const channel = supabase
       .channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'items', filter },
-        (payload) => {
-          console.log('[subscribeToItems] Received change:', payload);
-          loadItems();
-        },
-      )
-      .subscribe((status) => {
-        console.log('[subscribeToItems] Subscription status:', status);
-      });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter }, () => {
+        loadItems();
+      })
+      .subscribe();
 
     if (onChannelCreated) {
       onChannelCreated(channel);

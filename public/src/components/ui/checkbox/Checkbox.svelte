@@ -2,7 +2,7 @@
 import { cn } from '$lib/utils/cn';
 import { Check } from 'lucide-svelte';
 
-let { checked = $bindable(false), onCheckedChange, class: className } = $props();
+let { checked = $bindable(false), id, onCheckedChange, class: className } = $props();
 
 function toggle() {
   checked = !checked;
@@ -14,6 +14,7 @@ function toggle() {
   type="button"
   role="checkbox"
   aria-checked={checked}
+  {id}
   onclick={toggle}
   class={cn(
     "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background",
