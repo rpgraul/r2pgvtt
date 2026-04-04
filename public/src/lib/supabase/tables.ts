@@ -112,18 +112,40 @@ export const db = {
 
     const { data: game, error: gameError } = await supabase
       .from('games')
-      .select('id')
+      .select('id, nome')
       .eq('invite_code', inviteCode.toUpperCase())
+      .is('deleted_at', null)
       .single();
 
     if (gameError || !game) {
       throw new Error('Código de convite inválido');
     }
 
+    const existingMember = await supabase
+      .from('game_members')
+      .select('id, role')
+      .eq('game_id', game.id)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingMember) {
+      return { gameId: game.id, alreadyMember: true, role: existingMember.role };
+    }
+
+    const { count } = await supabase
+      .from('game_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (count !== null && count >= 3) {
+      throw new Error('Limite de 3 mesas atingido. Saia de uma mesa para entrar em outra.');
+    }
+
     const { error: memberError } = await supabase.from('game_members').insert({
       game_id: game.id,
       user_id: userId,
       role: 'jogador',
+      last_accessed_at: new Date().toISOString(),
     });
 
     if (memberError) {
@@ -131,7 +153,7 @@ export const db = {
       throw memberError;
     }
 
-    return game.id;
+    return { gameId: game.id, alreadyMember: false, role: 'jogador' };
   },
 
   async leaveGame(gameId: string, userRole?: string) {

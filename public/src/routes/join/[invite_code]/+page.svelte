@@ -1,11 +1,11 @@
 <script lang="ts">
-import { page } from '$app/stores';
+import { CheckCircle, Loader2, XCircle } from 'lucide-svelte';
 import { onMount } from 'svelte';
-import { gameState } from '$lib/state/game.svelte';
-import { authState } from '$lib/state/auth.svelte';
 import { goto } from '$app/navigation';
-import { Loader2, CheckCircle, XCircle, Users } from 'lucide-svelte';
+import { page } from '$app/stores';
 import Button from '$components/ui/Button.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import { gameState } from '$lib/state/game.svelte';
 
 let status = $state<'loading' | 'joining' | 'success' | 'error'>('loading');
 let errorMessage = $state('');
@@ -29,18 +29,38 @@ async function tryJoinGame() {
   const game = await gameState.getGameByInviteCode(inviteCode);
   if (game) {
     gameName = game.nome;
+
+    const existingRole = await gameState.checkUserGameMembership(game.id);
+    if (existingRole) {
+      status = 'success';
+      setTimeout(() => {
+        goto(`/?gameId=${game.id}`);
+      }, 1000);
+      return;
+    }
   }
 
-  const result = await gameState.joinGame(inviteCode);
+  try {
+    const result = await gameState.joinGame(inviteCode);
 
-  if (result.success && result.gameId) {
-    status = 'success';
-    setTimeout(() => {
-      goto(`/games/${result.gameId}`);
-    }, 1500);
-  } else {
+    if (result.success && result.gameId) {
+      status = 'success';
+      setTimeout(() => {
+        goto(`/?gameId=${result.gameId}`);
+      }, 1500);
+    } else {
+      status = 'error';
+      errorMessage = result.error || 'Erro ao entrar na mesa';
+    }
+  } catch (err: any) {
     status = 'error';
-    errorMessage = result.error || 'Erro ao entrar na mesa';
+    if (err.message?.includes('Limite')) {
+      errorMessage = 'Você atingiu o limite de 3 mesas. Saia de uma mesa para entrar em outra.';
+    } else if (err.message?.includes('inválido')) {
+      errorMessage = 'Código de convite inválido ou mesa excluída.';
+    } else {
+      errorMessage = err.message || 'Erro ao entrar na mesa';
+    }
   }
 }
 

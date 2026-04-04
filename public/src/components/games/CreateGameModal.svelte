@@ -1,9 +1,9 @@
 <script lang="ts">
-import { db } from '$lib/supabase/tables';
+import { Upload, X } from 'lucide-svelte';
+import { goto } from '$app/navigation';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
-import { X, Upload } from 'lucide-svelte';
-import { goto } from '$app/navigation';
+import { db } from '$lib/supabase/tables';
 
 interface Props {
   open: boolean;
@@ -60,7 +60,7 @@ async function handleSubmit(e: Event) {
     if (gameId) {
       open = false;
       resetForm();
-      await goto(`/games/${gameId}`);
+      await goto(`/?gameId=${gameId}`);
     }
   } catch (err: any) {
     error = err.message || 'Erro ao criar mesa';

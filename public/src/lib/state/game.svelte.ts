@@ -187,8 +187,13 @@ function createGameState() {
   }
 
   async function joinGame(inviteCode: string) {
-    const gameId = await db.joinGame(inviteCode);
-    return { success: true, gameId };
+    const result = await db.joinGame(inviteCode);
+    return {
+      success: true,
+      gameId: result.gameId,
+      alreadyMember: result.alreadyMember,
+      role: result.role,
+    };
   }
 
   async function getGameMembers(gameId: string) {
@@ -265,6 +270,14 @@ function createGameState() {
       return currentGameId;
     },
 
+    get activeGameId() {
+      return currentGameId;
+    },
+
+    setActiveGameId(gameId: string | null) {
+      setGameId(gameId);
+    },
+
     init,
     destroy,
     setGameId,
@@ -283,9 +296,11 @@ function createGameState() {
     setUserName: (name) => authState.updateProfile({ display_name: name }),
     setNarrator: () => authState.updateProfile({ role: 'narrador' }),
     getGameById,
+    getGameByInviteCode,
     getGameMembers,
     checkUserGameMembership,
     leaveGame,
+    joinGame,
     onRollReceived,
     logout: () => authState.signOut(),
   };
