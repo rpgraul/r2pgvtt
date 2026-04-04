@@ -242,7 +242,11 @@ export const db = {
     onChannelCreated?: (channel: any) => void,
   ) {
     const loadItems = () => {
-      let q = supabase.from('items').select('*').order('order', { ascending: true });
+      let q = supabase
+        .from('items')
+        .select('*')
+        .is('deleted_at', null)
+        .order('order', { ascending: true });
       if (gameId) {
         q = q.eq('game_id', gameId);
       }
@@ -260,7 +264,7 @@ export const db = {
 
     const channelName = `items:${gameId || 'global'}`;
 
-    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+    const filter = gameId ? `game_id=eq.${gameId}&deleted_at=is.null` : 'deleted_at=is.null';
 
     const channel = supabase
       .channel(channelName)
@@ -336,7 +340,43 @@ export const db = {
   },
 
   async deleteItem(itemId: string) {
+    const { error } = await supabase
+      .from('items')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', itemId);
+
+    if (error) throw error;
+  },
+
+  async getTrashItems(gameId: string) {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('game_id', gameId)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async restoreItem(itemId: string) {
+    const { error } = await supabase.from('items').update({ deleted_at: null }).eq('id', itemId);
+
+    if (error) throw error;
+  },
+
+  async permanentlyDeleteItem(itemId: string) {
     const { error } = await supabase.from('items').delete().eq('id', itemId);
+    if (error) throw error;
+  },
+
+  async emptyTrash(gameId: string) {
+    const { error } = await supabase
+      .from('items')
+      .delete()
+      .eq('game_id', gameId)
+      .not('deleted_at', 'is', null);
 
     if (error) throw error;
   },

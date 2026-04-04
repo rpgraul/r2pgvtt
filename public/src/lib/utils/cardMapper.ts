@@ -22,6 +22,7 @@ export interface CardDB {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export function toCardDB(card: CardInput): Partial<CardDB> {
@@ -51,6 +52,7 @@ export function fromCardDB(card: CardDB): any {
     createdBy: card.created_by,
     createdAt: card.created_at,
     updatedAt: card.updated_at,
+    deletedAt: card.deleted_at,
   };
 }
 

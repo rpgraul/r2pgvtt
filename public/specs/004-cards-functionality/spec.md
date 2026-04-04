@@ -187,8 +187,55 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
 
 ### 6.9 Correção: Realtime filtrado por game_id
 - **Problema**: Realtime recebia updates de todas as mesas, causando múltiplas recargas
-- **Solução**: Adicionar filtro `game_id=eq.{gameId}` no subscription
+- **Solução**: Adicionar filtro `game_id=eq.{gameId}&deleted_at=is.null` no subscription
 - **Arquivo**: `src/lib/supabase/tables.ts`
+
+### 6.10 Correção: Card não aparece após criar
+- **Problema**: realtime não dispara update visual corretamente
+- **Solução**: Adicionar `refreshItems()` após createCard, editCard, removeCard
+- **Arquivo**: `src/lib/state/gameState.svelte.ts`
+
+### 6.11 Correção: Botão deletar no CardDialog
+- **Problema**: Apenas narrador podia excluir cards
+- **Solução**: Remover verificação `gameState.isNarrator`, todos podem excluir
+- **Arquivo**: `src/components/grid/CardDialog.svelte`
+
+### 6.12 Novo: Sistema de Lixeira (Soft Delete)
+- **Problema**: Cards eram deletados permanentemente
+- **Solução**: 
+  - `deleteItem()` agora usa soft delete (seta `deleted_at`)
+  - Adicionadas funções: `getTrashItems()`, `restoreItem()`, `permanentlyDeleteItem()`, `emptyTrash()`
+  - Adicionado coluna `deleted_at` na interface CardDB
+  - Filtrar items ativos com `.is('deleted_at', null)`
+- **Arquivos**: 
+  - `src/lib/supabase/tables.ts`
+  - `src/lib/state/gameState.svelte.ts`
+  - `src/lib/utils/cardMapper.ts`
+
+### 6.13 Novo: Dialog de Lixeira
+- **Problema**: Não havia interface para gerenciar cards excluídos
+- **Solução**: Criado `TrashDialog.svelte` com:
+  - Lista de cards deletados com data de exclusão
+  - Indicador de expiração (30 dias)
+  - Botão restaurar
+  - Botão excluir permanentemente
+  - Botão limpar lixeira
+  - Apenas narrador pode acessar
+- **Arquivo**: `src/components/grid/TrashDialog.svelte`
+
+### 6.14 Novo: Botões de ação no hover do Card
+- **Problema**: Não havia como excluir card diretamente
+- **Solução**: Adicionados botões editar e excluir no hover do card
+- **Arquivo**: `src/components/grid/Card.svelte`
+
+### 6.15 Novo: Redesign Card estilo TCG
+- **Problema**: Card era box de info genérico
+- **Solução**: Card estilo TCG com:
+  - Imagem grande em proporção 3:4
+  - Gradiente sobre a imagem
+  - Título e tags sobre a imagem
+  - Botões de editar/excluir no hover
+- **Arquivo**: `src/components/grid/Card.svelte`
 
 ---
 

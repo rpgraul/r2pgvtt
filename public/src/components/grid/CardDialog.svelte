@@ -173,7 +173,7 @@ async function handleDelete() {
     
     <div class="flex justify-between pt-4 border-t">
       <div>
-        {#if editItem && gameState.isNarrator}
+        {#if editItem}
           <Button variant="destructive" onclick={handleDelete}>
             Excluir
           </Button>

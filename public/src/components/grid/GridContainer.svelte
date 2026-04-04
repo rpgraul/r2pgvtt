@@ -2,12 +2,14 @@
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import Card from './Card.svelte';
 import CardDialog from './CardDialog.svelte';
+import TrashDialog from './TrashDialog.svelte';
 import { cn } from '$lib/utils/cn.js';
-import { Plus } from 'lucide-svelte';
+import { Plus, Trash2 } from 'lucide-svelte';
 
 const items = $derived(gameState.filteredItems);
 
 let showCardDialog = $state(false);
+let showTrashDialog = $state(false);
 let editingCard = $state(null);
 let draggedItem = $state(null);
 let dragOverIndex = $state(-1);
@@ -63,11 +65,20 @@ function handleDragEnd() {
 </script>
 
 <div class="space-y-4">
-  <div class="flex justify-end">
-    <Button onclick={openNewCard}>
-      <Plus class="w-4 h-4 mr-2" />
-      Novo Card
-    </Button>
+  <div class="flex justify-between items-center">
+    <div class="flex-1"></div>
+    <div class="flex gap-2">
+      {#if gameState.isNarrator}
+        <Button variant="outline" onclick={() => showTrashDialog = true}>
+          <Trash2 class="w-4 h-4 mr-2" />
+          Lixeira
+        </Button>
+      {/if}
+      <Button onclick={openNewCard}>
+        <Plus class="w-4 h-4 mr-2" />
+        Novo Card
+      </Button>
+    </div>
   </div>
   
   {#if items.length === 0}
@@ -115,6 +126,8 @@ function handleDragEnd() {
 </div>
 
 <CardDialog bind:open={showCardDialog} editItem={editingCard} />
+
+<TrashDialog bind:open={showTrashDialog} />
 
 <script context="module">
   import Button from '$components/ui/Button.svelte';

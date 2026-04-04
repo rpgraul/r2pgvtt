@@ -223,7 +223,7 @@ class GameState {
       console.warn('Cannot create card: no game selected');
       return null;
     }
-    return await db.addItem({
+    const result = await db.addItem({
       gameId: this.currentGameId,
       titulo: cardData.titulo,
       conteudo: cardData.conteudo,
@@ -233,6 +233,8 @@ class GameState {
       isVisibleToPlayers: cardData.isVisibleToPlayers,
       order: cardData.order,
     });
+    await this.refreshItems();
+    return result;
   }
 
   async editCard(cardId: string, cardData: any) {
@@ -240,10 +242,32 @@ class GameState {
       ...cardData,
       gameId: this.currentGameId,
     });
+    await this.refreshItems();
   }
 
   async removeCard(cardId: string) {
     await db.deleteItem(cardId);
+    await this.refreshItems();
+  }
+
+  async getTrashItems() {
+    if (!this.currentGameId) return [];
+    return await db.getTrashItems(this.currentGameId);
+  }
+
+  async restoreCard(cardId: string) {
+    await db.restoreItem(cardId);
+    await this.refreshItems();
+  }
+
+  async permanentlyDeleteCard(cardId: string) {
+    await db.permanentlyDeleteItem(cardId);
+  }
+
+  async emptyTrash() {
+    if (!this.currentGameId) return;
+    await db.emptyTrash(this.currentGameId);
+    await this.refreshItems();
   }
 
   async reorderCards(reorderedItems: any[]) {
@@ -315,6 +339,17 @@ class GameState {
   async leaveGame(gameId: string) {
     await db.leaveGame(gameId);
     return true;
+  }
+
+  async refreshItems() {
+    if (!this.currentGameId) return;
+    const { data } = await supabase
+      .from('items')
+      .select('*')
+      .eq('game_id', this.currentGameId)
+      .is('deleted_at', null)
+      .order('order', { ascending: true });
+    this.items = fromCardDBArray(data || []);
   }
 
   async removeMember(gameId: string, userId: string) {
