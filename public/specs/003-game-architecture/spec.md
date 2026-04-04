@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-game-architecture`  
 **Created**: 2026-04-04  
-**Status**: Draft
+**Status**: Partially Implemented
 
 ---
 
@@ -64,17 +64,18 @@ CREATE TABLE game_members (
 ## 3. Regras de Negócio
 
 ### 3.1 Criação de Mesa
-- Usuário logado pode criar mesa
-- Limite: 3 mesas ativas por usuário
-- Ao criar: gera invite_code único (8 caracteres)
-- Criador automaticamente vira `narrador`
+- [x] Usuário logado pode criar mesa
+- [x] Limite: 3 mesas ativas por usuário
+- [x] Ao criar: gera invite_code único (8 caracteres)
+- [x] Criador automaticamente vira `narrador`
 
 ### 3.2 Convite de Jogadores
-- Link de convite: `/join/[invite_code]`
-- Ao acessar link:
+- [x] Link de convite: `/join/[invite_code]`
+- [x] Ao acessar link:
   - Se não logado → login → redireciona de volta
-  - Se logado → entra na mesa como `jogador`
-  - Se já é membro → entra normalmente
+  - Se já é membro → redireciona para `/`
+  - Se não é membro + limite disponível → entra na mesa como `jogador`
+  - Se limite atingido → mostra erro
 
 ### 3.3 Permissões por Role
 
@@ -139,41 +140,58 @@ ORDER BY created_at ASC;
 
 ---
 
-## 5. UI/UX
+## 5. Arquitetura de Rotas
 
-### 5.1 Fluxo de Criação
+### 5.1 Estrutura de Rotas
+
+| Rota | Descrição |
+|------|-----------|
+| `/` | Grid principal - contexto global ou por mesa via `?gameId=` |
+| `/?gameId=XXX` | Grid com dados da mesa específica |
+| `/games` | Lista de mesas do usuário |
+| `/games/[id]` | Redireciona para `/?gameId=[id]` |
+| `/games/[id]/settings` | Configurações da mesa |
+| `/join/[invite_code]` | Tela de entrada via convite |
+
+### 5.2 Fluxo de Criação
 
 1. Usuário clica "Criar Mesa"
 2. Modal abre com campos: Nome*, Sistema, Campanha, Capa
 3. Usuário preenche e confirma
 4. Mesa criada com invite_code
-5. Redirecionado para `/games/[id]`
+5. Redirecionado para `/?gameId=[id]`
 
-### 5.2 Lista de Mesas (/games)
+### 5.3 Fluxo de Convite
 
-- Mostra apenas mesas onde usuário é membro
-- Cards muestran: nome, sistema, data, role do usuário
-- Botões: Copiar Link, Deletar (narrador), Sair (jogador)
-- Limite de 3 mesas visível
+1. Usuário acessa `/join/[invite_code]`
+2. Se não logado → redireciona para `/auth/login?redirect_to=/join/XXX`
+3. Se logado:
+   - Verifica se já é membro → redireciona para `/?gameId=[id]`
+   - Verifica limite de 3 mesas
+   - Se não é membro + limite disponível → cria membership como `jogador`
+   - Se limite atingido → mostra erro
 
-### 5.3 Página da Mesa (/games/[id])
+### 5.4 Lista de Mesas (/games)
 
-- Header: Nome da mesa, sistema, botões
-- Área principal: Cards/Notas da mesa
-- Sidebar: Chat, Dados, Música
+- [x] Mostra apenas mesas onde usuário é membro
+- [x] Cards muestran: nome, sistema, data, role do usuário
+- [x] Botões: Copiar Link, Deletar (narrador), Sair (jogador)
+- [x] Limite de 3 mesas visível (botão desabilitado se atingido)
 
-### 5.4 Header em /games
+### 5.5 Header Minimalista
 
-Minimalista: apenas "R2PG VTT" + Theme Toggle + UserMenu
+- [x] `/games` usa header minimalista (só logo + tema + user menu)
+- [x] Página principal com `?gameId=` mostra header "Mesa Ativa"
 
 ---
 
 ## 6. Questões em Aberto
 
-- [ ] Como implementar sistema de convites com limite?
-- [ ] UI para configurar permissions por role?
-- [ ] Sistema de "lixeira" com restauração em 3 dias?
-- [ ] Backup/export de mesa?
+- [ ] Sistema de convites com limite configurável (atualmente fixo em 3)
+- [ ] UI para configurar permissions por role
+- [ ] Sistema de "lixeira" com restauração em 3 dias
+- [ ] Backup/export de mesa
+- [ ] RLS policies por `game_id`
 
 ---
 
@@ -201,8 +219,81 @@ UPDATE games SET invite_code = (
 
 ---
 
-## 8. Dependências
+## 8. API Implementada
+
+### 8.1 tables.ts (db)
+
+```typescript
+// Games
+async getUserGames()              // Busca só mesas do usuário (filtrado por membership)
+async getGameByInviteCode(code)   // Busca mesa por código de convite
+async getUserGameCount()          // Conta mesas do usuário (para limite)
+async createGame(nome, sistema, campanha, capaUrl)
+async joinGame(inviteCode)        // Retorna { gameId, alreadyMember, role }
+async leaveGame(gameId, userRole) // Lida com soft/hard delete
+async softDeleteGame(gameId)
+async cancelDeleteGame(gameId)
+async getGameMembers(gameId)
+async deleteGame(gameId)
+async getInviteCode(gameId)
+```
+
+### 8.2 game.svelte.ts (gameState)
+
+```typescript
+// Getters
+gameId         // currentGameId
+activeGameId   // currentGameId
+isNarrator     // authState.role === 'narrador'
+
+// Métodos
+setGameId(gameId)           // Inicializa subscriptions para a mesa
+setActiveGameId(gameId)     // Alias para setGameId
+getGameById(gameId)
+getGameByInviteCode(code)
+getGameMembers(gameId)
+checkUserGameMembership(gameId)
+joinGame(inviteCode)        // Wrapper que retorna { success, gameId, alreadyMember, role }
+leaveGame(gameId)
+```
+
+---
+
+## 9. Dependências
 
 - Tabelas: `games`, `game_members`, `items`, `chat_messages`, `dice_rolls`, `audio_state`
 - Colunas: `game_id` em todas as tabelas de dados
-- RLS policies por `game_id`
+- RLS policies por `game_id` (pendente)
+
+---
+
+## 10. Testes Implementados
+
+- [x] /games mostra apenas minhas mesas
+- [x] /games/[id] redireciona para /?gameId=
+- [x] Cards/Chat/Dados são da mesa atual (via gameId)
+- [x] Header em /games é minimalista
+- [x] Criar 3 mesas → botão fica desabilitado na 4ª
+- [x] Convite: se já membro → redireciona diretamente
+- [x] Convite: se limite atingido → mostra erro
+- [x] Header "Mesa Ativa" aparece com ?gameId=
+
+---
+
+## 11. Correções Realizadas
+
+### 11.1 Problema: Funções não existem no build de produção
+**Causa**: Minificação excessiva do Vite removendo funções factory pattern  
+**Solução**: Exportar funções explicitamente com `nome: funcao` ao invés de apenas `funcao`
+
+### 11.2 Problema: leaveGame deletava a mesa incorretamente
+**Causa**: `isLastMember` usava `<= 1` ao invés de `=== 1`  
+**Solução**: Corrigido para verificar se há 0 membros restantes após delete
+
+### 11.3 Problema: Jogadores podiam convidar outros
+**Causa**: InviteLink não verificava role do usuário  
+**Solução**: Adicionada verificação `userRole === 'narrador' || userRole === 'assistente'`
+
+### 11.4 Problema: FAB não aparecia na página principal
+**Causa**: Rota `/` estava sendo redirecionada para `/games` no auth redirect  
+**Solução**: Removido redirecionamento de `/` para `/games` (agora vai direto para `/games` se não logado)

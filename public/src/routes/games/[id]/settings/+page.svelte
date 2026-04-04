@@ -161,7 +161,7 @@ async function handleSave() {
         <section class="bg-card border border-border rounded-xl p-6 space-y-4">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">Link de Convite</h2>
-            <InviteLink {game} />
+            <InviteLink {game} {userRole} />
           </div>
           <p class="text-sm text-muted-foreground">
             Compartilhe este link para convidar jogadores para a mesa.

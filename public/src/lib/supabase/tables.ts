@@ -165,7 +165,6 @@ export const db = {
       .select('id, user_id')
       .eq('game_id', gameId);
 
-    const isLastMember = membersBefore && membersBefore.length <= 1;
     const isNarrator = userRole === 'narrador';
 
     const { error } = await supabase
@@ -176,15 +175,18 @@ export const db = {
 
     if (error) throw error;
 
-    if (isLastMember) {
-      if (isNarrator) {
-        await supabase
-          .from('games')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', gameId);
-      } else {
-        await supabase.from('games').delete().eq('id', gameId);
-      }
+    const { data: membersAfter } = await supabase
+      .from('game_members')
+      .select('id, user_id')
+      .eq('game_id', gameId);
+
+    const isLastMember = !membersAfter || membersAfter.length === 0;
+
+    if (isLastMember && isNarrator) {
+      await supabase
+        .from('games')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', gameId);
     }
   },
 

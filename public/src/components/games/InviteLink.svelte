@@ -5,9 +5,10 @@ import Button from '$components/ui/Button.svelte';
 
 interface Props {
   game: Game | null;
+  userRole?: string;
 }
 
-let { game }: Props = $props();
+let { game, userRole }: Props = $props();
 
 let copied = $state(false);
 
@@ -19,14 +20,18 @@ async function copyLink() {
   copied = true;
   setTimeout(() => (copied = false), 2000);
 }
+
+const canInvite = $derived(userRole === 'narrador' || userRole === 'assistente');
 </script>
 
-<Button variant="outline" size="sm" onclick={copyLink}>
-  {#if copied}
-    <Check class="w-4 h-4 mr-2 text-green-500" />
-    Copiado!
-  {:else}
-    <Share2 class="w-4 h-4 mr-2" />
-    Compartilhar
-  {/if}
-</Button>
+{#if canInvite}
+  <Button variant="outline" size="sm" onclick={copyLink}>
+    {#if copied}
+      <Check class="w-4 h-4 mr-2 text-green-500" />
+      Copiado!
+    {:else}
+      <Share2 class="w-4 h-4 mr-2" />
+      Compartilhar
+    {/if}
+  </Button>
+{/if}
