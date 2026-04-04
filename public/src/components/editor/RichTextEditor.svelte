@@ -46,6 +46,8 @@ let linkUrl = $state('');
 let showLinkInput = $state(false);
 
 onMount(() => {
+  if (!element) return;
+
   editor = new Editor({
     element: element,
     extensions: [

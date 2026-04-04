@@ -259,7 +259,21 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
 
 ### 6.20 Correção: Jogadores veem cards ocultos
 - **Problema**: `filteredItems` não filtrava cards ocultos para jogadores por padrão
-- **Solução**: Adicionar filtro `if (authState.role !== 'narrador')` para filtrar `isVisibleToPlayers`
+- **Solução**: Adicionar filtro `if (role !== 'narrador')` para filtrar `isVisibleToPlayers`
+- **Arquivo**: `src/lib/state/gameState.svelte.ts`
+
+### 6.21 Correção: Tiptap "doc is not defined"
+- **Problema**: Editor Tiptap tentava inicializar sem elemento DOM
+- **Solução**: Verificar `if (!element) return` antes de criar editor
+- **Arquivo**: `src/components/editor/RichTextEditor.svelte`
+
+### 6.22 Correção: isNarrator baseado no role da mesa
+- **Problema**: `isNarrator` usava `authState.role` (global) que não existe mais
+- **Solução**: 
+  - Adicionar `currentGameRole` state no gameState
+  - Buscar role em `game_members` via `loadGameRole()` no init()
+  - `isNarrator` agora retorna `currentGameRole === 'narrador'`
+  - Filtrar items para não-narradores com `currentGameRole !== 'narrador'`
 - **Arquivo**: `src/lib/state/gameState.svelte.ts`
 
 ---

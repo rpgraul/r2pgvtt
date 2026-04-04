@@ -25,6 +25,7 @@ function setStoredGameId(gameId: string | null): void {
 class GameState {
   isLoading = $state(true);
   currentGameId = $state<string | null>(null);
+  currentGameRole = $state<string | null>(null);
 
   items = $state<any[]>([]);
   chatMessages = $state<any[]>([]);
@@ -55,7 +56,7 @@ class GameState {
   }
 
   get isNarrator() {
-    return !authState.isLoading && authState.role === 'narrador';
+    return this.currentGameRole === 'narrador';
   }
 
   get gameId() {
@@ -69,7 +70,7 @@ class GameState {
   get filteredItems() {
     let result = this.items;
 
-    if (authState.role !== 'narrador') {
+    if (this.currentGameRole !== 'narrador') {
       result = result.filter((item) => item.isVisibleToPlayers);
     }
 
@@ -126,7 +127,12 @@ class GameState {
     }
 
     this.currentGameId = gameId;
+    this.currentGameRole = null;
     authState.init();
+
+    if (gameId) {
+      this.loadGameRole(gameId);
+    }
 
     this.cleanupRealtimeChannels();
 
@@ -177,6 +183,19 @@ class GameState {
       this.destroy();
       this.init(gameId);
     }
+  }
+
+  private async loadGameRole(gameId: string) {
+    if (!authState.user) return;
+
+    const { data } = await supabase
+      .from('game_members')
+      .select('role')
+      .eq('game_id', gameId)
+      .eq('user_id', authState.user.id)
+      .single();
+
+    this.currentGameRole = data?.role || null;
   }
 
   private cleanupRealtimeChannels() {
