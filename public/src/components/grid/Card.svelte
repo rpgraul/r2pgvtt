@@ -48,30 +48,20 @@ async function handleDelete(e) {
     toast.error('Erro ao excluir card');
   }
 }
-
-function handleClick() {
-  if (onEdit) {
-    onEdit(item);
-  }
-}
 </script>
 
 <div 
-  onclick={handleClick}
   class={cn(
-    "group relative rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-lg hover:scale-[1.02] cursor-pointer overflow-hidden",
+    "group relative rounded-xl border bg-card text-card-foreground shadow-sm transition-all overflow-hidden",
     !item.isVisibleToPlayers && gameState.isNarrator && "border-destructive/50"
   )}
-  role="button"
-  tabindex="0"
-  onkeydown={(e) => e.key === 'Enter' && handleClick()}
 >
   {#if item.imagemUrl}
     <div class="relative aspect-[3/4] w-full overflow-hidden">
       <img 
         src={item.imagemUrl} 
         alt={item.titulo}
-        class="h-full w-full object-cover transition-transform group-hover:scale-105"
+        class="h-full w-full object-cover"
       />
       
       <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>

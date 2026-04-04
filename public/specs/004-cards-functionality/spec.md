@@ -237,6 +237,21 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
   - Botões de editar/excluir no hover
 - **Arquivo**: `src/components/grid/Card.svelte`
 
+### 6.16 Correção: Remover clique no Card
+- **Problema**: Card abria edição ao clicar no card inteiro
+- **Solução**: Remover onclick, role, tabindex do card. Apenas botão Editar abre dialog
+- **Arquivo**: `src/components/grid/Card.svelte`
+
+### 6.17 Correção: Remover zoom no hover
+- **Problema**: Card tinha scale no hover
+- **Solução**: Remover hover:scale-[1.02] e group-hover:scale-105
+- **Arquivo**: `src/components/grid/Card.svelte`
+
+### 6.18 Novo: Botão Lixeira em CategoryFilters
+- **Problema**: Lixeira estava em local мало visible
+- **Solução**: Mover botão Lixeira para CategoryFilters (após Anotações), visível apenas para narrador
+- **Arquivo**: `src/components/CategoryFilters.svelte`
+
 ---
 
 ## 7. Arquivos Modificados

@@ -2,6 +2,8 @@
 import { ToggleGroup } from 'bits-ui';
 import { cn } from '$lib/utils/cn.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
+import TrashDialog from './grid/TrashDialog.svelte';
+import { Trash2 } from 'lucide-svelte';
 
 const categories = [
   { value: 'all', label: 'Todos', icon: null },
@@ -13,6 +15,7 @@ const categories = [
 ];
 
 let value = $state('all');
+let showTrashDialog = $state(false);
 
 function handleValueChange(newValue) {
   value = newValue;
@@ -41,4 +44,17 @@ function handleValueChange(newValue) {
       </ToggleGroup.Item>
     {/each}
   </ToggleGroup.Root>
+  
+  {#if gameState.isNarrator}
+    <button
+      type="button"
+      onclick={() => showTrashDialog = true}
+      class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all hover:bg-accent hover:text-accent-foreground"
+    >
+      <Trash2 class="w-4 h-4 mr-1" />
+      Lixeira
+    </button>
+  {/if}
 </div>
+
+<TrashDialog bind:open={showTrashDialog} />
