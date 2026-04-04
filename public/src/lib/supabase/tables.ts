@@ -1,6 +1,15 @@
 import { supabase } from './client';
 import { authState } from '$lib/state/auth.svelte';
 
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 export const db = {
   // Games
   async getUserGames() {
@@ -22,9 +31,12 @@ export const db = {
     return data || [];
   },
 
-  async createGame(nome: string, sistema?: string) {
+  async createGame(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
+
+    // Generate invite code
+    const inviteCode = generateInviteCode();
 
     // Create game
     const { data: game, error: gameError } = await supabase
@@ -33,6 +45,9 @@ export const db = {
         nome,
         owner_id: userId,
         sistema: sistema || 'RPG Genérico',
+        invite_code: inviteCode,
+        campanha: campanha || null,
+        capa_url: capaUrl || null,
       })
       .select()
       .single();
@@ -89,15 +104,20 @@ export const db = {
     return game.id;
   },
 
-  async leaveGame(gameId: string) {
+  async leaveGame(gameId: string, userRole?: string) {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
-    // Check if this is the last member
-    const { data: members } = await supabase
+    // Check all members before removing
+    const { data: membersBefore } = await supabase
       .from('game_members')
-      .select('id')
+      .select('id, user_id')
       .eq('game_id', gameId);
+
+    const isLastMember = membersBefore && membersBefore.length <= 1;
+
+    // Check if user is narrator
+    const isNarrator = userRole === 'narrador';
 
     // Remove the member
     const { error } = await supabase
@@ -108,9 +128,18 @@ export const db = {
 
     if (error) throw error;
 
-    // If this was the last member, delete the game permanently
-    if (members && members.length <= 1) {
-      await supabase.from('games').delete().eq('id', gameId);
+    // If this was the last member
+    if (isLastMember) {
+      if (isNarrator) {
+        // Narrador saindo como último → soft delete
+        await supabase
+          .from('games')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', gameId);
+      } else {
+        // Jogador saindo como último → delete permanently
+        await supabase.from('games').delete().eq('id', gameId);
+      }
     }
   },
 

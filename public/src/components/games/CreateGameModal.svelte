@@ -2,7 +2,7 @@
 import { db } from '$lib/supabase/tables';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
-import { X } from 'lucide-svelte';
+import { X, Upload } from 'lucide-svelte';
 import { goto } from '$app/navigation';
 
 interface Props {
@@ -13,8 +13,29 @@ let { open = $bindable() }: Props = $props();
 
 let nome = $state('');
 let sistema = $state('');
+let campanha = $state('');
+let capaFile = $state<File | null>(null);
+let capaPreview = $state<string | null>(null);
 let loading = $state(false);
 let error = $state('');
+
+function handleFileChange(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file) {
+    capaFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      capaPreview = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeCapa() {
+  capaFile = null;
+  capaPreview = null;
+}
 
 async function handleSubmit(e: Event) {
   e.preventDefault();
@@ -24,7 +45,17 @@ async function handleSubmit(e: Event) {
   error = '';
 
   try {
-    const gameId = await db.createGame(nome.trim(), sistema.trim() || undefined);
+    let capaUrl: string | undefined;
+    if (capaFile && capaPreview) {
+      capaUrl = capaPreview;
+    }
+
+    const gameId = await db.createGame(
+      nome.trim(),
+      sistema.trim() || undefined,
+      campanha.trim() || undefined,
+      capaUrl,
+    );
 
     if (gameId) {
       open = false;
@@ -46,6 +77,9 @@ function handleClose() {
 function resetForm() {
   nome = '';
   sistema = '';
+  campanha = '';
+  capaFile = null;
+  capaPreview = null;
   error = '';
 }
 </script>
@@ -58,7 +92,7 @@ function resetForm() {
       aria-label="Fechar"
     ></button>
 
-    <div class="relative w-full max-w-md mx-4 bg-card border border-border rounded-xl shadow-xl">
+    <div class="relative w-full max-w-md mx-4 bg-card border border-border rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between p-4 border-b border-border">
         <h2 class="text-lg font-semibold">Criar Nova Mesa</h2>
         <button
@@ -70,6 +104,40 @@ function resetForm() {
       </div>
 
       <form onsubmit={handleSubmit} class="p-4 space-y-4">
+        <!-- Capa -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium">Capa da Mesa</label>
+          <div class="flex items-center gap-4">
+            {#if capaPreview}
+              <div class="relative">
+                <img 
+                  src={capaPreview} 
+                  alt="Capa" 
+                  class="w-20 h-20 object-cover rounded-lg border"
+                />
+                <button
+                  type="button"
+                  onclick={removeCapa}
+                  class="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/80"
+                >
+                  <X class="w-3 h-3" />
+                </button>
+              </div>
+            {:else}
+              <label class="flex items-center gap-2 px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                <Upload class="w-5 h-5 text-muted-foreground" />
+                <span class="text-sm text-muted-foreground">Enviar capa</span>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  class="hidden"
+                  onchange={handleFileChange}
+                />
+              </label>
+            {/if}
+          </div>
+        </div>
+
         <!-- Nome -->
         <div class="space-y-2">
           <label for="gameName" class="text-sm font-medium">Nome da Mesa *</label>
@@ -79,6 +147,17 @@ function resetForm() {
             bind:value={nome}
             placeholder="Aventura épica"
             required
+          />
+        </div>
+
+        <!-- Campanha -->
+        <div class="space-y-2">
+          <label for="campanha" class="text-sm font-medium">Campanha</label>
+          <Input
+            id="campanha"
+            type="text"
+            bind:value={campanha}
+            placeholder="Saga do Dragão Vermelho"
           />
         </div>
 

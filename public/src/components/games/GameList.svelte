@@ -37,10 +37,10 @@ async function handleDelete(gameId: string) {
   }
 }
 
-async function handleLeave(gameId: string) {
+async function handleLeave(gameId: string, userRole?: string) {
   isLoading = true;
   try {
-    await db.leaveGame(gameId);
+    await db.leaveGame(gameId, userRole);
     window.location.reload();
   } catch (err) {
     console.error('Error leaving game:', err);
@@ -99,7 +99,7 @@ async function handleRestore(gameId: string) {
           {game} 
           {userRole}
           onDelete={handleDelete}
-          onLeave={handleLeave}
+          onLeave={(id) => handleLeave(id, userRole)}
           onRestore={handleRestore}
         />
       {/each}

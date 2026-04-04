@@ -1,17 +1,30 @@
 <script lang="ts">
 import type { Game } from '$lib/supabase/types';
-import { Gamepad2, Calendar, Clock, Trash2, LogOut, AlertTriangle, RotateCcw } from 'lucide-svelte';
+import {
+  Gamepad2,
+  Calendar,
+  Clock,
+  Trash2,
+  LogOut,
+  AlertTriangle,
+  RotateCcw,
+  Share2,
+  Copy,
+  Check,
+} from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
 
 interface Props {
   game: Game;
   userRole?: string;
   onDelete?: (gameId: string) => void;
-  onLeave?: (gameId: string) => void;
+  onLeave?: (gameId: string, userRole?: string) => void;
   onRestore?: (gameId: string) => void;
 }
 
 let { game, userRole, onDelete, onLeave, onRestore }: Props = $props();
+
+let copied = $state(false);
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -49,7 +62,7 @@ async function handleLeave(e: Event) {
   e.stopPropagation();
   if (!confirm('Tem certeza que deseja sair desta mesa?')) return;
   if (onLeave) {
-    onLeave(game.id);
+    onLeave(game.id, userRole);
   }
 }
 
@@ -61,8 +74,20 @@ async function handleRestore(e: Event) {
   }
 }
 
+async function handleCopyLink(e: Event) {
+  e.preventDefault();
+  e.stopPropagation();
+  const inviteLink = `${window.location.origin}/join/${game.invite_code}`;
+  await navigator.clipboard.writeText(inviteLink);
+  copied = true;
+  setTimeout(() => {
+    copied = false;
+  }, 2000);
+}
+
 const isDeleted = $derived(!!game.deleted_at);
 const isNarrator = userRole === 'narrador';
+const showCopyLink = $derived(!!game.invite_code && !isDeleted);
 </script>
 
 {#if isDeleted}
@@ -189,12 +214,22 @@ const isNarrator = userRole === 'narrador';
           </span>
         {/if}
         
+        {#if showCopyLink}
+          <Button variant="ghost" size="sm" onclick={handleCopyLink} title="Copiar link de convite">
+            {#if copied}
+              <Check class="w-4 h-4 text-green-500" />
+            {:else}
+              <Share2 class="w-4 h-4" />
+            {/if}
+          </Button>
+        {/if}
+        
         {#if isNarrator}
-          <Button variant="ghost" size="sm" onclick={handleDelete} class="text-red-500 hover:text-red-400">
+          <Button variant="ghost" size="sm" onclick={handleDelete} class="text-red-500 hover:text-red-400" title="Excluir mesa">
             <Trash2 class="w-4 h-4" />
           </Button>
         {:else if userRole}
-          <Button variant="ghost" size="sm" onclick={handleLeave} class="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" onclick={handleLeave} class="text-muted-foreground hover:text-foreground" title="Sair da mesa">
             <LogOut class="w-4 h-4" />
           </Button>
         {/if}

@@ -1,7 +1,7 @@
 # Tasks: Auth Fixes + Games v2
 
 **SPEC**: `002-auth-fix`  
-**Status**: Completed  
+**Status**: In Progress (Bug Fixes)  
 **Created**: 2026-04-03
 
 ---
@@ -94,42 +94,67 @@
 
 ---
 
-## Phase 8: Testing ✅
+## Phase 8: Bug Fixes ✅
 
-### Task 8.1: Teste Manual
-- [ ] Testes manuais a cargo do usuário
-
-### Task 8.2: Build
-- [x] npm run build passa
-- [x] biome format --write
-- [x] biome lint passa
-
----
-
-## Phase 9: Bug Fixes ✅
-
-### Task 9.1: Menu em /games
+### Task 8.1: Menu em /games
 - [x] Header aparece em /games e outras rotas autenticadas
 
-### Task 9.2: Mesas deletadas
+### Task 8.2: Mesas deletadas
 - [x] Separar visualmente: mesa normal vs deletada
 - [x] Mesas deletadas não são navegáveis (não são links)
 - [x] Narrador vê botão "Restaurar"
 - [x] Sorted: ativas primeiro, deletadas no fim
 
-### Task 9.3: Coluna 'campanha' não existe
-- [x] Remover campos campanha e capa do código
+### Task 8.3: Coluna 'campanha' não existe
+- [ ] SQL necessário para criar colunas
 
-### Task 9.4: Raiz redireciona para /games
-- [x] Usuário logado em /` → `/games`
+### Task 8.4: Raiz redireciona para /games
+- [x] Usuário logado em `/` → `/games`
 - [x] Usuário não logado → /auth/login
 
 ---
 
-## Definition of Done ✅
+## Phase 9: Corrigir Criação de Mesa
 
-- [x] Todas as User Stories do SPEC.md implementadas
-- [x] Sem erros 404/205 no console
+### Task 9.1: SQL - Criar colunas necessárias
+- [x] Código pronto (esperando SQL do usuário)
+
+### Task 9.2: createGame() - Gerar invite_code
+- [x] Gerar invite_code automaticamente
+
+### Task 9.3: CreateGameModal - Restaurar campos
+- [x] Adicionar campos Campanha e Capa de volta
+
+---
+
+## Phase 10: Auto-Delete e Link de Convite
+
+### Task 10.1: Auto-delete quando último membro sai
+- [x] Narrador sai → mesa vai para excluded_at (soft delete)
+- [x] Jogador sai → confirmation, then auto-delete
+
+### Task 10.2: Botão Link de Convite
+- [x] Adicionar botão "Copiar Link" no GameCard
+- [x] Gerar link `/join/[invite_code]`
+
+---
+
+## Phase 11: Build e Testing
+
+### Task 11.1: Build
+- [x] npm run build passa
+- [x] biome format --write
+- [x] biome lint passa
+
+### Task 11.2: Testing
+- [ ] Teste manual completo
+
+---
+
+## Definition of Done
+
+- [x] Mesa cria com invite_code automático
+- [x] Campos Campanha e Capa funcionam
+- [x] Auto-delete quando último membro sai
+- [x] Botão Link de Convite funciona
 - [x] Build passa
-- [x] Código formatado com biome
-- [x] Lint passa
