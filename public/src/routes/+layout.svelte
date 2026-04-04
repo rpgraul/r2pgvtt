@@ -84,6 +84,12 @@ function handleAuthRedirect() {
     goto('/games');
     return;
   }
+
+  // Se está logado e tenta acessar raiz, redirecionar para /games
+  if (isLoggedIn && (currentPath === '/' || currentPath === '')) {
+    goto('/games');
+    return;
+  }
 }
 
 // Reação a mudanças no auth state
@@ -104,13 +110,13 @@ $effect(() => {
 <DiceLayer />
 <Toaster />
 
-{#if showAuthLoading}
+  {#if showAuthLoading}
   <!-- Loading durante auth check -->
   <div class="flex items-center justify-center min-h-screen bg-background">
     <div class="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
   </div>
 {:else}
-  {#if currentPath === '/' || currentPath === '' || currentPath === '/converter' || currentPath === '/auth/login'}
+  {#if currentPath === '/' || currentPath === '' || currentPath === '/converter' || currentPath === '/auth/login' || currentPath.startsWith('/games') || currentPath.startsWith('/text-mode') || currentPath.startsWith('/sheet-mode') || currentPath.startsWith('/drawing-mode')}
     <Header minimal={currentPath === '/auth/login'} />
   {/if}
 

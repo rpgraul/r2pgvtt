@@ -22,7 +22,7 @@ export const db = {
     return data || [];
   },
 
-  async createGame(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
+  async createGame(nome: string, sistema?: string) {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
@@ -33,8 +33,6 @@ export const db = {
         nome,
         owner_id: userId,
         sistema: sistema || 'RPG Genérico',
-        campanha: campanha || null,
-        capa_url: capaUrl || null,
       })
       .select()
       .single();
@@ -54,14 +52,13 @@ export const db = {
 
     if (memberError) {
       console.error('Error adding member:', memberError);
-      // Game was created, but member add failed - still return game
     }
 
     return game.id;
   },
 
-  async createGameExtended(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
-    return this.createGame(nome, sistema, campanha, capaUrl);
+  async createGameExtended(nome: string, sistema?: string, _campanha?: string, _capaUrl?: string) {
+    return this.createGame(nome, sistema);
   },
 
   async joinGame(inviteCode: string) {

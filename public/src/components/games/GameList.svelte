@@ -1,18 +1,27 @@
 <script lang="ts">
 import GameCard from './GameCard.svelte';
 import CreateGameModal from './CreateGameModal.svelte';
-import { Plus, AlertTriangle, RotateCcw } from 'lucide-svelte';
+import { Plus } from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
 import { db } from '$lib/supabase/tables';
-import { authState } from '$lib/state/auth.svelte';
 
 interface Props {
   games: any[];
 }
 
 let { games = [] }: Props = $props();
+
+// Sort games: active first, deleted at end
+let sortedGames = $derived(
+  [...games].sort((a, b) => {
+    if (a.deleted_at && !b.deleted_at) return 1;
+    if (!a.deleted_at && b.deleted_at) return -1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  }),
+);
+
 let showCreateModal = $state(false);
-let canCreateMore = $derived(games.length < 3);
+let canCreateMore = $derived(games.filter((g) => !g.deleted_at).length < 3);
 let isLoading = $state(false);
 
 async function handleDelete(gameId: string) {
@@ -41,13 +50,13 @@ async function handleLeave(gameId: string) {
   }
 }
 
-async function handleCancelDelete(gameId: string) {
+async function handleRestore(gameId: string) {
   isLoading = true;
   try {
     await db.cancelDeleteGame(gameId);
     window.location.reload();
   } catch (err) {
-    console.error('Error canceling delete:', err);
+    console.error('Error restoring game:', err);
     alert('Erro ao restaurar mesa');
   } finally {
     isLoading = false;
@@ -60,7 +69,7 @@ async function handleCancelDelete(gameId: string) {
     <div>
       <h2 class="text-2xl font-bold text-foreground">Minhas Mesas</h2>
       <p class="text-sm text-muted-foreground">
-        {games.length} de 3 mesas
+        {games.filter(g => !g.deleted_at).length} de 3 mesas ativas
       </p>
     </div>
     
@@ -84,13 +93,14 @@ async function handleCancelDelete(gameId: string) {
     </div>
   {:else}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {#each games as game (game.id)}
+      {#each sortedGames as game (game.id)}
         {@const userRole = game.user_role?.[0]?.role || game.user_role}
         <GameCard 
           {game} 
           {userRole}
           onDelete={handleDelete}
           onLeave={handleLeave}
+          onRestore={handleRestore}
         />
       {/each}
     </div>

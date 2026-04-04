@@ -106,6 +106,26 @@
 
 ---
 
+## Phase 9: Bug Fixes ✅
+
+### Task 9.1: Menu em /games
+- [x] Header aparece em /games e outras rotas autenticadas
+
+### Task 9.2: Mesas deletadas
+- [x] Separar visualmente: mesa normal vs deletada
+- [x] Mesas deletadas não são navegáveis (não são links)
+- [x] Narrador vê botão "Restaurar"
+- [x] Sorted: ativas primeiro, deletadas no fim
+
+### Task 9.3: Coluna 'campanha' não existe
+- [x] Remover campos campanha e capa do código
+
+### Task 9.4: Raiz redireciona para /games
+- [x] Usuário logado em /` → `/games`
+- [x] Usuário não logado → /auth/login
+
+---
+
 ## Definition of Done ✅
 
 - [x] Todas as User Stories do SPEC.md implementadas
