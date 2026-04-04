@@ -10,6 +10,7 @@ import { gameState } from '$lib/state/gameState.svelte';
 let status = $state<'loading' | 'joining' | 'success' | 'error'>('loading');
 let errorMessage = $state('');
 let gameName = $state('');
+let hasTried = $state(false);
 
 const inviteCode = $derived($page.params.invite_code);
 
@@ -21,6 +22,13 @@ onMount(async () => {
   }
 
   await tryJoinGame();
+});
+
+$effect(() => {
+  if (!hasTried && authState.isAuthenticated && !authState.isLoading) {
+    hasTried = true;
+    tryJoinGame();
+  }
 });
 
 async function tryJoinGame() {

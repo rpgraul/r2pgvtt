@@ -235,28 +235,32 @@ export const db = {
     return data?.invite_code;
   },
 
-  async subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
+  subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
     let query = supabase.from('items').select('*').order('order', { ascending: true });
 
     if (gameId) {
       query = query.eq('game_id', gameId);
     }
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error loading items:', error);
-      callback([]);
-      return () => {};
-    }
+    query.then(({ data, error }) => {
+      if (error) {
+        console.error('Error loading items:', error);
+        callback([]);
+        return;
+      }
+      callback(data || []);
+    });
 
-    callback(data || []);
-
-    return supabase
+    const channel = supabase
       .channel(`items:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
         db.subscribeToItems(gameId, callback);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   async addItem(itemData: any) {
@@ -301,28 +305,32 @@ export const db = {
     if (error) throw error;
   },
 
-  async subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
+  subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
     let query = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
 
     if (gameId) {
       query = query.eq('game_id', gameId);
     }
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error loading chat:', error);
-      callback([]);
-      return () => {};
-    }
+    query.then(({ data, error }) => {
+      if (error) {
+        console.error('Error loading chat:', error);
+        callback([]);
+        return;
+      }
+      callback(data || []);
+    });
 
-    callback(data || []);
-
-    return supabase
+    const channel = supabase
       .channel(`chat:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         db.subscribeToChat(gameId, callback);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   async addChatMessage(text: string, type: string = 'user', sender?: string) {
@@ -340,7 +348,7 @@ export const db = {
     return data;
   },
 
-  async subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
+  subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
     let query = supabase
       .from('dice_rolls')
       .select('*')
@@ -351,21 +359,25 @@ export const db = {
       query = query.eq('game_id', gameId);
     }
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error loading rolls:', error);
-      callback([]);
-      return () => {};
-    }
+    query.then(({ data, error }) => {
+      if (error) {
+        console.error('Error loading rolls:', error);
+        callback([]);
+        return;
+      }
+      callback(data || []);
+    });
 
-    callback(data || []);
-
-    return supabase
+    const channel = supabase
       .channel(`rolls:${gameId || 'global'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls' }, () => {
         db.subscribeToRolls(gameId, callback);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   async addRoll(rollData: { userName: string; formula: string; result: number; details?: any }) {

@@ -80,14 +80,8 @@ function handleAuthRedirect() {
     return;
   }
 
-  // Se está logado e tenta acessar /auth/login, redirecionar para /games
+  // Se está logado e tenta acessar /auth/login (não callback), redirecionar para /games
   if (isLoggedIn && goingToLogin && !goingToCallback) {
-    goto('/games');
-    return;
-  }
-
-  // Se está logado e tenta acessar raiz, redirecionar para /games
-  if (isLoggedIn && (currentPath === '/' || currentPath === '')) {
     goto('/games');
     return;
   }
