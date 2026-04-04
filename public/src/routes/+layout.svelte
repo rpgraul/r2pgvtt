@@ -36,10 +36,8 @@ const showFab = $derived(!hideFabRoutes.some((route) => currentPath.startsWith(r
 const showAuthLoading = $derived(authState.isLoading);
 
 onMount(async () => {
-  // Inicializar auth primeiro
   authState.init();
 
-  // Aguardar auth inicializar
   const checkAuth = setInterval(() => {
     if (!authState.isLoading) {
       clearInterval(checkAuth);
@@ -47,7 +45,6 @@ onMount(async () => {
     }
   }, 100);
 
-  gameState.init();
   audioStore.init();
 
   // Create fullscreen container for DiceBox

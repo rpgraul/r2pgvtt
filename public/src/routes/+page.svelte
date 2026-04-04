@@ -12,18 +12,16 @@ import { gameState } from '$lib/state/gameState.svelte.ts';
 let ready = $state(false);
 
 onMount(() => {
-  const urlGameId = $page.url.searchParams.get('gameId');
-  if (urlGameId && browser) {
-    window.history.replaceState({}, '', '/');
-    gameState.destroy();
-    gameState.setGameId(urlGameId);
-  } else {
-    gameState.init(null);
-  }
-  ready = true;
-});
+  if (browser) {
+    const urlGameId = $page.url.searchParams.get('gameId');
 
-$effect(() => {
+    if (urlGameId) {
+      window.history.replaceState({}, '', '/');
+      gameState.setGameId(urlGameId);
+    } else {
+      gameState.init(null);
+    }
+  }
   ready = true;
 });
 </script>

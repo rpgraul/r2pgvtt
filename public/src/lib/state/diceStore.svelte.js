@@ -13,7 +13,6 @@ function createDiceStore() {
   let diceBoxResolve = null;
   let diceBoxData = null;
 
-  // Custom Dice Color
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
     typeof window !== 'undefined'

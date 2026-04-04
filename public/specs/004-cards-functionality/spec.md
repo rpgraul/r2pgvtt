@@ -165,6 +165,21 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
 - **Solução**: Chamar `gameState.destroy()` antes de `setGameId()` em `+page.svelte`
 - **Arquivo**: `src/routes/+page.svelte`
 
+### 6.5 Correção: Race condition entre init e setGameId
+- **Problema**: `+layout.svelte` chamava `gameState.init()` (seta currentGameId = null), causando "Cannot create card: no game selected"
+- **Solução**: Remover `gameState.init()` de +layout.svelte, deixar apenas +page.svelte gerenciar a inicialização
+- **Arquivo**: `src/routes/+layout.svelte` (linha 50)
+
+### 6.6 Correção: Erro Tiptap "doc is not defined"
+- **Problema**: Editor Tiptap recebia `content = undefined` quando não havia valor inicial
+- **Solução**: Usar `content || ''` como padrão
+- **Arquivo**: `src/components/editor/RichTextEditor.svelte` (linha 68)
+
+### 6.7 Correção: Erro localStorage em SSR
+- **Problema**: `localStorage` não existe no server-side, causando erro em SSR
+- **Solução**: Verificar `typeof window !== 'undefined'` antes de acessar localStorage
+- **Arquivo**: `src/lib/state/diceStore.svelte.js` (linha 17-22)
+
 ---
 
 ## 7. Arquivos Modificados

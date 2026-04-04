@@ -65,7 +65,7 @@ onMount(() => {
       CountNode,
       XpNode,
     ],
-    content: content,
+    content: content || '',
     editable: editable,
     onUpdate: ({ editor }) => {
       content = editor.getHTML();
