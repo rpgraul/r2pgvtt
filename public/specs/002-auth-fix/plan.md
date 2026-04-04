@@ -11,15 +11,15 @@
 ### 1.1 Erro de Tabela (PGRST205)
 
 ```
-Could not find the table 'public.profiles' in the schema cache
+Could not find the table 'public.user_profiles' in the schema cache
 ```
 
-**Causa**: Tabela `profiles` não existe no Supabase ou schema cache desatualizado.
+**Causa**: Tabela `user_profiles` não existe no Supabase ou schema cache desatualizado.
 
 **Solução**:
-1. Verificar se tabela existe
-2. Se não existir, criar schema SQL
-3. Verificar trigger `handle_new_user`
+1. Verificar se tabela `user_profiles` existe (já existe!)
+2. Atualizar código para usar `user_profiles`
+3. Adicionar coluna `deleted_at` em games se necessário
 
 ### 1.2 getGameById is not a function
 
@@ -37,28 +37,23 @@ Could not find the table 'public.profiles' in the schema cache
 
 ## 2. Tarefas de Banco de Dados
 
-### 2.1 Verificar/Criar Tabelas
+### 2.1 Tabela user_profiles (já existe!)
 
 ```sql
--- Verificar se profiles existe
-SELECT EXISTS (
-   SELECT FROM information_schema.tables 
-   WHERE table_schema = 'public'
-   AND table_name = 'profiles'
-);
+-- A tabela user_profiles já existe no Supabase:
+-- public.user_profiles (
+--   id uuid PRIMARY KEY,
+--   display_name text,
+--   role text DEFAULT 'jogador',
+--   created_at timestamptz,
+--   name text,
+--   avatar_url text
+-- )
 
--- Se não existir, criar:
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  display_name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'jogador' CHECK (role IN ('narrador', 'assistente', 'jogador')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Adicionar deleted_at em games
+-- Adicionar deleted_at em games (se ainda não existir)
 ALTER TABLE games ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
--- Adicionar last_accessed_at em game_members
+-- Adicionar last_accessed_at em game_members (se ainda não existir)
 ALTER TABLE game_members ADD COLUMN IF NOT EXISTS last_accessed_at TIMESTAMPTZ;
 ```
 

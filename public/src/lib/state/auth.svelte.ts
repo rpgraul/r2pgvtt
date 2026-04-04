@@ -38,7 +38,7 @@ function createAuthState() {
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -46,7 +46,7 @@ function createAuthState() {
       if (error?.code === 'PGRST116') {
         await createProfile();
       } else if (error?.code === 'PGRST205') {
-        console.error('Tabela profiles não existe. Criando automaticamente...');
+        console.error('Tabela user_profiles não existe. Criando automaticamente...');
         await createProfile();
       } else if (error) {
         console.error('Error loading profile:', error);
@@ -67,7 +67,7 @@ function createAuthState() {
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .insert({
           id: user.id,
           display_name: displayName,
@@ -129,7 +129,7 @@ function createAuthState() {
   async function updateProfile(updates: Partial<Profile>) {
     if (!user) return;
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .update(updates)
       .eq('id', user.id)
       .select()

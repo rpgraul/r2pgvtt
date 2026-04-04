@@ -1,8 +1,10 @@
 <script lang="ts">
 import GameCard from './GameCard.svelte';
 import CreateGameModal from './CreateGameModal.svelte';
-import { Plus } from 'lucide-svelte';
+import { Plus, AlertTriangle, RotateCcw } from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
+import { db } from '$lib/supabase/tables';
+import { authState } from '$lib/state/auth.svelte';
 
 interface Props {
   games: any[];
@@ -11,6 +13,46 @@ interface Props {
 let { games = [] }: Props = $props();
 let showCreateModal = $state(false);
 let canCreateMore = $derived(games.length < 3);
+let isLoading = $state(false);
+
+async function handleDelete(gameId: string) {
+  isLoading = true;
+  try {
+    await db.softDeleteGame(gameId);
+    window.location.reload();
+  } catch (err) {
+    console.error('Error deleting game:', err);
+    alert('Erro ao excluir mesa');
+  } finally {
+    isLoading = false;
+  }
+}
+
+async function handleLeave(gameId: string) {
+  isLoading = true;
+  try {
+    await db.leaveGame(gameId);
+    window.location.reload();
+  } catch (err) {
+    console.error('Error leaving game:', err);
+    alert('Erro ao sair da mesa');
+  } finally {
+    isLoading = false;
+  }
+}
+
+async function handleCancelDelete(gameId: string) {
+  isLoading = true;
+  try {
+    await db.cancelDeleteGame(gameId);
+    window.location.reload();
+  } catch (err) {
+    console.error('Error canceling delete:', err);
+    alert('Erro ao restaurar mesa');
+  } finally {
+    isLoading = false;
+  }
+}
 </script>
 
 <div class="space-y-6">
@@ -24,7 +66,7 @@ let canCreateMore = $derived(games.length < 3);
     
     <Button
       onclick={() => showCreateModal = true}
-      disabled={!canCreateMore}
+      disabled={!canCreateMore || isLoading}
     >
       <Plus class="w-4 h-4 mr-2" />
       Criar Mesa
@@ -43,7 +85,13 @@ let canCreateMore = $derived(games.length < 3);
   {:else}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {#each games as game (game.id)}
-        <GameCard {game} />
+        {@const userRole = game.user_role?.[0]?.role || game.user_role}
+        <GameCard 
+          {game} 
+          {userRole}
+          onDelete={handleDelete}
+          onLeave={handleLeave}
+        />
       {/each}
     </div>
   {/if}

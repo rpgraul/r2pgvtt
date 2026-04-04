@@ -15,6 +15,10 @@ export interface Game {
   sistema: string;
   moeda_padrao: string;
   created_at: string;
+  campanha?: string;
+  capa_url?: string;
+  deleted_at?: string;
+  last_accessed_at?: string;
 }
 
 export interface GameMember {

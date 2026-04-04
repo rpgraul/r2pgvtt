@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-auth-fix`  
 **Created**: 2026-04-03  
-**Status**: Draft  
+**Status**: Completed  
 **Updated**: 2026-04-03
 
 ---
@@ -96,7 +96,7 @@ Como **usuário**, quero que mesas deletadas vão para lixeira até todos saíre
 Como **usuário**, quero ver erros tratados de forma amigável.
 
 **Acceptance Scenarios**:
-1. **Given** tabela profiles não existe, **When** authState carrega, **Then** mostra erro e não trava
+1. **Given** tabela user_profiles não existe, **When** authState carrega, **Then** mostra erro e não trava
 2. **Given** API retorna erro, **When** tentando carregar dados, **Then** mostra mensagem amigável com retry
 3. **Given** qualquer erro, **Then** não mostra stack trace para usuário
 
@@ -136,8 +136,8 @@ Como **usuário**, quero acessar uma mesa específica após clicar.
 
 - **DBR-001**: Adicionar coluna `deleted_at` em `games`
 - **DBR-002**: Adicionar coluna `last_accessed_at` em `game_members`
-- **DBR-003**: Criar tabela `profiles` se não existir
-- **DBR-004**: Verificar/recriar trigger `handle_new_user`
+- **DBR-003**: Usar tabela `user_profiles` (já existe no Supabase)
+- **DBR-004**: Verificar trigger `handle_new_user` (se necessário)
 
 ### UI/UX Requirements
 
@@ -150,12 +150,12 @@ Como **usuário**, quero acessar uma mesa específica após clicar.
 
 ## Success Criteria
 
-- [ ] FAB oculta em /auth/login e /games
-- [ ] Loading antes de redirecionar auth
-- [ ] Header login com apenas logo + theme toggle
-- [ ] UserMenu funcional em /games
-- [ ] Lista de mesas com todos os campos
-- [ ] Criar mesa com preview de capa
-- [ ] Soft delete funcionando
-- [ ] Sem erros 404 no console
-- [ ] Build passa
+- [x] FAB oculta em /auth/login e /games
+- [x] Loading antes de redirecionar auth
+- [x] Header login com apenas logo + theme toggle
+- [x] UserMenu funcional em /games
+- [x] Lista de mesas com todos os campos
+- [x] Criar mesa com preview de capa
+- [x] Soft delete funcionando
+- [x] Sem erros 404 no console
+- [x] Build passa

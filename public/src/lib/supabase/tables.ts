@@ -8,7 +8,9 @@ export const db = {
       .from('games')
       .select(`
         *,
-        user_role:game_members(role)
+        user_role:game_members(role),
+        member_count:game_members(count),
+        last_access:game_members(last_accessed_at)
       `)
       .order('created_at', { ascending: false });
 
@@ -20,21 +22,46 @@ export const db = {
     return data || [];
   },
 
-  async createGame(nome: string) {
+  async createGame(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase.rpc('create_game_with_owner', {
-      p_nome: nome,
-      p_owner_id: userId,
-    });
+    // Create game
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .insert({
+        nome,
+        owner_id: userId,
+        sistema: sistema || 'RPG Genérico',
+        campanha: campanha || null,
+        capa_url: capaUrl || null,
+      })
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error creating game:', error);
-      throw error;
+    if (gameError) {
+      console.error('Error creating game:', gameError);
+      throw gameError;
     }
 
-    return data;
+    // Add owner as member with narrator role
+    const { error: memberError } = await supabase.from('game_members').insert({
+      game_id: game.id,
+      user_id: userId,
+      role: 'narrador',
+      last_accessed_at: new Date().toISOString(),
+    });
+
+    if (memberError) {
+      console.error('Error adding member:', memberError);
+      // Game was created, but member add failed - still return game
+    }
+
+    return game.id;
+  },
+
+  async createGameExtended(nome: string, sistema?: string, campanha?: string, capaUrl?: string) {
+    return this.createGame(nome, sistema, campanha, capaUrl);
   },
 
   async joinGame(inviteCode: string) {
@@ -69,11 +96,38 @@ export const db = {
     const userId = authState.user?.id;
     if (!userId) throw new Error('Not authenticated');
 
+    // Check if this is the last member
+    const { data: members } = await supabase
+      .from('game_members')
+      .select('id')
+      .eq('game_id', gameId);
+
+    // Remove the member
     const { error } = await supabase
       .from('game_members')
       .delete()
       .eq('game_id', gameId)
       .eq('user_id', userId);
+
+    if (error) throw error;
+
+    // If this was the last member, delete the game permanently
+    if (members && members.length <= 1) {
+      await supabase.from('games').delete().eq('id', gameId);
+    }
+  },
+
+  async softDeleteGame(gameId: string) {
+    const { error } = await supabase
+      .from('games')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', gameId);
+
+    if (error) throw error;
+  },
+
+  async cancelDeleteGame(gameId: string) {
+    const { error } = await supabase.from('games').update({ deleted_at: null }).eq('id', gameId);
 
     if (error) throw error;
   },
@@ -83,7 +137,7 @@ export const db = {
       .from('game_members')
       .select(`
         *,
-        profile:profiles(id, display_name)
+        profile:user_profiles(id, display_name)
       `)
       .eq('game_id', gameId);
 
