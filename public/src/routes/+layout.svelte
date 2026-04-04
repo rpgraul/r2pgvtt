@@ -27,6 +27,13 @@ const showHeaderOnPublicPages = $derived(
   currentPath === '/' || currentPath === '' || currentPath === '/converter',
 );
 
+// Ocultar FAB em rotas específicas
+const hideFabRoutes = ['/auth/login', '/games', '/join'];
+const showFab = $derived(!hideFabRoutes.some((route) => currentPath.startsWith(route)));
+
+// Loading durante auth check
+const showAuthLoading = $derived(authState.isLoading);
+
 onMount(async () => {
   // Inicializar auth primeiro
   authState.init();
@@ -97,14 +104,21 @@ $effect(() => {
 <DiceLayer />
 <Toaster />
 
-{#if currentPath === '/' || currentPath === '' || currentPath === '/converter' || currentPath === '/auth/login'}
-  <Header />
-{/if}
+{#if showAuthLoading}
+  <!-- Loading durante auth check -->
+  <div class="flex items-center justify-center min-h-screen bg-background">
+    <div class="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
+  </div>
+{:else}
+  {#if currentPath === '/' || currentPath === '' || currentPath === '/converter' || currentPath === '/auth/login'}
+    <Header minimal={currentPath === '/auth/login'} />
+  {/if}
 
-<main>
-  {@render children()}
-</main>
+  <main>
+    {@render children()}
+  </main>
 
-{#if currentPath !== '/drawing-mode'}
-  <FAB {currentPath} />
+  {#if showFab}
+    <FAB {currentPath} />
+  {/if}
 {/if}

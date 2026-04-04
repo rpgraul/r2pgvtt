@@ -35,14 +35,28 @@ function createAuthState() {
 
   async function loadProfile() {
     if (!user) return;
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
-    if (error?.code === 'PGRST116') {
-      await createProfile();
-    } else if (error) {
-      console.error('Error loading profile:', error);
-    } else {
-      profile = data;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error?.code === 'PGRST116') {
+        await createProfile();
+      } else if (error?.code === 'PGRST205') {
+        console.error('Tabela profiles não existe. Criando automaticamente...');
+        await createProfile();
+      } else if (error) {
+        console.error('Error loading profile:', error);
+        profile = null;
+      } else {
+        profile = data;
+      }
+    } catch (e) {
+      console.error('Error loading profile:', e);
+      profile = null;
     }
   }
 
@@ -51,20 +65,28 @@ function createAuthState() {
 
     const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'Usuário';
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert({
-        id: user.id,
-        display_name: displayName,
-        role: 'jogador',
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          display_name: displayName,
+          role: 'jogador',
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating profile:', error);
-    } else {
-      profile = data;
+      if (error) {
+        if (error.code === 'PGRST205') {
+          console.error('Tabela profiles não existe ainda.');
+          return;
+        }
+        console.error('Error creating profile:', error);
+      } else {
+        profile = data;
+      }
+    } catch (e) {
+      console.error('Error creating profile:', e);
     }
   }
 
