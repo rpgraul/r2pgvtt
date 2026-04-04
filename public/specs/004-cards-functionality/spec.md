@@ -291,6 +291,24 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
   - Updates em tempo real via Supabase Realtime broadcast
 - **Arquivo**: `src/lib/supabase/tables.ts`
 
+### 6.25 Correção: Labels de formulário clicáveis
+- **Problema**: Labels não funcionavam ao clicar em Checkbox e Select
+- **Solução**:
+  - Adicionar prop `id` em Input, Checkbox e Select
+  - Associar labels via `for` + `id`
+  - Adicionar keyboard support (Escape) no Select
+  - Remover logs de debug
+- **Arquivos**:
+  - `src/components/ui/Input.svelte`
+  - `src/components/ui/checkbox/Checkbox.svelte`
+  - `src/components/ui/select/Select.svelte`
+  - `src/components/grid/CardDialog.svelte`
+
+### 6.26 Novo: Regra de acessibilidade na Constitution
+- **Problema**: Não havia guideline sobre labels acessíveis
+- **Solução**: Adicionar seção 3.6 na Constitution com regras de acessibilidade
+- **Arquivo**: `.specify/memory/constitution.md`
+
 ---
 
 ## 7. Arquivos Modificados

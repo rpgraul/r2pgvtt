@@ -2,6 +2,7 @@
 import { cn } from '$lib/utils/cn.js';
 
 let {
+  id,
   class: className = '',
   type = 'text',
   value = $bindable(''),
@@ -11,6 +12,7 @@ let {
 </script>
 
 <input
+  {id}
   {type}
   bind:value
   {placeholder}
