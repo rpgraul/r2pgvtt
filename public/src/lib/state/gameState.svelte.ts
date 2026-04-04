@@ -1,6 +1,7 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte';
+import { fromCardDBArray } from '$lib/utils/cardMapper';
 
 class GameState {
   isLoading = $state(true);
@@ -99,7 +100,7 @@ class GameState {
     authState.init();
 
     this.unsubItems = db.subscribeToItems(gameId, (cards) => {
-      this.items = cards;
+      this.items = fromCardDBArray(cards);
       this.isLoading = false;
     });
 
@@ -156,15 +157,27 @@ class GameState {
       console.warn('Cannot create card: not authenticated');
       return null;
     }
+    if (!this.currentGameId) {
+      console.warn('Cannot create card: no game selected');
+      return null;
+    }
     return await db.addItem({
-      game_id: this.currentGameId,
-      ...cardData,
-      created_by: authState.displayName,
+      gameId: this.currentGameId,
+      titulo: cardData.titulo,
+      conteudo: cardData.conteudo,
+      category: cardData.category,
+      tags: cardData.tags,
+      imagemUrl: cardData.imagemUrl,
+      isVisibleToPlayers: cardData.isVisibleToPlayers,
+      order: cardData.order,
     });
   }
 
   async editCard(cardId: string, cardData: any) {
-    await db.updateItem(cardId, cardData);
+    await db.updateItem(cardId, {
+      ...cardData,
+      gameId: this.currentGameId,
+    });
   }
 
   async removeCard(cardId: string) {

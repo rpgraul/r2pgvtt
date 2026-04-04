@@ -1,5 +1,6 @@
 import { authState } from '$lib/state/auth.svelte';
 import { supabase } from './client';
+import { toCardDB, fromCardDB } from '$lib/utils/cardMapper';
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -266,29 +267,60 @@ export const db = {
   },
 
   async addItem(itemData: any) {
+    const cardDB = toCardDB({
+      titulo: itemData.titulo,
+      conteudo: itemData.conteudo,
+      category: itemData.category,
+      tags: itemData.tags,
+      imagemUrl: itemData.imagemUrl,
+      isVisibleToPlayers: itemData.isVisibleToPlayers,
+      order: itemData.order,
+      gameId: itemData.game_id,
+    });
+
     const { data, error } = await supabase
       .from('items')
       .insert({
-        ...itemData,
+        ...cardDB,
         created_by: authState.displayName,
       })
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error adding item:', error);
+      throw error;
+    }
+    return fromCardDB(data);
   },
 
   async updateItem(itemId: string, itemData: any) {
+    const cardDB = toCardDB({
+      titulo: itemData.titulo,
+      conteudo: itemData.conteudo,
+      category: itemData.category,
+      tags: itemData.tags,
+      imagemUrl: itemData.imagemUrl,
+      isVisibleToPlayers: itemData.isVisibleToPlayers,
+      order: itemData.order,
+      gameId: itemData.game_id || '',
+    });
+
+    delete cardDB.game_id;
+    delete cardDB.created_by;
+
     const { error } = await supabase
       .from('items')
       .update({
-        ...itemData,
+        ...cardDB,
         updated_at: new Date().toISOString(),
       })
       .eq('id', itemId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating item:', error);
+      throw error;
+    }
   },
 
   async deleteItem(itemId: string) {
