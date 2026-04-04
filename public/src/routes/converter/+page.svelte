@@ -1,6 +1,6 @@
 <script>
 import { onMount } from 'svelte';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
 import Badge from '$components/ui/Badge.svelte';

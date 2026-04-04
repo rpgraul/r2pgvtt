@@ -451,4 +451,14 @@ export const db = {
 
     if (error) throw error;
   },
+
+  async removeMember(gameId: string, userId: string) {
+    const { error } = await supabase
+      .from('game_members')
+      .delete()
+      .eq('game_id', gameId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  },
 };

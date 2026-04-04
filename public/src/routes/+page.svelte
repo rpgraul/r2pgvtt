@@ -1,19 +1,23 @@
 <script>
 import { onMount } from 'svelte';
 import { page } from '$app/stores';
+import { browser } from '$app/environment';
 import CategoryFilters from '$components/CategoryFilters.svelte';
 import GridContainer from '$components/grid/GridContainer.svelte';
 import SearchInput from '$components/SearchInput.svelte';
 import TagFilters from '$components/TagFilters.svelte';
 import { authState } from '$lib/state/auth.svelte';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 
 let ready = $state(false);
 
 onMount(() => {
   const urlGameId = $page.url.searchParams.get('gameId');
-  if (urlGameId) {
+  if (urlGameId && browser) {
+    window.history.replaceState({}, '', '/');
     gameState.setGameId(urlGameId);
+  } else {
+    gameState.init(null);
   }
   ready = true;
 });

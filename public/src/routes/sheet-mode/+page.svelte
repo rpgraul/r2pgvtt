@@ -1,5 +1,5 @@
 <script>
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import { authState } from '$lib/state/auth.svelte.ts';
 import Badge from '$components/ui/Badge.svelte';
 import Button from '$components/ui/Button.svelte';

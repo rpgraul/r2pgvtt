@@ -11,7 +11,7 @@ import { Toaster } from '$lib/components/ui/sonner/index.js';
 import { audioStore } from '$lib/state/audio.svelte.ts';
 import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import '../app.css';
 
 let { children } = $props();

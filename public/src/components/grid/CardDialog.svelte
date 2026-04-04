@@ -1,5 +1,5 @@
 <script>
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import { toast } from '$lib/stores/toast.js';
 import Dialog from '$components/ui/Dialog.svelte';
 import DialogContent from '$components/ui/DialogContent.svelte';

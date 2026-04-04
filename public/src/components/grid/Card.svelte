@@ -1,5 +1,5 @@
 <script>
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import Badge from '../ui/Badge.svelte';
 import { cn } from '$lib/utils/cn.js';
 import { Edit, Eye, EyeOff } from 'lucide-svelte';

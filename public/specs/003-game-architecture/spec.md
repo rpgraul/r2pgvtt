@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-game-architecture`  
 **Created**: 2026-04-04  
-**Status**: Partially Implemented
+**Status**: Implemented
 
 ---
 
@@ -236,17 +236,41 @@ async cancelDeleteGame(gameId)
 async getGameMembers(gameId)
 async deleteGame(gameId)
 async getInviteCode(gameId)
+async removeMember(gameId, userId)
 ```
 
-### 8.2 game.svelte.ts (gameState)
+### 8.2 gameState.svelte.ts (NOVA ABORDAGEM - Classe com $state nativo)
 
 ```typescript
-// Getters
-gameId         // currentGameId
-activeGameId   // currentGameId
-isNarrator     // authState.role === 'narrador'
+class GameState {
+  isLoading = $state(true);
+  currentGameId = $state<string | null>(null);
+  items = $state<any[]>([]);
+  chatMessages = $state<any[]>([]);
+  rolls = $state<any[]>([]);
+  filters = $state({ search: '', category: 'all', tags: [], visibility: 'all' });
+  viewMode = $state('grid');
 
-// Métodos
+  // Métodos
+  init(gameId)
+  setGameId(gameId)
+  createCard(cardData)
+  editCard(cardId, cardData)
+  removeCard(cardId)
+  reorderCards(items)
+  sendMessage(text)
+  sendRoll(formula, result, details)
+  getGameById(gameId)
+  getGameByInviteCode(code)
+  joinGame(code)
+  getGameMembers(gameId)
+  checkUserGameMembership(gameId)
+  leaveGame(gameId)
+  removeMember(gameId, userId)
+}
+```
+
+> **Nota**: O factory pattern antigo foi substituído por uma classe nativa Svelte 5 com `$state()` para resolver problemas de minificação em build de produção.
 setGameId(gameId)           // Inicializa subscriptions para a mesa
 setActiveGameId(gameId)     // Alias para setGameId
 getGameById(gameId)
@@ -283,17 +307,17 @@ leaveGame(gameId)
 ## 11. Correções Realizadas
 
 ### 11.1 Problema: Funções não existem no build de produção
-**Causa**: Minificação excessiva do Vite removendo funções factory pattern  
-**Solução**: Exportar funções explicitamente com `nome: funcao` ao invés de apenas `funcao`
+**Causa**: Minificação excessiva do Vite com factory pattern  
+**Solução**: Substituir factory pattern por **classe nativa Svelte 5** com `$state()`
 
-### 11.2 Problema: leaveGame deletava a mesa incorretamente
-**Causa**: `isLastMember` usava `<= 1` ao invés de `=== 1`  
-**Solução**: Corrigido para verificar se há 0 membros restantes após delete
+### 11.2 Problema: URL com ?gameId= visível
+**Causa**: Redirecionamento usava `?gameId=` na URL  
+**Solução**: Usar `history.replaceState()` para remover query params, armazenar gameId na memória
 
-### 11.3 Problema: Jogadores podiam convidar outros
+### 11.3 Problema: leaveGame deletava a mesa incorretamente
+**Causa**: `isLastMember` usava `<= 1` ao invés de verificar após delete  
+**Solução**: Verificar membros restantes APÓS o delete
+
+### 11.4 Problema: Jogadores podiam convidar outros
 **Causa**: InviteLink não verificava role do usuário  
 **Solução**: Adicionada verificação `userRole === 'narrador' || userRole === 'assistente'`
-
-### 11.4 Problema: FAB não aparecia na página principal
-**Causa**: Rota `/` estava sendo redirecionada para `/games` no auth redirect  
-**Solução**: Removido redirecionamento de `/` para `/games` (agora vai direto para `/games` se não logado)

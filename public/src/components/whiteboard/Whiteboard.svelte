@@ -1,6 +1,6 @@
 <script>
 import { onMount, onDestroy } from 'svelte';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import { authState } from '$lib/state/auth.svelte.ts';
 import { toast } from '$lib/stores/toast.js';
 import Button from '$components/ui/Button.svelte';

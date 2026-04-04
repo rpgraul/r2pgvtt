@@ -5,7 +5,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import Button from '$components/ui/Button.svelte';
 import { authState } from '$lib/state/auth.svelte';
-import { gameState } from '$lib/state/game.svelte';
+import { gameState } from '$lib/state/gameState.svelte';
 
 let status = $state<'loading' | 'joining' | 'success' | 'error'>('loading');
 let errorMessage = $state('');
@@ -33,8 +33,9 @@ async function tryJoinGame() {
     const existingRole = await gameState.checkUserGameMembership(game.id);
     if (existingRole) {
       status = 'success';
+      gameState.setGameId(game.id);
       setTimeout(() => {
-        goto(`/?gameId=${game.id}`);
+        goto('/');
       }, 1000);
       return;
     }
@@ -45,8 +46,9 @@ async function tryJoinGame() {
 
     if (result.success && result.gameId) {
       status = 'success';
+      gameState.setGameId(result.gameId);
       setTimeout(() => {
-        goto(`/?gameId=${result.gameId}`);
+        goto('/');
       }, 1500);
     } else {
       status = 'error';

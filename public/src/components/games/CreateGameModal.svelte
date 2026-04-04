@@ -4,6 +4,7 @@ import { goto } from '$app/navigation';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
 import { db } from '$lib/supabase/tables';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 
 interface Props {
   open: boolean;
@@ -60,7 +61,8 @@ async function handleSubmit(e: Event) {
     if (gameId) {
       open = false;
       resetForm();
-      await goto(`/?gameId=${gameId}`);
+      gameState.setGameId(gameId);
+      await goto('/');
     }
   } catch (err: any) {
     error = err.message || 'Erro ao criar mesa';

@@ -1,5 +1,5 @@
 <script>
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import { cn } from '$lib/utils/cn.js';
 import { Check } from 'lucide-svelte';
 

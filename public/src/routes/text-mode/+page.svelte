@@ -1,5 +1,5 @@
 <script>
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import Button from '$components/ui/Button.svelte';
 import Badge from '$components/ui/Badge.svelte';
 import { ScrollArea } from '$components/ui/scroll-area/index.js';

@@ -2,7 +2,7 @@
 import { page } from '$app/stores';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { gameState } from '$lib/state/game.svelte';
+import { gameState } from '$lib/state/gameState.svelte';
 import { authState } from '$lib/state/auth.svelte';
 import type { Game } from '$lib/supabase/types';
 import { ArrowLeft, Save, Copy, Check } from 'lucide-svelte';

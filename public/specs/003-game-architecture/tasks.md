@@ -108,19 +108,25 @@
 
 ## Tarefas Adicionais: Correções de Bugs
 
-### Bug 1: Funções não existem no build de produção
-- [x] Exportar funções explicitamente em game.svelte.ts
+### Bug 1: Funções não existem no build de produção (CRÍTICO)
+- [x] Substituir factory pattern por classe nativa Svelte 5 com $state()
+- [x] Criar gameState.svelte.ts (NOVA ABORDAGEM)
+- [x] Atualizar todos os imports
 - [x] Build passou
 
-### Bug 2: leaveGame deletava mesa incorretamente
+### Bug 2: URL com ?gameId= visível
+- [x] Usar history.replaceState() para remover query params
+- [x] Fluxo: /games/[id] → / → gameState.setGameId()
+
+### Bug 3: leaveGame deletava mesa incorretamente
 - [x] Corrigir lógica de isLastMember (verificar após delete)
 - [x] Testar: jogador sai → apenas RemoveMember, não delete
 
-### Bug 3: Jogadores podiam convidar outros
+### Bug 4: Jogadores podiam convidar outros
 - [x] Adicionar userRole prop em InviteLink
 - [x] Verificar role antes de mostrar botão
 - [x] Passar userRole em settings/+page.svelte
 
-### Bug 4: FAB não aparecia
+### Bug 5: FAB não aparecia
 - [x] Corrigido junto com outras correções
 - [x] Build passou

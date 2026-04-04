@@ -1,6 +1,6 @@
 <script>
 import { onMount, onDestroy } from 'svelte';
-import { gameState } from '$lib/state/game.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import { useDiceBox } from '$lib/actions/useDiceBox.js';
 import Button from '../ui/Button.svelte';
 

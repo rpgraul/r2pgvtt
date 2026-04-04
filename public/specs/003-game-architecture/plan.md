@@ -123,37 +123,43 @@ async getUserGames() {
 
 ## 6. Correções Realizadas
 
-### 6.1 Funções não existem no build
+### 6.1 Funções não existem no build (PROBLEMA CRÍTICO)
 **Problema**: `getGameByInviteCode is not a function`, `setGameId is not a function` no build de produção  
 **Causa**: Minificação do Vite otimizando demais o factory pattern  
-**Solução**: Exportar todas as funções explicitamente no return do gameState
+**Solução**: Substituir factory pattern por **classe nativa Svelte 5** com `$state()`
 
-### 6.2 leaveGame deletava mesa incorretamente
+### 6.2 URL com ?gameId= visível
+**Problema**: URL ficava com `?gameId=XXX` facilitando erros e poluindo navegação  
+**Causa**: Redirecionamento usava query params  
+**Solução**: Usar `history.replaceState()` para remover query params após ler gameId
+
+### 6.3 leaveGame deletava mesa incorretamente
 **Problema**: Quando qualquer membro saía, a mesa era deletada  
 **Causa**: `isLastMember = membersBefore.length <= 1` (incluía 2 membros)  
 **Solução**: Verificar membros restantes APÓS o delete, não antes
 
-### 6.3 Jogadores podiam convidar
+### 6.4 Jogadores podiam convidar
 **Problema**: InviteLink sempre visível para todos os membros  
 **Causa**: Não havia verificação de role  
 **Solução**: Adicionar prop `userRole` e verificar `narrador || assistente`
 
-### 6.4 FAB não aparecia
+### 6.5 FAB não aparecia
 **Problema**: Botões não funcionavam na página principal  
 **Causa**: Auth redirect enviava para /games, não deixando usuário ver a página principal  
 **Solução**: Mantido fluxo normal (sem redirecionamento automático para /games)
 
 ---
 
-## 6. Files Modificados
+## 7. Arquivos Modificados
 
 | Arquivo | Mudanças |
 |---------|----------|
-| `src/lib/supabase/tables.ts` | `getUserGames()` filtrado, `getGameByInviteCode()`, `getUserGameCount()`, `joinGame()` com verificação |
-| `src/lib/state/game.svelte.ts` | Exportados `getGameByInviteCode`, `joinGame`, `activeGameId`, `setActiveGameId` |
-| `src/routes/+page.svelte` | Lê `?gameId=`, exibe header "Mesa Ativa" |
-| `src/routes/games/[id]/+page.svelte` | Apenas redireciona para `/` |
-| `src/routes/join/[invite_code]/+page.svelte` | Fluxo completo com verificação + limite |
-| `src/components/games/CreateGameModal.svelte` | Redireciona para `/?gameId=` |
+| `src/lib/supabase/tables.ts` | `getUserGames()` filtrado, `getGameByInviteCode()`, `getUserGameCount()`, `joinGame()` com verificação, `removeMember()` |
+| `src/lib/state/gameState.svelte.ts` | **NOVO** - Classe nativa com `$state()` substituindo factory pattern |
+| `src/routes/+page.svelte` | Lê `?gameId=`, usa `replaceState()`, exibe header "Mesa Ativa" |
+| `src/routes/games/[id]/+page.svelte` | Redireciona para `/` (sem query) |
+| `src/routes/join/[invite_code]/+page.svelte` | Fluxo completo com verificação + limite, redireciona para `/` |
+| `src/components/games/CreateGameModal.svelte` | Redireciona para `/` (usa setGameId) |
+| `src/components/games/InviteLink.svelte` | Verifica `userRole` antes de mostrar botão |
 | `src/components/Header.svelte` | `showUserMenu` inclui `isGamesPage` |
 | `src/routes/+layout.svelte` | `minimal` inclui `isGamesPage` |
