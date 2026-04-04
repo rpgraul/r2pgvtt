@@ -236,7 +236,11 @@ export const db = {
     return data?.invite_code;
   },
 
-  subscribeToItems(gameId: string | null, callback: (items: any[]) => void) {
+  subscribeToItems(
+    gameId: string | null,
+    callback: (items: any[]) => void,
+    onChannelCreated?: (channel: any) => void,
+  ) {
     const loadItems = () => {
       let q = supabase.from('items').select('*').order('order', { ascending: true });
       if (gameId) {
@@ -254,12 +258,18 @@ export const db = {
 
     loadItems();
 
+    const channelName = `items:${gameId || 'global'}`;
+
     const channel = supabase
-      .channel(`items:${gameId || 'global'}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
         loadItems();
       })
       .subscribe();
+
+    if (onChannelCreated) {
+      onChannelCreated(channel);
+    }
 
     return () => {
       supabase.removeChannel(channel);
@@ -275,7 +285,7 @@ export const db = {
       imagemUrl: itemData.imagemUrl,
       isVisibleToPlayers: itemData.isVisibleToPlayers,
       order: itemData.order,
-      gameId: itemData.game_id,
+      gameId: itemData.gameId || '',
     });
 
     const { data, error } = await supabase
@@ -339,7 +349,11 @@ export const db = {
     if (error) throw error;
   },
 
-  subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
+  subscribeToChat(
+    gameId: string | null,
+    callback: (messages: any[]) => void,
+    onChannelCreated?: (channel: any) => void,
+  ) {
     const loadMessages = () => {
       let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (gameId) {
@@ -357,12 +371,18 @@ export const db = {
 
     loadMessages();
 
+    const channelName = `chat:${gameId || 'global'}`;
+
     const channel = supabase
-      .channel(`chat:${gameId || 'global'}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         loadMessages();
       })
       .subscribe();
+
+    if (onChannelCreated) {
+      onChannelCreated(channel);
+    }
 
     return () => {
       supabase.removeChannel(channel);
@@ -384,7 +404,11 @@ export const db = {
     return data;
   },
 
-  subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
+  subscribeToRolls(
+    gameId: string | null,
+    callback: (rolls: any[]) => void,
+    onChannelCreated?: (channel: any) => void,
+  ) {
     const loadRolls = () => {
       let q = supabase
         .from('dice_rolls')
@@ -408,12 +432,18 @@ export const db = {
 
     loadRolls();
 
+    const channelName = `rolls:${gameId || 'global'}`;
+
     const channel = supabase
-      .channel(`rolls:${gameId || 'global'}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls' }, () => {
         loadRolls();
       })
       .subscribe();
+
+    if (onChannelCreated) {
+      onChannelCreated(channel);
+    }
 
     return () => {
       supabase.removeChannel(channel);

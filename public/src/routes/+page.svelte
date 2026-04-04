@@ -15,6 +15,7 @@ onMount(() => {
   const urlGameId = $page.url.searchParams.get('gameId');
   if (urlGameId && browser) {
     window.history.replaceState({}, '', '/');
+    gameState.destroy();
     gameState.setGameId(urlGameId);
   } else {
     gameState.init(null);

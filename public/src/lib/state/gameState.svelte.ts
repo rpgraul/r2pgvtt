@@ -25,6 +25,7 @@ class GameState {
   private unsubRolls: (() => void) | null = null;
   private rollCallback: ((roll: any) => void) | null = null;
   private lastRollId: string | null = null;
+  private realtimeChannels: any = { items: null, chat: null, rolls: null };
 
   get user() {
     return authState.user;
@@ -99,32 +100,68 @@ class GameState {
     this.currentGameId = gameId;
     authState.init();
 
-    this.unsubItems = db.subscribeToItems(gameId, (cards) => {
-      this.items = fromCardDBArray(cards);
-      this.isLoading = false;
-    });
+    this.cleanupRealtimeChannels();
 
-    this.unsubChat = db.subscribeToChat(gameId, (messages) => {
-      this.chatMessages = messages;
-    });
+    this.unsubItems = db.subscribeToItems(
+      gameId,
+      (cards) => {
+        this.items = fromCardDBArray(cards);
+        this.isLoading = false;
+      },
+      (channel) => {
+        this.realtimeChannels.items = channel;
+      },
+    );
 
-    this.unsubRolls = db.subscribeToRolls(gameId, (rollData) => {
-      this.rolls = rollData;
+    this.unsubChat = db.subscribeToChat(
+      gameId,
+      (messages) => {
+        this.chatMessages = messages;
+      },
+      (channel) => {
+        this.realtimeChannels.chat = channel;
+      },
+    );
 
-      if (rollData.length > 0) {
-        const latestRoll = rollData[0];
-        if (latestRoll.id !== this.lastRollId && this.rollCallback) {
-          this.lastRollId = latestRoll.id;
-          this.rollCallback(latestRoll);
+    this.unsubRolls = db.subscribeToRolls(
+      gameId,
+      (rollData) => {
+        this.rolls = rollData;
+
+        if (rollData.length > 0) {
+          const latestRoll = rollData[0];
+          if (latestRoll.id !== this.lastRollId && this.rollCallback) {
+            this.lastRollId = latestRoll.id;
+            this.rollCallback(latestRoll);
+          }
         }
-      }
-    });
+      },
+      (channel) => {
+        this.realtimeChannels.rolls = channel;
+      },
+    );
   }
 
   setGameId(gameId: string | null) {
     if (this.currentGameId !== gameId) {
+      this.cleanupRealtimeChannels();
       this.destroy();
       this.init(gameId);
+    }
+  }
+
+  private cleanupRealtimeChannels() {
+    if (this.realtimeChannels.items) {
+      supabase.removeChannel(this.realtimeChannels.items);
+      this.realtimeChannels.items = null;
+    }
+    if (this.realtimeChannels.chat) {
+      supabase.removeChannel(this.realtimeChannels.chat);
+      this.realtimeChannels.chat = null;
+    }
+    if (this.realtimeChannels.rolls) {
+      supabase.removeChannel(this.realtimeChannels.rolls);
+      this.realtimeChannels.rolls = null;
     }
   }
 
