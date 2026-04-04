@@ -55,7 +55,7 @@ class GameState {
   }
 
   get isNarrator() {
-    return authState.role === 'narrador';
+    return !authState.isLoading && authState.role === 'narrador';
   }
 
   get gameId() {
@@ -68,6 +68,10 @@ class GameState {
 
   get filteredItems() {
     let result = this.items;
+
+    if (authState.role !== 'narrador') {
+      result = result.filter((item) => item.isVisibleToPlayers);
+    }
 
     if (this.filters.search) {
       const searchLower = this.filters.search.toLowerCase();

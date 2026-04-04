@@ -252,6 +252,16 @@ export function fromCardDBArray(cards: CardDB[]): any[] {
 - **Solução**: Mover botão Lixeira para CategoryFilters (após Anotações), visível apenas para narrador
 - **Arquivo**: `src/components/CategoryFilters.svelte`
 
+### 6.19 Correção: Lixeira não aparece para narrador
+- **Problema**: `isNarrator` retornava false quando profile ainda não estava carregado
+- **Solução**: Verificar `!authState.isLoading && authState.role === 'narrador'`
+- **Arquivo**: `src/lib/state/gameState.svelte.ts`
+
+### 6.20 Correção: Jogadores veem cards ocultos
+- **Problema**: `filteredItems` não filtrava cards ocultos para jogadores por padrão
+- **Solução**: Adicionar filtro `if (authState.role !== 'narrador')` para filtrar `isVisibleToPlayers`
+- **Arquivo**: `src/lib/state/gameState.svelte.ts`
+
 ---
 
 ## 7. Arquivos Modificados
