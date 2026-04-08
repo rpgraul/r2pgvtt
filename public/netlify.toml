@@ -1,6 +1,10 @@
 [build]
-  command = "cd public && npm install && npm run build"
-  publish = "public/dist"
+  command = "npm install && npm run build"
+  publish = "dist"
+  environment = { NODE_VERSION = "20" }
+
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = ".svelte-kit,dist,.firebaserc"
 
 [[redirects]]
   from = "/*"
@@ -15,5 +19,5 @@
 [[headers]]
   for = "assets/dice-box/**"
   [headers.values]
-    Content-Type = "application/wasm"
     Access-Control-Allow-Origin = "*"
+    Content-Type = "application/wasm"
