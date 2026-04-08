@@ -7,6 +7,7 @@ import Dialog from './ui/Dialog.svelte';
 import DialogContent from './ui/DialogContent.svelte';
 import DialogTitle from './ui/DialogTitle.svelte';
 import MiniPlayer from './audio/MiniPlayer.svelte';
+import MusicPlayer from './player/MusicPlayer.svelte';
 import ChatSidebar from './chat/ChatSidebar.svelte';
 
 import {
@@ -258,10 +259,10 @@ function getButtonIcon(key) {
 <Sheet bind:open={showAudio} onOpenChange={(v) => showAudio = v}>
   <SheetContent side="right" class="w-[400px]">
     <SheetHeader>
-      <SheetTitle>Música</SheetTitle>
+      <SheetTitle>Player de Música</SheetTitle>
     </SheetHeader>
     <div class="mt-4">
-      <MiniPlayer />
+      <MusicPlayer />
     </div>
   </SheetContent>
 </Sheet>
