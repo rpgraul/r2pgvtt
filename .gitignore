@@ -24,4 +24,4 @@ dataconnect/
 .turbo/
 .vercel/
 
-*.tsbuildinfo
+*.tsbuildinfo.firebaserc
