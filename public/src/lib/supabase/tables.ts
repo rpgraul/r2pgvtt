@@ -397,16 +397,19 @@ export const db = {
     onChannelCreated?: (channel: any) => void,
   ) {
     const loadMessages = () => {
+      console.log('[Chat] loadMessages called, gameId:', gameId);
       let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (gameId) {
         q = q.eq('game_id', gameId);
       }
       q.then(({ data, error }) => {
+        console.log('[Chat] query result:', { count: data?.length, error });
         if (error) {
-          console.error('Error loading chat:', error);
+          console.error('[Chat] Error loading chat:', error);
           callback([]);
           return;
         }
+        console.log('[Chat] messages:', data);
         callback(data || []);
       });
     };
@@ -438,6 +441,7 @@ export const db = {
   },
 
   async addChatMessage(text: string, type: string = 'user', sender?: string) {
+    console.log('[Chat] addChatMessage called:', { text, type, sender });
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -448,7 +452,11 @@ export const db = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Chat] Error inserting message:', error);
+      throw error;
+    }
+    console.log('[Chat] Message inserted:', data);
     return data;
   },
 
