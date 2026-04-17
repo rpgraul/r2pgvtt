@@ -1,16 +1,20 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
+import { onMount } from 'svelte';
 import { musicState } from '$lib/state/music.svelte.js';
 
-let { videoId } = $props();
+let { videoId, visible = false } = $props();
 
 let player = $state(null);
 let playerReady = $state(false);
 let container = $state(null);
 let apiLoaded = $state(false);
 let lastSeekTarget = null;
+let mounted = $state(false);
+let previousVideoId = $state(null);
 
 onMount(() => {
+  mounted = true;
+
   if (window.YT && window.YT.Player) {
     apiLoaded = true;
     createPlayer();
@@ -25,6 +29,34 @@ onMount(() => {
       createPlayer();
     };
   }
+
+  musicState.setPlayer({
+    seekTo,
+    setVolume: (level) => {
+      if (player && playerReady && player.setVolume) {
+        player.setVolume(level);
+      } else {
+        setTimeout(() => {
+          if (player && player.setVolume) {
+            player.setVolume(level);
+          }
+        }, 500);
+      }
+    },
+    getDuration: () => {
+      if (player && playerReady && player.getDuration) {
+        return player.getDuration() || 0;
+      }
+      return 0;
+    },
+    getCurrentTime: () => {
+      if (player && playerReady && player.getCurrentTime) {
+        return player.getCurrentTime() || 0;
+      }
+      return 0;
+    },
+    isReady: () => playerReady,
+  });
 });
 
 function createPlayer() {
@@ -34,7 +66,7 @@ function createPlayer() {
     videoId,
     playerVars: {
       autoplay: 0,
-      controls: 1,
+      controls: 0,
       modestbranding: 1,
       rel: 0,
       enablejsapi: 1,
@@ -88,6 +120,13 @@ function syncState() {
 }
 
 $effect(() => {
+  if (!mounted || !apiLoaded) return;
+  if (!player && window.YT) {
+    createPlayer();
+  }
+});
+
+$effect(() => {
   if (playerReady && player) {
     syncState();
   }
@@ -99,23 +138,18 @@ $effect(() => {
   }
 });
 
-$effect(() => {
-  if (playerReady && player && videoId) {
-    const currentVideo = player.getVideoData?.();
-    if (currentVideo && currentVideo.video_id !== videoId) {
-      player.loadVideoById(videoId);
-      lastSeekTarget = null;
+  $effect(() => {
+    if (playerReady && player && videoId) {
+      if (previousVideoId !== videoId) {
+        previousVideoId = videoId;
+        const currentVideo = player.getVideoData?.();
+        if (currentVideo && currentVideo.video_id !== videoId) {
+          player.loadVideoById(videoId);
+          lastSeekTarget = null;
+        }
+      }
     }
-  }
-});
-
-onDestroy(() => {
-  if (player) {
-    player.destroy();
-    player = null;
-  }
-  playerReady = false;
-});
+  });
 
 export function seekTo(seconds) {
   if (player && playerReady) {
@@ -123,27 +157,29 @@ export function seekTo(seconds) {
     player.seekTo(seconds, true);
   }
 }
-
-export function setPlayerVolume(level) {
-  if (player && playerReady && player.setVolume) {
-    player.setVolume(level);
-  }
-}
 </script>
 
-<div bind:this={container} class="youtube-player"></div>
+<div bind:this={container} class="youtube-player" class:hidden={!visible}></div>
 
 <style>
   .youtube-player {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background-color: #000;
-    border-radius: 0.5rem;
-    overflow: hidden;
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+    top: 0;
+    left: 0;
+  }
+
+  .youtube-player.hidden {
+    display: none;
   }
 
   :global(.youtube-player iframe) {
-    width: 100%;
-    height: 100%;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
   }
 </style>

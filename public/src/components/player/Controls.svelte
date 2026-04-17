@@ -1,16 +1,69 @@
 <script>
 import { musicState } from '$lib/state/music.svelte.js';
-import { Play, Pause, SkipForward, Volume2, VolumeX } from 'lucide-svelte';
+import { Play, Pause, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-svelte';
+import { onMount, onDestroy } from 'svelte';
 
 const isPlaying = $derived(musicState.isPlaying());
 const currentTrack = $derived(musicState.currentTrack());
 const playlist = $derived(musicState.playlist());
-const currentIndex = $derived(musicState.currentIndex());
 const volume = $derived(musicState.volume());
 const isLoading = $derived(musicState.isLoading());
+const repeatMode = $derived(musicState.repeatMode());
+const startedAt = $derived(musicState.startedAt());
 
 let isMuted = $state(false);
 let previousVolume = $state(70);
+let currentTime = $state(0);
+let duration = $state(0);
+let progressInterval = null;
+let localVolume = $state(70);
+
+const canPlay = $derived(playlist.length > 0);
+
+const currentTrackIndex = $derived(
+  currentTrack ? playlist.findIndex((t) => t.id === currentTrack.id) : -1,
+);
+
+const canSkip = $derived(currentTrackIndex >= 0 && currentTrackIndex < playlist.length - 1);
+
+$effect(() => {
+  localVolume = volume;
+});
+
+onMount(() => {
+  progressInterval = setInterval(updateProgress, 500);
+});
+
+onDestroy(() => {
+  if (progressInterval) clearInterval(progressInterval);
+});
+
+function updateProgress() {
+  const player = musicState.getPlayer();
+  if (player && player.isReady && player.isReady()) {
+    const d = player.getDuration();
+    if (d > 0) {
+      duration = d;
+      musicState.setDuration(d);
+    }
+    const t = player.getCurrentTime();
+    if (t !== undefined) {
+      currentTime = t;
+    }
+  } else if (startedAt && isPlaying) {
+    currentTime = (Date.now() - startedAt) / 1000;
+    if (duration > 0 && currentTime > duration) {
+      currentTime = duration;
+    }
+  }
+}
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 function handlePlayPause() {
   if (isPlaying) {
@@ -24,28 +77,67 @@ function handleSkip() {
   musicState.skip();
 }
 
+function handleRepeat() {
+  musicState.cycleRepeatMode();
+}
+
 function handleVolumeChange(e) {
   const newVolume = parseInt(e.target.value, 10);
+  localVolume = newVolume;
   musicState.setVolume(newVolume);
   if (newVolume > 0) {
     isMuted = false;
     previousVolume = newVolume;
   }
-}
 
-function handleToggleMute() {
-  if (volume > 0) {
-    previousVolume = volume;
-    musicState.setVolume(0);
-    isMuted = true;
+  const player = musicState.getPlayer();
+  if (player && player.setVolume) {
+    player.setVolume(newVolume);
   } else {
-    musicState.setVolume(previousVolume || 70);
-    isMuted = false;
+    setTimeout(() => {
+      const p = musicState.getPlayer();
+      if (p && p.setVolume) {
+        p.setVolume(newVolume);
+      }
+    }, 500);
   }
 }
 
-const canPlay = $derived(playlist.length > 0);
-const canSkip = $derived(currentIndex < playlist.length - 1);
+function handleToggleMute() {
+  const player = musicState.getPlayer();
+  const targetVolume = localVolume > 0 ? 0 : previousVolume || 70;
+
+  localVolume = targetVolume;
+  musicState.setVolume(targetVolume);
+  isMuted = localVolume > 0 ? false : true;
+
+  if (player && player.setVolume) {
+    player.setVolume(targetVolume);
+  } else {
+    setTimeout(() => {
+      const p = musicState.getPlayer();
+      if (p && p.setVolume) {
+        p.setVolume(targetVolume);
+      }
+    }, 500);
+  }
+}
+
+function handleProgressClick(e) {
+  if (!duration) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const percent = (e.clientX - rect.left) / rect.width;
+  const newTime = percent * duration;
+
+  const player = musicState.getPlayer();
+  if (player && player.seekTo) {
+    player.seekTo(newTime);
+  }
+
+  musicState.setStartedAt(Date.now() - newTime * 1000);
+}
+
+const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
 </script>
 
 <div class="controls-container">
@@ -67,7 +159,38 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
     {/if}
   </div>
 
+  <div class="progress-section">
+    <span class="time-label">{formatTime(currentTime)}</span>
+    <div
+      class="progress-bar"
+      onclick={handleProgressClick}
+      role="slider"
+      aria-valuenow={currentTime}
+      aria-valuemin="0"
+      aria-valuemax={duration}
+      tabindex="0"
+    >
+      <div class="progress-fill" style="width: {progress}%"></div>
+    </div>
+    <span class="time-label">{formatTime(duration)}</span>
+  </div>
+
   <div class="buttons-row">
+    <button
+      class="control-btn"
+      class:active={repeatMode !== 'off'}
+      class:primary={repeatMode === 'track'}
+      class:off={repeatMode === 'off'}
+      onclick={handleRepeat}
+      title="Repetir: {repeatMode === 'off' ? 'Desligado' : repeatMode === 'track' ? 'Música' : 'Playlist'}"
+    >
+      {#if repeatMode === 'track'}
+        <Repeat1 class="w-5 h-5" />
+      {:else}
+        <Repeat class="w-5 h-5" />
+      {/if}
+    </button>
+
     <button
       class="control-btn"
       class:primary={isPlaying}
@@ -94,7 +217,7 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
 
   <div class="volume-row">
     <button class="volume-btn" onclick={handleToggleMute} title={isMuted ? 'Ativar som' : 'Silenciar'}>
-      {#if volume === 0 || isMuted}
+      {#if localVolume === 0 || isMuted}
         <VolumeX class="w-4 h-4" />
       {:else}
         <Volume2 class="w-4 h-4" />
@@ -104,11 +227,11 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
       type="range"
       min="0"
       max="100"
-      value={isMuted ? 0 : volume}
+      value={isMuted ? 0 : localVolume}
       oninput={handleVolumeChange}
       class="volume-slider"
     />
-    <span class="volume-label">{isMuted ? 0 : volume}%</span>
+    <span class="volume-label">{isMuted ? 0 : localVolume}%</span>
   </div>
 </div>
 
@@ -116,7 +239,7 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
   .controls-container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .now-playing {
@@ -165,18 +288,49 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
     padding: 0.5rem;
   }
 
+  .progress-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .time-label {
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    min-width: 2.5rem;
+    text-align: center;
+  }
+
+  .progress-bar {
+    flex: 1;
+    height: 0.5rem;
+    background-color: #4a4a4a;
+    border-radius: 9999px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background-color: #22c55e;
+    border-radius: 9999px;
+    transition: width 0.1s linear;
+  }
+
   .buttons-row {
     display: flex;
     justify-content: center;
     gap: 0.75rem;
+    align-items: center;
   }
 
   .control-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 3rem;
-    height: 3rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     border: none;
     background-color: hsl(var(--muted));
@@ -196,6 +350,19 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
   }
 
   .control-btn.primary {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .control-btn.active {
+    color: hsl(var(--primary));
+  }
+
+  .control-btn.off {
+    opacity: 0.5;
+  }
+
+  .control-btn.active.primary {
     background-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
   }
@@ -225,8 +392,8 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
 
   .volume-slider {
     flex: 1;
-    height: 0.25rem;
-    background-color: hsl(var(--muted));
+    height: 0.5rem;
+    background-color: #4a4a4a;
     border-radius: 9999px;
     appearance: none;
     cursor: pointer;
@@ -234,12 +401,13 @@ const canSkip = $derived(currentIndex < playlist.length - 1);
 
   .volume-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
-    background-color: hsl(var(--primary));
+    background-color: #22c55e;
     cursor: pointer;
     transition: transform 0.15s;
+    border: 2px solid white;
   }
 
   .volume-slider::-webkit-slider-thumb:hover {

@@ -5,12 +5,16 @@ function createMusicState() {
   let playlist = $state([]);
   let isPlaying = $state(false);
   let currentIndex = $state(0);
+  let currentTrackId = $state(null);
   let startedAt = $state(null);
   let isLoaded = $state(false);
   let currentGameId = $state('');
   let volume = 70;
   let isLoading = $state(false);
   let error = $state(null);
+  let repeatMode = $state('off');
+  let duration = $state(0);
+  let playerRef = $state(null);
 
   let channel = null;
   let updateTimeout = null;
@@ -25,6 +29,9 @@ function createMusicState() {
   }
 
   function getCurrentTrack() {
+    if (currentTrackId) {
+      return playlist.find((t) => t.id === currentTrackId) ?? null;
+    }
     return playlist[currentIndex] ?? null;
   }
 
@@ -50,6 +57,26 @@ function createMusicState() {
 
   function getError() {
     return error;
+  }
+
+  function getRepeatMode() {
+    return repeatMode;
+  }
+
+  function getDuration() {
+    return duration;
+  }
+
+  function getStartedAtValue() {
+    return startedAt;
+  }
+
+  function setPlayer(ref) {
+    playerRef = ref;
+  }
+
+  function getPlayer() {
+    return playerRef;
   }
 
   function extractVideoId(url) {
@@ -110,7 +137,7 @@ function createMusicState() {
 
     if (state) {
       isPlaying = state.is_playing ?? false;
-      currentIndex = state.current_index ?? 0;
+      currentTrackId = state.current_track_id;
       startedAt = state.started_at ? new Date(state.started_at).getTime() : null;
     }
   }
@@ -123,12 +150,12 @@ function createMusicState() {
 
     if (payload.action === 'play') {
       isPlaying = true;
-      currentIndex = payload.trackIndex;
+      currentTrackId = payload.trackId;
       startedAt = payload.startedAt;
     } else if (payload.action === 'pause') {
       isPlaying = false;
     } else if (payload.action === 'skip' || payload.action === 'auto-skip') {
-      currentIndex = payload.toIndex;
+      currentTrackId = payload.toTrackId;
       if (payload.action === 'auto-skip') {
         isPlaying = true;
         startedAt = Date.now();
@@ -145,6 +172,7 @@ function createMusicState() {
 
     if (typeof window !== 'undefined' && window.localStorage) {
       volume = parseInt(localStorage.getItem('music-volume') || '70', 10);
+      repeatMode = localStorage.getItem('music-repeat') || 'off';
     }
 
     await loadPlaylist(gameId);
@@ -228,16 +256,20 @@ function createMusicState() {
 
     playlist = playlist.filter((t) => t.id !== trackId);
 
-    if (currentIndex >= playlist.length && playlist.length > 0) {
-      currentIndex = playlist.length - 1;
+    if (currentTrackId && !playlist.find(t => t.id === currentTrackId)) {
+      currentTrackId = playlist.length > 0 ? playlist[0].id : null;
     }
   }
 
   async function play() {
     if (playlist.length === 0) return;
 
+    const track = getCurrentTrack();
+    if (!track) return;
+
     const now = Date.now();
     isPlaying = true;
+    currentTrackId = track.id;
     startedAt = now;
 
     channel?.send({
@@ -245,7 +277,7 @@ function createMusicState() {
       event: 'player',
       payload: {
         action: 'play',
-        trackIndex: currentIndex,
+        trackId: track.id,
         startedAt: now,
         timestamp: now,
       },
@@ -262,7 +294,7 @@ function createMusicState() {
       event: 'player',
       payload: {
         action: 'pause',
-        trackIndex: currentIndex,
+        trackId: currentTrackId,
         timestamp: Date.now(),
       },
     });
@@ -271,10 +303,15 @@ function createMusicState() {
   }
 
   async function skip() {
-    if (currentIndex >= playlist.length - 1) return;
+    const currentTrack = getCurrentTrack();
+    if (!currentTrack) return;
 
+    const currentPos = playlist.findIndex((t) => t.id === currentTrack.id);
+    if (currentPos >= playlist.length - 1) return;
+
+    const nextTrack = playlist[currentPos + 1];
     const now = Date.now();
-    currentIndex++;
+    currentTrackId = nextTrack.id;
     startedAt = now;
     isPlaying = true;
 
@@ -283,7 +320,7 @@ function createMusicState() {
       event: 'player',
       payload: {
         action: 'skip',
-        toIndex: currentIndex,
+        toTrackId: nextTrack.id,
         timestamp: now,
       },
     });
@@ -294,17 +331,18 @@ function createMusicState() {
   async function setTrack(index) {
     if (index < 0 || index >= playlist.length) return;
 
-    currentIndex = index;
-    startedAt = Date.now();
+    const track = playlist[index];
+    const now = Date.now();
+    currentTrackId = track.id;
+    startedAt = now;
     isPlaying = true;
 
-    const now = Date.now();
     channel?.send({
       type: 'broadcast',
       event: 'player',
       payload: {
         action: 'play',
-        trackIndex: index,
+        trackId: track.id,
         startedAt: now,
         timestamp: now,
       },
@@ -314,35 +352,72 @@ function createMusicState() {
   }
 
   async function autoSkip() {
+    const currentTrack = getCurrentTrack();
+    if (!currentTrack) return;
+
     const now = Date.now();
 
-    if (currentIndex < playlist.length - 1) {
-      currentIndex++;
+    if (repeatMode === 'track') {
       startedAt = now;
       isPlaying = true;
-
       channel?.send({
         type: 'broadcast',
         event: 'player',
         payload: {
-          action: 'auto-skip',
-          toIndex: currentIndex,
+          action: 'play',
+          trackId: currentTrack.id,
+          startedAt: now,
           timestamp: now,
         },
       });
     } else {
-      isPlaying = false;
-      startedAt = null;
+      const currentPos = playlist.findIndex((t) => t.id === currentTrack.id);
 
-      channel?.send({
-        type: 'broadcast',
-        event: 'player',
-        payload: {
-          action: 'pause',
-          trackIndex: currentIndex,
-          timestamp: now,
-        },
-      });
+      if (currentPos < playlist.length - 1) {
+        const nextTrack = playlist[currentPos + 1];
+        currentTrackId = nextTrack.id;
+        startedAt = now;
+        isPlaying = true;
+
+        channel?.send({
+          type: 'broadcast',
+          event: 'player',
+          payload: {
+            action: 'auto-skip',
+            toTrackId: nextTrack.id,
+            timestamp: now,
+          },
+        });
+      } else if (repeatMode === 'all') {
+        const firstTrack = playlist[0];
+        currentTrackId = firstTrack.id;
+        startedAt = now;
+        isPlaying = true;
+
+        channel?.send({
+          type: 'broadcast',
+          event: 'player',
+          payload: {
+            action: 'auto-skip',
+            toTrackId: firstTrack.id,
+            timestamp: now,
+          },
+        });
+      } else {
+        isPlaying = false;
+        startedAt = null;
+        currentTrackId = null;
+
+        channel?.send({
+          type: 'broadcast',
+          event: 'player',
+          payload: {
+            action: 'pause',
+            trackId: currentTrack.id,
+            timestamp: now,
+          },
+        });
+      }
     }
 
     scheduleStateUpdate();
@@ -357,7 +432,7 @@ function createMusicState() {
       await supabase.from('player_state').upsert({
         game_id: currentGameId,
         is_playing: isPlaying,
-        current_index: currentIndex,
+        current_track_id: currentTrackId,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         updated_at: new Date().toISOString(),
       });
@@ -369,6 +444,28 @@ function createMusicState() {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem('music-volume', level.toString());
     }
+  }
+
+  function setRepeatMode(mode) {
+    repeatMode = mode;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('music-repeat', mode);
+    }
+  }
+
+  function cycleRepeatMode() {
+    const modes = ['off', 'track', 'all'];
+    const currentIdx = modes.indexOf(repeatMode);
+    const nextIdx = (currentIdx + 1) % modes.length;
+    setRepeatMode(modes[nextIdx]);
+  }
+
+  function setDuration(d) {
+    duration = d;
+  }
+
+  function setStartedAt(time) {
+    startedAt = time;
   }
 
   function clearError() {
@@ -403,6 +500,12 @@ function createMusicState() {
     get error() {
       return getError;
     },
+    get repeatMode() {
+      return getRepeatMode;
+    },
+    get duration() {
+      return getDuration;
+    },
     get gameId() {
       return currentGameId;
     },
@@ -416,6 +519,12 @@ function createMusicState() {
     setTrack,
     autoSkip,
     setVolume,
+    setRepeatMode,
+    cycleRepeatMode,
+    setDuration,
+    setStartedAt,
+    setPlayer,
+    getPlayer,
     clearError,
   };
 }

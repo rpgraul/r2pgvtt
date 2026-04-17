@@ -2,6 +2,7 @@
 import { page } from '$app/stores';
 import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import ThemeToggle from './ui/ThemeToggle.svelte';
 import UserMenu from './ui/UserMenu.svelte';
 
@@ -10,16 +11,22 @@ let { minimal = false } = $props();
 const isGamesPage = $derived($page.url.pathname.startsWith('/games'));
 const isRootPage = $derived($page.url.pathname === '/');
 const showUserMenu = $derived(minimal || isGamesPage || isRootPage);
+const gameName = $derived(gameState.gameName);
+const inGame = $derived(!!gameState.gameId);
 </script>
 
 <header class="sticky top-0 z-40 w-full border-b border-border bg-popover">
   <div class="container flex h-16 items-center justify-between px-4">
     <div class="flex items-center gap-6">
-      <a href="/" class="flex items-center space-x-2">
-        <span class="text-xl font-bold text-foreground">R2PG VTT</span>
-      </a>
+      {#if inGame && gameName}
+        <span class="text-xl font-bold text-foreground">{gameName}</span>
+      {:else}
+        <a href="/" class="flex items-center space-x-2">
+          <span class="text-xl font-bold text-foreground">R2PG VTT</span>
+        </a>
+      {/if}
       
-      {#if !minimal}
+      {#if !minimal && inGame}
         <nav class="hidden md:flex items-center gap-1">
           <a
             href="/"

@@ -26,6 +26,7 @@ class GameState {
   isLoading = $state(true);
   currentGameId = $state<string | null>(null);
   currentGameRole = $state<string | null>(null);
+  currentGameName = $state<string | null>(null);
 
   items = $state<any[]>([]);
   chatMessages = $state<any[]>([]);
@@ -61,6 +62,10 @@ class GameState {
 
   get gameId() {
     return this.currentGameId;
+  }
+
+  get gameName() {
+    return this.currentGameName;
   }
 
   get activeGameId() {
@@ -200,6 +205,14 @@ class GameState {
       .single();
 
     this.currentGameRole = data?.role || null;
+
+    const { data: gameData } = await supabase
+      .from('games')
+      .select('nome')
+      .eq('id', gameId)
+      .single();
+
+    this.currentGameName = gameData?.nome || null;
   }
 
   private cleanupRealtimeChannels() {

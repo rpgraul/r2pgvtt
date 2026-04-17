@@ -1,8 +1,7 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
+import { onMount } from 'svelte';
 import { musicState } from '$lib/state/music.svelte.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
-import YouTubeEmbed from './YouTubeEmbed.svelte';
 import Playlist from './Playlist.svelte';
 import Controls from './Controls.svelte';
 
@@ -17,13 +16,9 @@ const isLoaded = $derived(musicState.isLoaded());
 
 onMount(() => {
   const gameId = gameState.gameId;
-  if (gameId) {
+  if (gameId && !musicState.isLoaded()) {
     musicState.init(gameId);
   }
-});
-
-onDestroy(() => {
-  musicState.destroy();
 });
 
 async function handleAddTrack() {
@@ -62,12 +57,6 @@ function clearError() {
     </div>
   {:else}
     <div class="player-content">
-      {#if currentTrack}
-        <div class="video-section">
-          <YouTubeEmbed videoId={currentTrack.youtube_id} />
-        </div>
-      {/if}
-
       <Controls />
 
       <div class="add-track-section">

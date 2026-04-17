@@ -1,27 +1,31 @@
 <script>
-import { musicState } from '$lib/state/music.svelte.js';
-import { X, Play, Trash2, Music } from 'lucide-svelte';
+  import { musicState } from '$lib/state/music.svelte.js';
+  import { X, Music, Play, Pause } from 'lucide-svelte';
 
-const playlist = $derived(musicState.playlist());
-const currentIndex = $derived(musicState.currentIndex());
-const isPlaying = $derived(musicState.isPlaying());
-const isLoading = $derived(musicState.isLoading());
+  const playlist = $derived(musicState.playlist());
+  const currentTrack = $derived(musicState.currentTrack());
+  const isPlaying = $derived(musicState.isPlaying());
+  const isLoading = $derived(musicState.isLoading());
 
-async function handleRemove(trackId) {
-  try {
-    await musicState.removeTrack(trackId);
-  } catch (e) {
-    console.error('Failed to remove track:', e);
+  function isCurrentTrack(trackId) {
+    return currentTrack?.id === trackId;
   }
-}
 
-async function handlePlayTrack(index) {
-  if (index === currentIndex && isPlaying) {
-    await musicState.pause();
-  } else {
-    await musicState.setTrack(index);
+  async function handleRemove(trackId) {
+    try {
+      await musicState.removeTrack(trackId);
+    } catch (e) {
+      console.error('Failed to remove track:', e);
+    }
   }
-}
+
+  async function handlePlayTrack(track, index) {
+    if (currentTrack?.id === track.id && isPlaying) {
+      await musicState.pause();
+    } else {
+      await musicState.setTrack(index);
+    }
+  }
 </script>
 
 <div class="playlist-container">
@@ -33,18 +37,29 @@ async function handlePlayTrack(index) {
     </div>
   {:else}
     <ul class="track-list">
-      {#each playlist as track, index}
+      {#each playlist as track, index (track.id)}
         <li
           class="track-item"
-          class:active={index === currentIndex}
-          class:playing={index === currentIndex && isPlaying}
+          class:active={isCurrentTrack(track.id)}
+          class:playing={isCurrentTrack(track.id) && isPlaying}
         >
-          <button class="track-info" onclick={() => handlePlayTrack(index)}>
-            <img
-              src={`https://img.youtube.com/vi/${track.youtube_id}/mqdefault.jpg`}
-              alt=""
-              class="track-thumb"
-            />
+          <button class="track-info" onclick={() => handlePlayTrack(track, index)}>
+            <div class="thumb-wrapper">
+              <img
+                src={`https://img.youtube.com/vi/${track.youtube_id}/mqdefault.jpg`}
+                alt=""
+                class="track-thumb"
+              />
+              {#if isCurrentTrack(track.id)}
+                <div class="play-overlay">
+                  {#if isPlaying}
+                    <Pause class="w-5 h-5 text-white" />
+                  {:else}
+                    <Play class="w-5 h-5 text-white" />
+                  {/if}
+                </div>
+              {/if}
+            </div>
             <div class="track-details">
               <span class="track-title">{track.title || track.youtube_id}</span>
               <span class="track-duration">YouTube</span>
@@ -65,8 +80,9 @@ async function handlePlayTrack(index) {
 
 <style>
   .playlist-container {
-    max-height: 300px;
+    max-height: 250px;
     overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .empty-state {
@@ -87,8 +103,8 @@ async function handlePlayTrack(index) {
   .track-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: 0.25rem;
+    padding: 0.375rem;
     border-radius: 0.375rem;
     transition: background-color 0.15s;
   }
@@ -98,32 +114,48 @@ async function handlePlayTrack(index) {
   }
 
   .track-item.active {
-    background-color: hsl(var(--primary) / 0.1);
+    background-color: hsl(var(--primary) / 0.15);
   }
 
   .track-item.playing {
-    background-color: hsl(var(--primary) / 0.2);
+    background-color: hsl(var(--primary) / 0.25);
   }
 
   .track-info {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     flex: 1;
+    min-width: 0;
     background: none;
     border: none;
     cursor: pointer;
     text-align: left;
-    padding: 0;
+    padding: 0.25rem;
     color: inherit;
   }
 
+  .thumb-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
   .track-thumb {
-    width: 64px;
-    height: 36px;
+    width: 56px;
+    height: 32px;
     object-fit: cover;
     border-radius: 0.25rem;
     background-color: hsl(var(--muted));
+  }
+
+  .play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 0.25rem;
   }
 
   .track-details {
@@ -134,7 +166,7 @@ async function handlePlayTrack(index) {
   }
 
   .track-title {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -142,12 +174,12 @@ async function handlePlayTrack(index) {
   }
 
   .track-duration {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: hsl(var(--muted-foreground));
   }
 
   .remove-btn {
-    padding: 0.5rem;
+    padding: 0.375rem;
     border-radius: 0.25rem;
     background: none;
     border: none;
@@ -155,6 +187,7 @@ async function handlePlayTrack(index) {
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
   }
 
   .track-item:hover .remove-btn {

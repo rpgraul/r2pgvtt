@@ -4,6 +4,7 @@ import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import YouTubeAudioPlayer from '$components/audio/YouTubeAudioPlayer.svelte';
+import YouTubeEmbed from '$components/player/YouTubeEmbed.svelte';
 import DiceLayer from '$components/dice/DiceLayer.svelte';
 import FAB from '$components/FAB.svelte';
 import Header from '$components/Header.svelte';
@@ -12,6 +13,7 @@ import { audioStore } from '$lib/state/audio.svelte.ts';
 import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
+import { musicState } from '$lib/state/music.svelte.js';
 import '../app.css';
 
 let { children } = $props();
@@ -34,6 +36,18 @@ const showFab = $derived(!hideFabRoutes.some((route) => currentPath.startsWith(r
 
 // Loading durante auth check
 const showAuthLoading = $derived(authState.isLoading);
+
+// Music player global
+const musicCurrentTrack = $derived(musicState.currentTrack());
+const musicVideoId = $derived(musicCurrentTrack?.youtube_id || '');
+
+// Inicializar musicState quando entrar em uma mesa
+$effect(() => {
+  const gameId = gameState.gameId;
+  if (gameId && !musicState.isLoaded()) {
+    musicState.init(gameId);
+  }
+});
 
 onMount(async () => {
   authState.init();
@@ -99,6 +113,9 @@ $effect(() => {
 </svelte:head>
 
 <YouTubeAudioPlayer />
+{#if musicVideoId}
+  <YouTubeEmbed videoId={musicVideoId} visible={false} />
+{/if}
 <DiceLayer />
 <Toaster />
 
