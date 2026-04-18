@@ -60,7 +60,7 @@ $effect(() => {
     diceChannelInstance = supabase.channel(`dice:${gameId}`);
     diceChannelInstance.on('broadcast', { event: 'roll' }, (payload) => {
       console.log('[Layout] Broadcast roll received:', payload);
-      const rollData = payload;
+      const rollData = payload.payload;
       diceStore.addRemoteAlert({
         formula: rollData.formula,
         result: rollData.result,
@@ -82,6 +82,7 @@ $effect(() => {
     chatChannelInstance = supabase.channel(`chat:${gameId}`);
     chatChannelInstance.on('broadcast', { event: 'message' }, (payload) => {
       console.log('[Layout] Chat broadcast received:', payload);
+      const message = payload.payload;
       gameState.refreshChat(); // Forçar refresh quando nova msg recebida
     });
     chatChannelInstance.subscribe();
