@@ -75,7 +75,6 @@ function createDiceStore() {
           console.log('[DiceStore] Resolving dice:', diceId, result);
 
           const evaluated = evaluateRolls(diceBoxData.parsedData, result.rolls);
-          // Adiciona os dados passados para fallback
           evaluated.formula = diceBoxData.formula;
           evaluated.diceType = diceBoxData.diceType;
 
@@ -84,7 +83,10 @@ function createDiceStore() {
           diceBoxResolve = null;
           diceBoxData = null;
         } else {
-          console.log('[DiceStore] No resolve or data, ignoring result');
+          console.log('[DiceStore] No resolve or data, treating as fake roll - clearing after 3s');
+          setTimeout(() => {
+            clear3DDice();
+          }, 3000);
         }
       },
     });
@@ -112,6 +114,8 @@ function createDiceStore() {
         reject(new Error('Invalid formula'));
         return;
       }
+
+      import('./gameState.svelte.ts').then((m) => m.gameState.broadcastDiceStart(formula));
 
       const diceId = generateId();
       const diceType = `d${parsedData.sides}`;
@@ -250,6 +254,40 @@ function createDiceStore() {
     return diceBoxInstance;
   }
 
+  async function rollFake(formula) {
+    const parsedData = parseFormula(formula);
+    if (!parsedData) {
+      console.error('[DiceStore] rollFake: invalid formula:', formula);
+      return;
+    }
+
+    isDiceVisible = true;
+
+    if (!diceBoxInstance && !diceInitializing) {
+      initDiceBox();
+    }
+
+    if (diceInitializing) {
+      try {
+        await diceInitializing;
+      } catch (err) {
+        console.error('[DiceStore] rollFake: init failed:', err);
+        return;
+      }
+    }
+
+    if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+      console.error('[DiceStore] rollFake: DiceBox not ready');
+      return;
+    }
+
+    try {
+      diceBoxInstance.roll(parsedData.baseFormula);
+    } catch (error) {
+      console.error('[DiceStore] rollFake error:', error);
+    }
+  }
+
   return {
     get activeDice() {
       return activeDice;
@@ -274,6 +312,7 @@ function createDiceStore() {
     },
 
     rollDice,
+    rollFake,
     dismissAlert,
     dismissAll,
     clearDice,

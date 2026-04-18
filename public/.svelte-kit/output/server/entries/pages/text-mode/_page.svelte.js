@@ -1,5 +1,5 @@
 import { s as sanitize_props, e as spread_props, f as slot, i as escape_html, d as derived, g as ensure_array_like, b as attr_class, l as stringify } from "../../../chunks/index2.js";
-import { g as gameState } from "../../../chunks/gameState.svelte.js";
+import { gameState } from "../../../chunks/gameState.svelte.js";
 import { B as Button } from "../../../chunks/Button.js";
 import { B as Badge } from "../../../chunks/Badge.js";
 import { S as ScrollArea } from "../../../chunks/ScrollArea.js";

@@ -1,5 +1,5 @@
 import { s as sanitize_props, e as spread_props, f as slot, o as attributes, c as bind_props, d as derived, b as attr_class, j as clsx, a as attr, i as escape_html } from "./index2.js";
-import { g as gameState } from "./gameState.svelte.js";
+import { gameState } from "./gameState.svelte.js";
 import { o as onDestroy, t as toast } from "./toast.js";
 import { p as useId, s as useDialogDescription, b as box, r as mergeProps, C as Chevron_down, D as Dialog_1, a as DialogContent, d as DialogTitle } from "./DialogTitle.js";
 import "style-to-object";

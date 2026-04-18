@@ -138,18 +138,18 @@ $effect(() => {
   }
 });
 
-  $effect(() => {
-    if (playerReady && player && videoId) {
-      if (previousVideoId !== videoId) {
-        previousVideoId = videoId;
-        const currentVideo = player.getVideoData?.();
-        if (currentVideo && currentVideo.video_id !== videoId) {
-          player.loadVideoById(videoId);
-          lastSeekTarget = null;
-        }
+$effect(() => {
+  if (playerReady && player && videoId) {
+    if (previousVideoId !== videoId) {
+      previousVideoId = videoId;
+      const currentVideo = player.getVideoData?.();
+      if (currentVideo && currentVideo.video_id !== videoId) {
+        player.loadVideoById(videoId);
+        lastSeekTarget = null;
       }
     }
-  });
+  }
+});
 
 export function seekTo(seconds) {
   if (player && playerReady) {

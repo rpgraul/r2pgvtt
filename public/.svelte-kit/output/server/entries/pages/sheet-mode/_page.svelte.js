@@ -1,5 +1,5 @@
 import { g as ensure_array_like, b as attr_class, l as stringify, a as attr, i as escape_html, d as derived } from "../../../chunks/index2.js";
-import { g as gameState } from "../../../chunks/gameState.svelte.js";
+import { gameState } from "../../../chunks/gameState.svelte.js";
 import "../../../chunks/client.js";
 import { B as Badge } from "../../../chunks/Badge.js";
 import "clsx";

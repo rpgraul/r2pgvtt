@@ -267,7 +267,7 @@ const db = {
     const { error } = await supabase.from("items").upsert(updates, { onConflict: "id" });
     if (error) throw error;
   },
-  subscribeToChat(gameId, callback, onChannelCreated) {
+  subscribeToChat(gameId, callback) {
     const loadMessages = () => {
       console.log("[Chat] loadMessages called, gameId:", gameId);
       let q = supabase.from("chat_messages").select("*").order("created_at", { ascending: true });
@@ -286,23 +286,7 @@ const db = {
       });
     };
     loadMessages();
-    const channelName = `chat:${gameId || "global"}`;
-    const filter = gameId ? `game_id=eq.${gameId}` : void 0;
-    const channel = supabase.channel(channelName).on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "chat_messages", filter },
-      (payload) => {
-        console.log("[Chat] Realtime event received:", payload);
-        loadMessages();
-      }
-    ).subscribe((status) => {
-      console.log("[Chat] Realtime channel status:", status);
-    });
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
     return () => {
-      supabase.removeChannel(channel);
     };
   },
   async addChatMessage(text, type = "user", sender, gameId) {
@@ -320,7 +304,7 @@ const db = {
     console.log("[Chat] Message inserted:", data);
     return data;
   },
-  subscribeToRolls(gameId, callback, onChannelCreated) {
+  subscribeToRolls(gameId, callback) {
     const loadRolls = () => {
       let q = supabase.from("dice_rolls").select("*").order("created_at", { ascending: false }).limit(50);
       if (gameId) {
@@ -336,19 +320,7 @@ const db = {
       });
     };
     loadRolls();
-    const channelName = `rolls:${gameId || "global"}`;
-    const filter = gameId ? `game_id=eq.${gameId}` : void 0;
-    const channel = supabase.channel(channelName).on("postgres_changes", { event: "*", schema: "public", table: "dice_rolls", filter }, (payload) => {
-      console.log("[Dice] Realtime event received:", payload);
-      loadRolls();
-    }).subscribe((status) => {
-      console.log("[Dice] Realtime channel status:", status);
-    });
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
     return () => {
-      supabase.removeChannel(channel);
     };
   },
   async addRoll(rollData) {
@@ -365,19 +337,6 @@ const db = {
       throw error;
     }
     console.log("[Dice] Roll inserted:", data);
-    if (rollData.gameId) {
-      const channel = supabase.channel(`dice:${rollData.gameId}`);
-      channel.send({
-        type: "broadcast",
-        event: "roll",
-        payload: {
-          userName: rollData.userName,
-          formula: rollData.formula,
-          result: rollData.result,
-          details: rollData.details
-        }
-      });
-    }
     return data;
   },
   async getAudioState(gameId) {
@@ -457,12 +416,9 @@ class GameState {
     this.rolls = [];
     this.filters = { search: "", category: "all", tags: [], visibility: "all" };
     this.viewMode = "grid";
+    this.itemChannel = null;
+    this.roomChannel = null;
     this.unsubItems = null;
-    this.unsubChat = null;
-    this.unsubRolls = null;
-    this.rollCallback = null;
-    this.lastRollId = null;
-    this.realtimeChannels = { items: null, chat: null, rolls: null };
     this.getUserName = () => authState.displayName;
     this.setUserName = (name) => authState.updateProfile({ display_name: name });
     this.setNarrator = () => authState.updateProfile({ role: "narrador" });
@@ -539,41 +495,33 @@ class GameState {
       this.loadGameRole(gameId);
     }
     this.cleanupRealtimeChannels();
-    this.unsubItems = db.subscribeToItems(
-      gameId,
-      (cards) => {
-        this.items = fromCardDBArray(cards);
-        this.isLoading = false;
-      },
-      (channel) => {
-        this.realtimeChannels.items = channel;
+    this.unsubItems = db.subscribeToItems(gameId, (cards) => {
+      this.items = fromCardDBArray(cards);
+      this.isLoading = false;
+    });
+    this.setupRoomChannel(gameId);
+  }
+  setupRoomChannel(gameId) {
+    if (!gameId) return;
+    this.roomChannel = supabase.channel(`room:${gameId}`);
+    this.roomChannel.on("broadcast", { event: "chat_message" }, (payload) => {
+      const message = payload.payload;
+      const currentUserId = authState.user?.id;
+      if (message.senderId !== currentUserId) {
+        this.chatMessages = [...this.chatMessages, message];
       }
-    );
-    this.unsubChat = db.subscribeToChat(
-      gameId,
-      (messages) => {
-        this.chatMessages = messages;
-      },
-      (channel) => {
-        this.realtimeChannels.chat = channel;
+    }).on("broadcast", { event: "dice_roll_start" }, (payload) => {
+      const { formula } = payload.payload;
+      import("./diceStore.svelte.js").then((m) => m.diceStore.rollFake(formula));
+    }).on("broadcast", { event: "dice_roll" }, (payload) => {
+      const rollData = payload.payload;
+      const currentUserId = authState.user?.id;
+      if (rollData.userId !== currentUserId) {
+        this.rolls = [rollData, ...this.rolls];
       }
-    );
-    this.unsubRolls = db.subscribeToRolls(
-      gameId,
-      (rollData) => {
-        this.rolls = rollData;
-        if (rollData.length > 0) {
-          const latestRoll = rollData[0];
-          if (latestRoll.id !== this.lastRollId && this.rollCallback) {
-            this.lastRollId = latestRoll.id;
-            this.rollCallback(latestRoll);
-          }
-        }
-      },
-      (channel) => {
-        this.realtimeChannels.rolls = channel;
-      }
-    );
+    }).subscribe((status) => {
+      console.log("[GameState] Room channel status:", status);
+    });
   }
   setGameId(gameId) {
     if (this.currentGameId !== gameId) {
@@ -591,17 +539,13 @@ class GameState {
     this.currentGameName = gameData?.nome || null;
   }
   cleanupRealtimeChannels() {
-    if (this.realtimeChannels.items) {
-      supabase.removeChannel(this.realtimeChannels.items);
-      this.realtimeChannels.items = null;
+    if (this.itemChannel) {
+      supabase.removeChannel(this.itemChannel);
+      this.itemChannel = null;
     }
-    if (this.realtimeChannels.chat) {
-      supabase.removeChannel(this.realtimeChannels.chat);
-      this.realtimeChannels.chat = null;
-    }
-    if (this.realtimeChannels.rolls) {
-      supabase.removeChannel(this.realtimeChannels.rolls);
-      this.realtimeChannels.rolls = null;
+    if (this.roomChannel) {
+      supabase.removeChannel(this.roomChannel);
+      this.roomChannel = null;
     }
   }
   setSearch(search) {
@@ -618,9 +562,6 @@ class GameState {
   }
   setViewMode(mode) {
     this.viewMode = mode;
-  }
-  onRollReceived(callback) {
-    this.rollCallback = callback;
   }
   async createCard(cardData) {
     if (!authState.isAuthenticated || !authState.displayName) {
@@ -678,38 +619,70 @@ class GameState {
   }
   async sendMessage(text) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addChatMessage(text, "user", authState.displayName, this.currentGameId);
-    await this.refreshChat();
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: "user",
+      sender: authState.displayName,
+      senderId: authState.user?.id,
+      game_id: this.currentGameId,
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.chatMessages = [...this.chatMessages, message];
+    if (this.roomChannel) {
+      this.roomChannel.send({ type: "broadcast", event: "chat_message", payload: message });
+    }
+    db.addChatMessage(text, "user", authState.displayName, this.currentGameId);
   }
   async sendSystemMessage(text) {
     if (!authState.isAuthenticated) return;
-    await db.addChatMessage(text, "system", "Sistema", this.currentGameId);
-    await this.refreshChat();
-  }
-  async refreshChat() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase.from("chat_messages").select("*").eq("game_id", this.currentGameId).order("created_at", { ascending: true });
-    if (!error) {
-      this.chatMessages = data || [];
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: "system",
+      sender: "Sistema",
+      senderId: null,
+      game_id: this.currentGameId,
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.chatMessages = [...this.chatMessages, message];
+    if (this.roomChannel) {
+      this.roomChannel.send({ type: "broadcast", event: "chat_message", payload: message });
     }
+    db.addChatMessage(text, "system", "Sistema", this.currentGameId);
   }
-  async refreshRolls() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase.from("dice_rolls").select("*").eq("game_id", this.currentGameId).order("created_at", { ascending: false }).limit(50);
-    if (!error) {
-      this.rolls = data || [];
+  broadcastDiceStart(formula) {
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: "broadcast",
+        event: "dice_roll_start",
+        payload: { formula }
+      });
     }
   }
   async sendRoll(formula, result, details) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addRoll({
+    const rollData = {
+      id: crypto.randomUUID(),
+      user_name: authState.displayName,
+      userId: authState.user?.id,
+      formula,
+      result,
+      details,
+      game_id: this.currentGameId,
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.rolls = [rollData, ...this.rolls];
+    if (this.roomChannel) {
+      this.roomChannel.send({ type: "broadcast", event: "dice_roll", payload: rollData });
+    }
+    db.addRoll({
       userName: authState.displayName,
       formula,
       result,
       details,
       gameId: this.currentGameId
     });
-    await this.refreshRolls();
   }
   async getGameById(gameId) {
     const { data, error } = await supabase.from("games").select("*").eq("id", gameId).single();
@@ -751,14 +724,11 @@ class GameState {
   }
   destroy() {
     if (this.unsubItems) this.unsubItems();
-    if (this.unsubChat) this.unsubChat();
-    if (this.unsubRolls) this.unsubRolls();
     this.unsubItems = null;
-    this.unsubChat = null;
-    this.unsubRolls = null;
+    this.cleanupRealtimeChannels();
   }
 }
 const gameState = new GameState();
 export {
-  gameState as g
+  gameState
 };

@@ -32,14 +32,12 @@ function createChatState() {
   async function sendMessage(content) {
     if (!gameId || !userId || !userName || !content.trim()) return;
 
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        game_id: gameId,
-        user_id: userId,
-        author_name: userName,
-        content: content.trim(),
-      });
+    const { error } = await supabase.from('chat_messages').insert({
+      game_id: gameId,
+      user_id: userId,
+      author_name: userName,
+      content: content.trim(),
+    });
 
     if (error) {
       console.error('Error sending message:', error);
@@ -71,12 +69,16 @@ function createChatState() {
 
     channel = supabase
       .channel(`chat:${gameId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `game_id=eq.${gameId}`,
-      }, handleRealtime)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `game_id=eq.${gameId}`,
+        },
+        handleRealtime,
+      )
       .subscribe();
   }
 

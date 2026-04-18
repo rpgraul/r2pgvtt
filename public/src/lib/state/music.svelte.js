@@ -256,7 +256,7 @@ function createMusicState() {
 
     playlist = playlist.filter((t) => t.id !== trackId);
 
-    if (currentTrackId && !playlist.find(t => t.id === currentTrackId)) {
+    if (currentTrackId && !playlist.find((t) => t.id === currentTrackId)) {
       currentTrackId = playlist.length > 0 ? playlist[0].id : null;
     }
   }

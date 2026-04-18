@@ -41,16 +41,11 @@ class GameState {
 
   viewMode = $state('grid');
 
-  // Polling for shared real-time updates
-  private chatPollingInterval: any = null;
-  private dicePollingInterval: any = null;
+  // Realtime channels
+  private itemChannel: any = null;
+  private roomChannel: any = null;
 
   private unsubItems: (() => void) | null = null;
-  private unsubChat: (() => void) | null = null;
-  private unsubRolls: (() => void) | null = null;
-  private rollCallback: ((roll: any) => void) | null = null;
-  private lastRollId: string | null = null;
-  private realtimeChannels: any = { items: null, chat: null, rolls: null };
 
   get user() {
     return authState.user;
@@ -149,44 +144,41 @@ class GameState {
 
     this.cleanupRealtimeChannels();
 
-    this.unsubItems = db.subscribeToItems(
-      gameId,
-      (cards) => {
-        this.items = fromCardDBArray(cards);
-        this.isLoading = false;
-      },
-      (channel) => {
-        this.realtimeChannels.items = channel;
-      },
-    );
+    this.unsubItems = db.subscribeToItems(gameId, (cards) => {
+      this.items = fromCardDBArray(cards);
+      this.isLoading = false;
+    });
 
-    this.unsubChat = db.subscribeToChat(
-      gameId,
-      (messages) => {
-        this.chatMessages = messages;
-      },
-      (channel) => {
-        this.realtimeChannels.chat = channel;
-      },
-    );
+    this.setupRoomChannel(gameId);
+  }
 
-    this.unsubRolls = db.subscribeToRolls(
-      gameId,
-      (rollData) => {
-        this.rolls = rollData;
+  private setupRoomChannel(gameId: string | null) {
+    if (!gameId) return;
 
-        if (rollData.length > 0) {
-          const latestRoll = rollData[0];
-          if (latestRoll.id !== this.lastRollId && this.rollCallback) {
-            this.lastRollId = latestRoll.id;
-            this.rollCallback(latestRoll);
-          }
+    this.roomChannel = supabase.channel(`room:${gameId}`);
+
+    this.roomChannel
+      .on('broadcast', { event: 'chat_message' }, (payload) => {
+        const message = payload.payload;
+        const currentUserId = authState.user?.id;
+        if (message.senderId !== currentUserId) {
+          this.chatMessages = [...this.chatMessages, message];
         }
-      },
-      (channel) => {
-        this.realtimeChannels.rolls = channel;
-      },
-    );
+      })
+      .on('broadcast', { event: 'dice_roll_start' }, (payload) => {
+        const { formula } = payload.payload;
+        import('./diceStore.svelte.js').then((m) => m.diceStore.rollFake(formula));
+      })
+      .on('broadcast', { event: 'dice_roll' }, (payload) => {
+        const rollData = payload.payload;
+        const currentUserId = authState.user?.id;
+        if (rollData.userId !== currentUserId) {
+          this.rolls = [rollData, ...this.rolls];
+        }
+      })
+      .subscribe((status) => {
+        console.log('[GameState] Room channel status:', status);
+      });
   }
 
   setGameId(gameId: string | null) {
@@ -220,17 +212,13 @@ class GameState {
   }
 
   private cleanupRealtimeChannels() {
-    if (this.realtimeChannels.items) {
-      supabase.removeChannel(this.realtimeChannels.items);
-      this.realtimeChannels.items = null;
+    if (this.itemChannel) {
+      supabase.removeChannel(this.itemChannel);
+      this.itemChannel = null;
     }
-    if (this.realtimeChannels.chat) {
-      supabase.removeChannel(this.realtimeChannels.chat);
-      this.realtimeChannels.chat = null;
-    }
-    if (this.realtimeChannels.rolls) {
-      supabase.removeChannel(this.realtimeChannels.rolls);
-      this.realtimeChannels.rolls = null;
+    if (this.roomChannel) {
+      supabase.removeChannel(this.roomChannel);
+      this.roomChannel = null;
     }
   }
 
@@ -252,10 +240,6 @@ class GameState {
 
   setViewMode(mode: string) {
     this.viewMode = mode;
-  }
-
-  onRollReceived(callback: (roll: any) => void) {
-    this.rollCallback = callback;
   }
 
   async createCard(cardData: any) {
@@ -328,52 +312,97 @@ class GameState {
 
   async sendMessage(text: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
-    await this.refreshChat();
-    await this.refreshRolls(); // Also refresh dice to show for everyone
+
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: 'user',
+      sender: authState.displayName,
+      senderId: authState.user?.id,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    this.chatMessages = [...this.chatMessages, message];
+
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'chat_message',
+        payload: message,
+      });
+    }
+
+    db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
   }
 
   async sendSystemMessage(text: string) {
     if (!authState.isAuthenticated) return;
-    await db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
-    await this.refreshChat();
-  }
 
-  async refreshChat() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('game_id', this.currentGameId)
-      .order('created_at', { ascending: true });
-    if (!error) {
-      this.chatMessages = data || [];
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: 'system',
+      sender: 'Sistema',
+      senderId: null,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    this.chatMessages = [...this.chatMessages, message];
+
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'chat_message',
+        payload: message,
+      });
     }
+
+    db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
   }
 
-  async refreshRolls() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase
-      .from('dice_rolls')
-      .select('*')
-      .eq('game_id', this.currentGameId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (!error) {
-      this.rolls = data || [];
+  broadcastDiceStart(formula: string) {
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'dice_roll_start',
+        payload: { formula },
+      });
     }
   }
 
   async sendRoll(formula: string, result: number, details: any) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addRoll({
+
+    const rollData = {
+      id: crypto.randomUUID(),
+      user_name: authState.displayName,
+      userId: authState.user?.id,
+      formula,
+      result,
+      details,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    this.rolls = [rollData, ...this.rolls];
+
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'dice_roll',
+        payload: rollData,
+      });
+    }
+
+    db.addRoll({
       userName: authState.displayName,
       formula,
       result,
       details,
       gameId: this.currentGameId,
     });
-    await this.refreshRolls();
   }
 
   async getGameById(gameId: string) {
@@ -436,41 +465,8 @@ class GameState {
 
   destroy() {
     if (this.unsubItems) this.unsubItems();
-    if (this.unsubChat) this.unsubChat();
-    if (this.unsubRolls) this.unsubRolls();
     this.unsubItems = null;
-    this.unsubChat = null;
-    this.unsubRolls = null;
-    this.stopPolling();
-    this.chatPollingInterval = null;
-    this.dicePollingInterval = null;
-  }
-
-  startPolling() {
-    const self = this;
-    // Polling for chat - cada 1.5 segundos
-    if (!this.chatPollingInterval && this.currentGameId) {
-      this.chatPollingInterval = setInterval(() => {
-        self.refreshChat();
-      }, 1500);
-    }
-    // Polling for dice - cada 1.5 segundos
-    if (!this.dicePollingInterval && this.currentGameId) {
-      this.dicePollingInterval = setInterval(() => {
-        self.refreshRolls();
-      }, 1500);
-    }
-  }
-
-  stopPolling() {
-    if (this.chatPollingInterval) {
-      clearInterval(this.chatPollingInterval);
-      this.chatPollingInterval = null;
-    }
-    if (this.dicePollingInterval) {
-      clearInterval(this.dicePollingInterval);
-      this.dicePollingInterval = null;
-    }
+    this.cleanupRealtimeChannels();
   }
 
   getUserName = () => authState.displayName;

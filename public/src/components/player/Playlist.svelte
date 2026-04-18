@@ -1,31 +1,31 @@
 <script>
-  import { musicState } from '$lib/state/music.svelte.js';
-  import { X, Music, Play, Pause } from 'lucide-svelte';
+import { musicState } from '$lib/state/music.svelte.js';
+import { X, Music, Play, Pause } from 'lucide-svelte';
 
-  const playlist = $derived(musicState.playlist());
-  const currentTrack = $derived(musicState.currentTrack());
-  const isPlaying = $derived(musicState.isPlaying());
-  const isLoading = $derived(musicState.isLoading());
+const playlist = $derived(musicState.playlist());
+const currentTrack = $derived(musicState.currentTrack());
+const isPlaying = $derived(musicState.isPlaying());
+const isLoading = $derived(musicState.isLoading());
 
-  function isCurrentTrack(trackId) {
-    return currentTrack?.id === trackId;
+function isCurrentTrack(trackId) {
+  return currentTrack?.id === trackId;
+}
+
+async function handleRemove(trackId) {
+  try {
+    await musicState.removeTrack(trackId);
+  } catch (e) {
+    console.error('Failed to remove track:', e);
   }
+}
 
-  async function handleRemove(trackId) {
-    try {
-      await musicState.removeTrack(trackId);
-    } catch (e) {
-      console.error('Failed to remove track:', e);
-    }
+async function handlePlayTrack(track, index) {
+  if (currentTrack?.id === track.id && isPlaying) {
+    await musicState.pause();
+  } else {
+    await musicState.setTrack(index);
   }
-
-  async function handlePlayTrack(track, index) {
-    if (currentTrack?.id === track.id && isPlaying) {
-      await musicState.pause();
-    } else {
-      await musicState.setTrack(index);
-    }
-  }
+}
 </script>
 
 <div class="playlist-container">

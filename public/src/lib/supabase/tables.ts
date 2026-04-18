@@ -391,11 +391,7 @@ export const db = {
     if (error) throw error;
   },
 
-  subscribeToChat(
-    gameId: string | null,
-    callback: (messages: any[]) => void,
-    onChannelCreated?: (channel: any) => void,
-  ) {
+  subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
     const loadMessages = () => {
       console.log('[Chat] loadMessages called, gameId:', gameId);
       let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
@@ -416,31 +412,7 @@ export const db = {
 
     loadMessages();
 
-    const channelName = `chat:${gameId || 'global'}`;
-
-    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chat_messages', filter },
-        (payload) => {
-          console.log('[Chat] Realtime event received:', payload);
-          loadMessages();
-        },
-      )
-      .subscribe((status) => {
-        console.log('[Chat] Realtime channel status:', status);
-      });
-
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => {};
   },
 
   async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string) {
@@ -462,28 +434,10 @@ export const db = {
     }
     console.log('[Chat] Message inserted:', data);
 
-    // Broadcast para outros jogadores - criar canal e enviar imediatamente
-    if (gameId) {
-      const chatBroadcast = supabase.channel(`chat:${gameId}`);
-      chatBroadcast.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          chatBroadcast.send({
-            type: 'broadcast',
-            event: 'message',
-            payload: { text, sender, type },
-          });
-        }
-      });
-    }
-
     return data;
   },
 
-  subscribeToRolls(
-    gameId: string | null,
-    callback: (rolls: any[]) => void,
-    onChannelCreated?: (channel: any) => void,
-  ) {
+  subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
     const loadRolls = () => {
       let q = supabase
         .from('dice_rolls')
@@ -507,30 +461,16 @@ export const db = {
 
     loadRolls();
 
-    const channelName = `rolls:${gameId || 'global'}`;
-
-    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
-
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls', filter }, (payload) => {
-        console.log('[Dice] Realtime event received:', payload);
-        loadRolls();
-      })
-      .subscribe((status) => {
-        console.log('[Dice] Realtime channel status:', status);
-      });
-
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => {};
   },
 
-  async addRoll(rollData: { userName: string; formula: string; result: number; details?: any; gameId?: string }) {
+  async addRoll(rollData: {
+    userName: string;
+    formula: string;
+    result: number;
+    details?: any;
+    gameId?: string;
+  }) {
     console.log('[Dice] addRoll called:', rollData);
     const { data, error } = await supabase
       .from('dice_rolls')
@@ -549,21 +489,6 @@ export const db = {
       throw error;
     }
     console.log('[Dice] Roll inserted:', data);
-
-    // Broadcast para outros jogadores usando Realtime Broadcast
-    if (rollData.gameId) {
-      const channel = supabase.channel(`dice:${rollData.gameId}`);
-      channel.send({
-        type: 'broadcast',
-        event: 'roll',
-        payload: {
-          userName: rollData.userName,
-          formula: rollData.formula,
-          result: rollData.result,
-          details: rollData.details,
-        },
-      });
-    }
 
     return data;
   },

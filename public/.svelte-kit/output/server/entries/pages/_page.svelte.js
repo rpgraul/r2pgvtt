@@ -7,7 +7,7 @@ import "../../chunks/root.js";
 import "../../chunks/state.svelte.js";
 import { s as sanitize_props, e as spread_props, f as slot, d as derived, o as attributes, c as bind_props, g as ensure_array_like, i as escape_html, b as attr_class, j as clsx, a as attr } from "../../chunks/index2.js";
 import { c as cn } from "../../chunks/cn.js";
-import { g as gameState } from "../../chunks/gameState.svelte.js";
+import { gameState } from "../../chunks/gameState.svelte.js";
 import { t as toast, o as onDestroy } from "../../chunks/toast.js";
 import { A as ARROW_UP, e as ARROW_RIGHT, f as ARROW_LEFT, g as ARROW_DOWN, b as box, E as END, i as isBrowser, H as HOME, h as Context, u as useRefById, j as ENTER, S as SPACE, k as getAriaChecked, l as getAriaPressed, m as getDisabled, n as getDataDisabled, o as getDataOrientation, p as useId, q as noop, w as watch, r as mergeProps, D as Dialog_1, a as DialogContent, d as DialogTitle, X, P as Plus } from "../../chunks/DialogTitle.js";
 import { D as DialogDescription, C as CardDialog } from "../../chunks/CardDialog.js";
