@@ -41,7 +41,7 @@ onMount(() => {
 });
 </script>
 
-{#if diceStore.activeDice.length > 0}
+{#if diceStore.isDiceVisible}
   <button
     class="fixed inset-0 z-[9999] bg-transparent cursor-pointer"
     onclick={() => diceStore.canDismiss && diceStore.clearDice()}

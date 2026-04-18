@@ -68,27 +68,6 @@ function createDiceStore() {
 
     diceBoxInstance = createDiceBoxManager(container, {
       themeColor: currentDiceColor,
-      onRollComplete: (result) => {
-        console.log('[DiceStore] onRollComplete called:', result);
-        if (diceBoxResolve && diceBoxData) {
-          const diceId = diceBoxData.id;
-          console.log('[DiceStore] Resolving dice:', diceId, result);
-
-          const evaluated = evaluateRolls(diceBoxData.parsedData, result.rolls);
-          evaluated.formula = diceBoxData.formula;
-          evaluated.diceType = diceBoxData.diceType;
-
-          diceBoxResolve(evaluated);
-          completeDice(diceId, evaluated);
-          diceBoxResolve = null;
-          diceBoxData = null;
-        } else {
-          console.log('[DiceStore] No resolve or data, treating as fake roll - clearing after 3s');
-          setTimeout(() => {
-            clear3DDice();
-          }, 3000);
-        }
-      },
     });
 
     diceInitializing = diceBoxInstance.init().then(() => {
@@ -115,60 +94,21 @@ function createDiceStore() {
         return;
       }
 
-      import('./gameState.svelte.ts').then((m) => m.gameState.broadcastDiceStart(formula));
+      const result = fallbackRoll(parsedData);
 
-      const diceId = generateId();
-      const diceType = `d${parsedData.sides}`;
+      import('./gameState.svelte.ts').then((m) =>
+        m.gameState.sendRoll(formula, result.total, result, currentDiceColor),
+      );
 
-      activeDice = [
-        ...activeDice,
-        {
-          id: diceId,
-          formula,
-          parsedData, // Guarda estrutura completa
-          diceType,
-          rolling: true,
-        },
-      ];
+      playSyncRoll({
+        formula,
+        result: result.total,
+        details: result,
+        color: currentDiceColor,
+        userName: getUserName(),
+      });
 
-      hasUserDismissed = false;
-      isDiceVisible = true;
-
-      // Tenta recuperar no ambiente dev (HMR) se a store for recriada
-      if (!diceBoxInstance && !diceInitializing) {
-        console.log('[DiceStore] Recarregando DiceBox devido a HMR...');
-        initDiceBox();
-      }
-
-      // Se está inicializando, aguardar
-      if (diceInitializing) {
-        console.log('[DiceStore] Waiting for DiceBox initialization...');
-        try {
-          await diceInitializing;
-        } catch (err) {
-          console.error('[DiceStore] Init failed:', err);
-        }
-      }
-
-      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
-        console.error('[DiceStore] DiceBox not ready after wait');
-        activeDice = activeDice.filter((d) => d.id !== diceId);
-        reject(new Error('DiceBox not ready'));
-        return;
-      }
-
-      diceBoxResolve = resolve;
-      diceBoxData = { id: diceId, formula, parsedData, diceType };
-
-      try {
-        await diceBoxInstance.roll(parsedData.baseFormula);
-      } catch (error) {
-        console.error('[DiceStore] Roll error:', error);
-        const fallback = fallbackRoll(parsedData);
-        completeDice(diceId, fallback);
-        activeDice = activeDice.filter((d) => d.id !== diceId);
-        resolve(fallback);
-      }
+      resolve(result);
     });
   }
 
@@ -254,12 +194,14 @@ function createDiceStore() {
     return diceBoxInstance;
   }
 
-  async function rollFake(formula) {
-    const parsedData = parseFormula(formula);
-    if (!parsedData) {
-      console.error('[DiceStore] rollFake: invalid formula:', formula);
-      return;
-    }
+  function playSyncRoll(payload) {
+    const { formula, result, details, color, userName } = payload;
+    const sides = details.parsedData.sides;
+    const forcedArray = details.details.map((d) => ({
+      sides,
+      themeColor: color,
+      value: d.value,
+    }));
 
     isDiceVisible = true;
 
@@ -267,24 +209,40 @@ function createDiceStore() {
       initDiceBox();
     }
 
-    if (diceInitializing) {
-      try {
-        await diceInitializing;
-      } catch (err) {
-        console.error('[DiceStore] rollFake: init failed:', err);
+    const finishRoll = () => {
+      const rollId = generateId();
+      pendingAlerts = [
+        ...pendingAlerts,
+        {
+          id: rollId,
+          userName,
+          formula,
+          result,
+          successes: details.successes,
+          textual: details.textual,
+          rolls: details.details.map((d) => d.value),
+          diceType: `d${sides}`,
+          timestamp: Date.now(),
+        },
+      ];
+      processNextAlert();
+      setTimeout(() => {
+        clear3DDice();
+      }, 3000);
+    };
+
+    const doRoll = () => {
+      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+        console.error('[DiceStore] playSyncRoll: DiceBox not ready');
         return;
       }
-    }
+      diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+    };
 
-    if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
-      console.error('[DiceStore] rollFake: DiceBox not ready');
-      return;
-    }
-
-    try {
-      diceBoxInstance.roll(parsedData.baseFormula);
-    } catch (error) {
-      console.error('[DiceStore] rollFake error:', error);
+    if (diceInitializing) {
+      diceInitializing.then(doRoll);
+    } else {
+      doRoll();
     }
   }
 
@@ -312,7 +270,7 @@ function createDiceStore() {
     },
 
     rollDice,
-    rollFake,
+    playSyncRoll,
     dismissAlert,
     dismissAll,
     clearDice,

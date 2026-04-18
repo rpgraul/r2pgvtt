@@ -510,14 +510,18 @@ class GameState {
       if (message.senderId !== currentUserId) {
         this.chatMessages = [...this.chatMessages, message];
       }
-    }).on("broadcast", { event: "dice_roll_start" }, (payload) => {
-      const { formula } = payload.payload;
-      import("./diceStore.svelte.js").then((m) => m.diceStore.rollFake(formula));
     }).on("broadcast", { event: "dice_roll" }, (payload) => {
       const rollData = payload.payload;
       const currentUserId = authState.user?.id;
       if (rollData.userId !== currentUserId) {
         this.rolls = [rollData, ...this.rolls];
+        import("./diceStore.svelte.js").then((m) => m.diceStore.playSyncRoll({
+          formula: rollData.formula,
+          result: rollData.result,
+          details: rollData.details,
+          color: rollData.color,
+          userName: rollData.user_name
+        }));
       }
     }).subscribe((status) => {
       console.log("[GameState] Room channel status:", status);
@@ -651,16 +655,7 @@ class GameState {
     }
     db.addChatMessage(text, "system", "Sistema", this.currentGameId);
   }
-  broadcastDiceStart(formula) {
-    if (this.roomChannel) {
-      this.roomChannel.send({
-        type: "broadcast",
-        event: "dice_roll_start",
-        payload: { formula }
-      });
-    }
-  }
-  async sendRoll(formula, result, details) {
+  async sendRoll(formula, result, details, color) {
     if (!authState.isAuthenticated || !authState.displayName) return;
     const rollData = {
       id: crypto.randomUUID(),
@@ -669,6 +664,7 @@ class GameState {
       formula,
       result,
       details,
+      color,
       game_id: this.currentGameId,
       created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
