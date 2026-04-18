@@ -41,6 +41,10 @@ class GameState {
 
   viewMode = $state('grid');
 
+  // Polling for shared real-time updates
+  private chatPollingInterval: any = null;
+  private dicePollingInterval: any = null;
+
   private unsubItems: (() => void) | null = null;
   private unsubChat: (() => void) | null = null;
   private unsubRolls: (() => void) | null = null;
@@ -324,12 +328,40 @@ class GameState {
 
   async sendMessage(text: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addChatMessage(text, 'user', authState.displayName);
+    await db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
+    await this.refreshChat();
+    await this.refreshRolls(); // Also refresh dice to show for everyone
   }
 
   async sendSystemMessage(text: string) {
     if (!authState.isAuthenticated) return;
-    await db.addChatMessage(text, 'system', 'Sistema');
+    await db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
+    await this.refreshChat();
+  }
+
+  async refreshChat() {
+    if (!this.currentGameId) return;
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('game_id', this.currentGameId)
+      .order('created_at', { ascending: true });
+    if (!error) {
+      this.chatMessages = data || [];
+    }
+  }
+
+  async refreshRolls() {
+    if (!this.currentGameId) return;
+    const { data, error } = await supabase
+      .from('dice_rolls')
+      .select('*')
+      .eq('game_id', this.currentGameId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (!error) {
+      this.rolls = data || [];
+    }
   }
 
   async sendRoll(formula: string, result: number, details: any) {
@@ -339,7 +371,9 @@ class GameState {
       formula,
       result,
       details,
+      gameId: this.currentGameId,
     });
+    await this.refreshRolls();
   }
 
   async getGameById(gameId: string) {
@@ -407,6 +441,36 @@ class GameState {
     this.unsubItems = null;
     this.unsubChat = null;
     this.unsubRolls = null;
+    this.stopPolling();
+    this.chatPollingInterval = null;
+    this.dicePollingInterval = null;
+  }
+
+  startPolling() {
+    const self = this;
+    // Polling for chat - cada 1.5 segundos
+    if (!this.chatPollingInterval && this.currentGameId) {
+      this.chatPollingInterval = setInterval(() => {
+        self.refreshChat();
+      }, 1500);
+    }
+    // Polling for dice - cada 1.5 segundos
+    if (!this.dicePollingInterval && this.currentGameId) {
+      this.dicePollingInterval = setInterval(() => {
+        self.refreshRolls();
+      }, 1500);
+    }
+  }
+
+  stopPolling() {
+    if (this.chatPollingInterval) {
+      clearInterval(this.chatPollingInterval);
+      this.chatPollingInterval = null;
+    }
+    if (this.dicePollingInterval) {
+      clearInterval(this.dicePollingInterval);
+      this.dicePollingInterval = null;
+    }
   }
 
   getUserName = () => authState.displayName;

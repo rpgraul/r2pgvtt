@@ -3,9 +3,24 @@ import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { Dices } from 'lucide-svelte';
 import { fly } from 'svelte/transition';
 
+// Use a key to force re-render when it changes
+let renderKey = $state(0);
+
+// Access the getter to track dependency - this should make it reactive
+$effect(() => {
+  // Access displayedAlerts length to create dependency
+  const len = diceStore.displayedAlerts.length;
+  // Also access the array itself
+  const alerts = diceStore.displayedAlerts;
+  // Force re-render by updating key
+  renderKey = Date.now();
+});
+
+// Get alerts when renderKey changes
 let alerts = $derived(diceStore.displayedAlerts);
 </script>
 
+{#key renderKey}
 <div class="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] flex flex-col gap-2 pointer-events-none">
   {#each alerts as alert (alert.id)}
     <div 
@@ -35,3 +50,4 @@ let alerts = $derived(diceStore.displayedAlerts);
     </div>
   {/each}
 </div>
+{/key}

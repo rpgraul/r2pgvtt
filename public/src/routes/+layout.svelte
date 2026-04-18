@@ -14,6 +14,7 @@ import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { musicState } from '$lib/state/music.svelte.js';
+import { supabase } from '$lib/supabase/client';
 import '../app.css';
 
 let { children } = $props();
@@ -49,6 +50,44 @@ $effect(() => {
   }
 });
 
+// Listener para Broadcast de dice (fora do onMount - nível do módulo)
+let diceChannelInstance = null;
+
+$effect(() => {
+  const gameId = gameState?.gameId;
+  if (gameId && !diceChannelInstance) {
+    console.log('[Layout] Creating dice broadcast listener for game:', gameId);
+    diceChannelInstance = supabase.channel(`dice:${gameId}`);
+    diceChannelInstance.on('broadcast', { event: 'roll' }, (payload) => {
+      console.log('[Layout] Broadcast roll received:', payload);
+      const rollData = payload;
+      diceStore.addRemoteAlert({
+        formula: rollData.formula,
+        result: rollData.result,
+        userName: rollData.userName,
+        details: rollData.details,
+      });
+    });
+    diceChannelInstance.subscribe();
+  }
+});
+
+// Listener para Broadcast de chat
+let chatChannelInstance = null;
+
+$effect(() => {
+  const gameId = gameState?.gameId;
+  if (gameId && !chatChannelInstance) {
+    console.log('[Layout] Creating chat broadcast listener for game:', gameId);
+    chatChannelInstance = supabase.channel(`chat:${gameId}`);
+    chatChannelInstance.on('broadcast', { event: 'message' }, (payload) => {
+      console.log('[Layout] Chat broadcast received:', payload);
+      gameState.refreshChat(); // Forçar refresh quando nova msg recebida
+    });
+    chatChannelInstance.subscribe();
+  }
+});
+
 onMount(async () => {
   authState.init();
 
@@ -70,9 +109,28 @@ onMount(async () => {
 
   diceStore.initDiceBox(diceContainer);
 
+  // Conectar callback de rolls para todos os jogadores
+  gameState.onRollReceived((roll) => {
+    console.log('[Layout] Roll received:', roll);
+    diceStore.addRemoteAlert({
+      formula: roll.formula,
+      result: roll.result,
+      userName: roll.user_name,
+      details: roll.details,
+    });
+  });
+
   return () => {
     gameState.destroy();
     audioStore.destroy();
+    if (diceChannelInstance) {
+      supabase.removeChannel(diceChannelInstance);
+      diceChannelInstance = null;
+    }
+    if (chatChannelInstance) {
+      supabase.removeChannel(chatChannelInstance);
+      chatChannelInstance = null;
+    }
     if (diceContainer.parentNode) {
       diceContainer.parentNode.removeChild(diceContainer);
     }

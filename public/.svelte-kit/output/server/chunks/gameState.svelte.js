@@ -269,16 +269,19 @@ const db = {
   },
   subscribeToChat(gameId, callback, onChannelCreated) {
     const loadMessages = () => {
+      console.log("[Chat] loadMessages called, gameId:", gameId);
       let q = supabase.from("chat_messages").select("*").order("created_at", { ascending: true });
       if (gameId) {
         q = q.eq("game_id", gameId);
       }
       q.then(({ data, error }) => {
+        console.log("[Chat] query result:", { count: data?.length, error });
         if (error) {
-          console.error("Error loading chat:", error);
+          console.error("[Chat] Error loading chat:", error);
           callback([]);
           return;
         }
+        console.log("[Chat] messages:", data);
         callback(data || []);
       });
     };
@@ -288,10 +291,13 @@ const db = {
     const channel = supabase.channel(channelName).on(
       "postgres_changes",
       { event: "*", schema: "public", table: "chat_messages", filter },
-      () => {
+      (payload) => {
+        console.log("[Chat] Realtime event received:", payload);
         loadMessages();
       }
-    ).subscribe();
+    ).subscribe((status) => {
+      console.log("[Chat] Realtime channel status:", status);
+    });
     if (onChannelCreated) {
       onChannelCreated(channel);
     }
@@ -299,13 +305,19 @@ const db = {
       supabase.removeChannel(channel);
     };
   },
-  async addChatMessage(text, type = "user", sender) {
+  async addChatMessage(text, type = "user", sender, gameId) {
+    console.log("[Chat] addChatMessage called:", { text, type, sender, gameId });
     const { data, error } = await supabase.from("chat_messages").insert({
       text,
       type,
-      sender: sender || authState.displayName || "Anonymous"
+      sender: sender || authState.displayName || "Anonymous",
+      game_id: gameId
     }).select().single();
-    if (error) throw error;
+    if (error) {
+      console.error("[Chat] Error inserting message:", error);
+      throw error;
+    }
+    console.log("[Chat] Message inserted:", data);
     return data;
   },
   subscribeToRolls(gameId, callback, onChannelCreated) {
@@ -326,9 +338,12 @@ const db = {
     loadRolls();
     const channelName = `rolls:${gameId || "global"}`;
     const filter = gameId ? `game_id=eq.${gameId}` : void 0;
-    const channel = supabase.channel(channelName).on("postgres_changes", { event: "*", schema: "public", table: "dice_rolls", filter }, () => {
+    const channel = supabase.channel(channelName).on("postgres_changes", { event: "*", schema: "public", table: "dice_rolls", filter }, (payload) => {
+      console.log("[Dice] Realtime event received:", payload);
       loadRolls();
-    }).subscribe();
+    }).subscribe((status) => {
+      console.log("[Dice] Realtime channel status:", status);
+    });
     if (onChannelCreated) {
       onChannelCreated(channel);
     }
@@ -337,13 +352,32 @@ const db = {
     };
   },
   async addRoll(rollData) {
+    console.log("[Dice] addRoll called:", rollData);
     const { data, error } = await supabase.from("dice_rolls").insert({
       user_name: rollData.userName,
       formula: rollData.formula,
       result: rollData.result,
-      details: rollData.details || []
+      details: rollData.details || [],
+      game_id: rollData.gameId
     }).select().single();
-    if (error) throw error;
+    if (error) {
+      console.error("[Dice] Error inserting roll:", error);
+      throw error;
+    }
+    console.log("[Dice] Roll inserted:", data);
+    if (rollData.gameId) {
+      const channel = supabase.channel(`dice:${rollData.gameId}`);
+      channel.send({
+        type: "broadcast",
+        event: "roll",
+        payload: {
+          userName: rollData.userName,
+          formula: rollData.formula,
+          result: rollData.result,
+          details: rollData.details
+        }
+      });
+    }
     return data;
   },
   async getAudioState(gameId) {
@@ -644,15 +678,38 @@ class GameState {
   }
   async sendMessage(text) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addChatMessage(text, "user", authState.displayName);
+    await db.addChatMessage(text, "user", authState.displayName, this.currentGameId);
+    await this.refreshChat();
   }
   async sendSystemMessage(text) {
     if (!authState.isAuthenticated) return;
-    await db.addChatMessage(text, "system", "Sistema");
+    await db.addChatMessage(text, "system", "Sistema", this.currentGameId);
+    await this.refreshChat();
+  }
+  async refreshChat() {
+    if (!this.currentGameId) return;
+    const { data, error } = await supabase.from("chat_messages").select("*").eq("game_id", this.currentGameId).order("created_at", { ascending: true });
+    if (!error) {
+      this.chatMessages = data || [];
+    }
+  }
+  async refreshRolls() {
+    if (!this.currentGameId) return;
+    const { data, error } = await supabase.from("dice_rolls").select("*").eq("game_id", this.currentGameId).order("created_at", { ascending: false }).limit(50);
+    if (!error) {
+      this.rolls = data || [];
+    }
   }
   async sendRoll(formula, result, details) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addRoll({ userName: authState.displayName, formula, result, details });
+    await db.addRoll({
+      userName: authState.displayName,
+      formula,
+      result,
+      details,
+      gameId: this.currentGameId
+    });
+    await this.refreshRolls();
   }
   async getGameById(gameId) {
     const { data, error } = await supabase.from("games").select("*").eq("id", gameId).single();

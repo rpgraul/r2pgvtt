@@ -1215,6 +1215,21 @@ function createDiceStore() {
       diceBoxInstance2.updateConfig({ themeColor: color });
     }
   }
+  function addRemoteAlert(alertData) {
+    const alertId = `remote-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const newAlert = {
+      id: alertId,
+      formula: alertData.formula,
+      total: alertData.result,
+      userName: alertData.userName,
+      rolls: alertData.details?.rolls || [],
+      diceType: alertData.details?.diceType || alertData.formula,
+      isRemote: true,
+      timestamp: Date.now()
+    };
+    pendingAlerts = [...pendingAlerts, newAlert];
+    processNextAlert();
+  }
   const canDismiss = derived(() => pendingAlerts.length === 0 && !hasActiveRolls());
   function hasActiveRolls() {
     return activeDice.some((d) => d.rolling);
@@ -1409,7 +1424,8 @@ function createDiceStore() {
     getDiceBox,
     processNextAlert,
     hasActiveRolls,
-    setDiceColor
+    setDiceColor,
+    addRemoteAlert
   };
 }
 const diceStore = createDiceStore();

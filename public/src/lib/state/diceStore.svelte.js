@@ -30,6 +30,22 @@ function createDiceStore() {
     }
   }
 
+  function addRemoteAlert(alertData) {
+    const alertId = `remote-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const newAlert = {
+      id: alertId,
+      formula: alertData.formula,
+      total: alertData.result,
+      userName: alertData.userName,
+      rolls: alertData.details?.rolls || [],
+      diceType: alertData.details?.diceType || alertData.formula,
+      isRemote: true,
+      timestamp: Date.now(),
+    };
+    pendingAlerts = [...pendingAlerts, newAlert];
+    processNextAlert();
+  }
+
   const canDismiss = $derived(pendingAlerts.length === 0 && !hasActiveRolls());
 
   function hasActiveRolls() {
@@ -267,6 +283,7 @@ function createDiceStore() {
     processNextAlert,
     hasActiveRolls,
     setDiceColor,
+    addRemoteAlert,
   };
 }
 
