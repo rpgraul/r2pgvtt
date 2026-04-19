@@ -247,6 +247,68 @@ function createDiceStore() {
     }
   }
 
+  async function playRemoteRoll(roll) {
+    const color = roll.details?.color || '#0000ff';
+    const rawDetails = roll.details?.details || [];
+
+    if (rawDetails.length === 0) return;
+
+    const sides = roll.details?.parsedData?.sides || 6;
+    const forcedArray = rawDetails.map(d => ({
+      qty: 1,
+      sides,
+      value: d.value,
+      themeColor: color,
+    }));
+
+    isDiceVisible = true;
+
+    const finishRoll = () => {
+      const rollId = generateId();
+      pendingAlerts = [
+        ...pendingAlerts,
+        {
+          id: rollId,
+          userName: roll.user_name,
+          formula: roll.formula,
+          result: roll.result,
+          successes: roll.details?.successes,
+          textual: roll.details?.textual,
+          rolls: rawDetails.map(d => d.value),
+          diceType: `d${sides}`,
+          color,
+          isRemote: true,
+          timestamp: Date.now(),
+        },
+      ];
+      processNextAlert();
+      setTimeout(() => {
+        clear3DDice();
+      }, 3000);
+    };
+
+    const doRoll = () => {
+      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+        if (!diceInitializing) {
+          initDiceBox();
+        }
+        diceInitializing.then(() => {
+          if (diceBoxInstance) {
+            diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+          }
+        });
+        return;
+      }
+      diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+    };
+
+    if (diceInitializing) {
+      diceInitializing.then(doRoll);
+    } else {
+      doRoll();
+    }
+  }
+
   return {
     get activeDice() {
       return activeDice;
@@ -272,6 +334,7 @@ function createDiceStore() {
 
     rollDice,
     playSyncRoll,
+    playRemoteRoll,
     dismissAlert,
     dismissAll,
     clearDice,

@@ -4,17 +4,28 @@
     "name": "internal",
     "src": ".svelte-kit/generated/server/internal.js",
     "isEntry": true,
-    "imports": ["_root.js", "_environment.js", "_internal.js", "_shared-server.js"]
+    "imports": [
+      "_root.js",
+      "_environment.js",
+      "_internal.js",
+      "_shared-server.js"
+    ]
   },
   "_Badge.js": {
     "file": "chunks/Badge.js",
     "name": "Badge",
-    "imports": ["_index2.js", "_cn.js"]
+    "imports": [
+      "_index2.js",
+      "_cn.js"
+    ]
   },
   "_Button.js": {
     "file": "chunks/Button.js",
     "name": "Button",
-    "imports": ["_index2.js", "_cn.js"]
+    "imports": [
+      "_index2.js",
+      "_cn.js"
+    ]
   },
   "_CardDialog.js": {
     "file": "chunks/CardDialog.js",
@@ -34,17 +45,28 @@
   "_DialogTitle.js": {
     "file": "chunks/DialogTitle.js",
     "name": "DialogTitle",
-    "imports": ["_index2.js", "_Icon.js", "_cn.js", "_toast.js", "_events.js"]
+    "imports": [
+      "_index2.js",
+      "_Icon.js",
+      "_cn.js",
+      "_toast.js",
+      "_events.js"
+    ]
   },
   "_Icon.js": {
     "file": "chunks/Icon.js",
     "name": "Icon",
-    "imports": ["_index2.js"]
+    "imports": [
+      "_index2.js"
+    ]
   },
   "_Input.js": {
     "file": "chunks/Input.js",
     "name": "Input",
-    "imports": ["_index2.js", "_cn.js"]
+    "imports": [
+      "_index2.js",
+      "_cn.js"
+    ]
   },
   "_RichTextEditor.CFMeo3nk.css": {
     "file": "_app/immutable/assets/RichTextEditor.CFMeo3nk.css",
@@ -53,22 +75,31 @@
   "_RichTextEditor.svelte_svelte_type_style_lang.js": {
     "file": "chunks/RichTextEditor.svelte_svelte_type_style_lang.js",
     "name": "RichTextEditor.svelte_svelte_type_style_lang",
-    "css": ["_app/immutable/assets/RichTextEditor.CFMeo3nk.css"]
+    "css": [
+      "_app/immutable/assets/RichTextEditor.CFMeo3nk.css"
+    ]
   },
   "_ScrollArea.js": {
     "file": "chunks/ScrollArea.js",
     "name": "ScrollArea",
-    "imports": ["_index2.js", "_cn.js"]
+    "imports": [
+      "_index2.js",
+      "_cn.js"
+    ]
   },
   "_auth.svelte.js": {
     "file": "chunks/auth.svelte.js",
     "name": "auth.svelte",
-    "imports": ["_client.js"]
+    "imports": [
+      "_client.js"
+    ]
   },
   "_client.js": {
     "file": "chunks/client.js",
     "name": "client",
-    "imports": ["_shared-server.js"]
+    "imports": [
+      "_shared-server.js"
+    ]
   },
   "_cn.js": {
     "file": "chunks/cn.js",
@@ -81,7 +112,9 @@
   "_events.js": {
     "file": "chunks/events.js",
     "name": "events",
-    "imports": ["_index2.js"]
+    "imports": [
+      "_index2.js"
+    ]
   },
   "_exports.js": {
     "file": "chunks/exports.js",
@@ -94,22 +127,33 @@
   "_index.js": {
     "file": "chunks/index.js",
     "name": "index",
-    "imports": ["_index2.js"]
+    "imports": [
+      "_index2.js"
+    ]
   },
   "_index2.js": {
     "file": "chunks/index2.js",
     "name": "index",
-    "imports": ["_false.js"]
+    "imports": [
+      "_false.js"
+    ]
   },
   "_internal.js": {
     "file": "chunks/internal.js",
     "name": "internal",
-    "imports": ["_root.js", "_environment.js", "_shared-server.js"]
+    "imports": [
+      "_root.js",
+      "_environment.js",
+      "_shared-server.js"
+    ]
   },
   "_root.js": {
     "file": "chunks/root.js",
     "name": "root",
-    "imports": ["_index2.js", "_events.js"]
+    "imports": [
+      "_index2.js",
+      "_events.js"
+    ]
   },
   "_shared-server.js": {
     "file": "chunks/shared-server.js",
@@ -118,32 +162,53 @@
   "_shared.js": {
     "file": "chunks/shared.js",
     "name": "shared",
-    "imports": ["_utils.js"]
+    "imports": [
+      "_utils.js"
+    ]
   },
   "_state.svelte.js": {
     "file": "chunks/state.svelte.js",
     "name": "state.svelte",
-    "imports": ["_index2.js", "_exports.js", "_root.js"]
+    "imports": [
+      "_index2.js",
+      "_exports.js",
+      "_root.js"
+    ]
   },
   "_stores.js": {
     "file": "chunks/stores.js",
     "name": "stores",
-    "imports": ["_index2.js", "_exports.js", "_utils.js", "_root.js", "_state.svelte.js"]
+    "imports": [
+      "_index2.js",
+      "_exports.js",
+      "_utils.js",
+      "_root.js",
+      "_state.svelte.js"
+    ]
   },
   "_toast.js": {
     "file": "chunks/toast.js",
     "name": "toast",
-    "imports": ["_index2.js", "_index.js"]
+    "imports": [
+      "_index2.js",
+      "_index.js"
+    ]
   },
   "_trash-2.js": {
     "file": "chunks/trash-2.js",
     "name": "trash-2",
-    "imports": ["_index2.js", "_Icon.js"]
+    "imports": [
+      "_index2.js",
+      "_Icon.js"
+    ]
   },
   "_user.js": {
     "file": "chunks/user.js",
     "name": "user",
-    "imports": ["_index2.js", "_Icon.js"]
+    "imports": [
+      "_index2.js",
+      "_Icon.js"
+    ]
   },
   "_utils.js": {
     "file": "chunks/utils.js",
@@ -154,7 +219,11 @@
     "name": "remote-entry",
     "src": "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js",
     "isEntry": true,
-    "imports": ["_shared.js", "_false.js", "_environment.js"]
+    "imports": [
+      "_shared.js",
+      "_false.js",
+      "_environment.js"
+    ]
   },
   "node_modules/@sveltejs/kit/src/runtime/components/svelte-5/error.svelte": {
     "file": "entries/fallbacks/error.svelte.js",
@@ -191,16 +260,26 @@
     "name": "diceStore.svelte",
     "src": "src/lib/state/diceStore.svelte.js",
     "isDynamicEntry": true,
-    "imports": ["_index2.js", "_auth.svelte.js"],
-    "dynamicImports": ["src/lib/state/gameState.svelte.ts"]
+    "imports": [
+      "_index2.js",
+      "_auth.svelte.js"
+    ],
+    "dynamicImports": [
+      "src/lib/state/gameState.svelte.ts"
+    ]
   },
   "src/lib/state/gameState.svelte.ts": {
     "file": "chunks/gameState.svelte.js",
     "name": "gameState.svelte",
     "src": "src/lib/state/gameState.svelte.ts",
     "isDynamicEntry": true,
-    "imports": ["_client.js", "_auth.svelte.js"],
-    "dynamicImports": ["src/lib/state/diceStore.svelte.js"]
+    "imports": [
+      "_client.js",
+      "_auth.svelte.js"
+    ],
+    "dynamicImports": [
+      "src/lib/state/diceStore.svelte.js"
+    ]
   },
   "src/routes/+layout.js": {
     "file": "entries/pages/_layout.js",
@@ -231,7 +310,9 @@
       "_Button.js",
       "_user.js"
     ],
-    "css": ["_app/immutable/assets/_layout.Dhm2nNXl.css"]
+    "css": [
+      "_app/immutable/assets/_layout.Dhm2nNXl.css"
+    ]
   },
   "src/routes/+page.svelte": {
     "file": "entries/pages/_page.svelte.js",
@@ -297,7 +378,12 @@
     "name": "entries/pages/converter/_page.svelte",
     "src": "src/routes/converter/+page.svelte",
     "isEntry": true,
-    "imports": ["_index2.js", "_client.js", "_Button.js", "_Badge.js"]
+    "imports": [
+      "_index2.js",
+      "_client.js",
+      "_Button.js",
+      "_Badge.js"
+    ]
   },
   "src/routes/drawing-mode/+page.svelte": {
     "file": "entries/pages/drawing-mode/_page.svelte.js",
@@ -334,7 +420,12 @@
     "name": "entries/pages/games/_id_/_page.svelte",
     "src": "src/routes/games/[id]/+page.svelte",
     "isEntry": true,
-    "imports": ["_exports.js", "_utils.js", "_root.js", "_state.svelte.js"]
+    "imports": [
+      "_exports.js",
+      "_utils.js",
+      "_root.js",
+      "_state.svelte.js"
+    ]
   },
   "src/routes/games/[id]/settings/+page.svelte": {
     "file": "entries/pages/games/_id_/settings/_page.svelte.js",

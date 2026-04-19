@@ -11,17 +11,7 @@ let isLoading = $state(false);
 async function rollDice(dice) {
   isLoading = true;
   try {
-    const result = await diceStore.rollDice(`1${dice}`);
-    lastResult = result;
-    if (gameState.user) {
-      if (result.rolls.length > 1) {
-        gameState.sendMessage(
-          `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
-        );
-      } else {
-        gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
-      }
-    }
+    lastResult = await diceStore.rollDice(`1${dice}`);
   } catch (error) {
     console.error('Dice roll error:', error);
   } finally {
@@ -34,17 +24,7 @@ async function rollCustom() {
 
   isLoading = true;
   try {
-    const result = await diceStore.rollDice(customFormula);
-    lastResult = result;
-    if (gameState.user) {
-      if (result.rolls.length > 1) {
-        gameState.sendMessage(
-          `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
-        );
-      } else {
-        gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
-      }
-    }
+    lastResult = await diceStore.rollDice(customFormula);
   } catch (error) {
     console.error('Dice roll error:', error);
   } finally {

@@ -1,5 +1,5 @@
-import { s as sanitize_props, e as spread_props, f as slot } from './index2.js';
-import { I as Icon } from './Icon.js';
+import { s as sanitize_props, e as spread_props, f as slot } from "./index2.js";
+import { I as Icon } from "./Icon.js";
 function User($$renderer, $$props) {
   const $$sanitized_props = sanitize_props($$props);
   /**
@@ -9,35 +9,34 @@ function User($$renderer, $$props) {
    * See the LICENSE file in the root directory of this source tree.
    */
   const iconNode = [
-    ['path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2' }],
-    ['circle', { cx: '12', cy: '7', r: '4' }],
+    ["path", { "d": "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }],
+    ["circle", { "cx": "12", "cy": "7", "r": "4" }]
   ];
-  Icon(
-    $$renderer,
-    spread_props([
-      { name: 'user' },
-      $$sanitized_props,
-      {
-        /**
-         * @component @name User
-         * @description Lucide SVG icon component, renders SVG Element with children.
-         *
-         * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTkgMjF2LTJhNCA0IDAgMCAwLTQtNEg5YTQgNCAwIDAgMC00IDR2MiIgLz4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/user
-         * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
-         *
-         * @param {Object} props - Lucide icons props and any valid SVG attribute
-         * @returns {FunctionalComponent} Svelte component
-         *
-         */
-        iconNode,
-        children: ($$renderer2) => {
-          $$renderer2.push(`<!--[-->`);
-          slot($$renderer2, $$props, 'default', {});
-          $$renderer2.push(`<!--]-->`);
-        },
-        $$slots: { default: true },
+  Icon($$renderer, spread_props([
+    { name: "user" },
+    $$sanitized_props,
+    {
+      /**
+       * @component @name User
+       * @description Lucide SVG icon component, renders SVG Element with children.
+       *
+       * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTkgMjF2LTJhNCA0IDAgMCAwLTQtNEg5YTQgNCAwIDAgMC00IDR2MiIgLz4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/user
+       * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
+       *
+       * @param {Object} props - Lucide icons props and any valid SVG attribute
+       * @returns {FunctionalComponent} Svelte component
+       *
+       */
+      iconNode,
+      children: ($$renderer2) => {
+        $$renderer2.push(`<!--[-->`);
+        slot($$renderer2, $$props, "default", {});
+        $$renderer2.push(`<!--]-->`);
       },
-    ]),
-  );
+      $$slots: { default: true }
+    }
+  ]));
 }
-export { User as U };
+export {
+  User as U
+};

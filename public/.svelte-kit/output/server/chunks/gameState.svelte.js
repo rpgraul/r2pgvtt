@@ -1,16 +1,16 @@
-import 'clsx';
-import { s as supabase } from './client.js';
-import { a as authState } from './auth.svelte.js';
+import "clsx";
+import { s as supabase } from "./client.js";
+import { a as authState } from "./auth.svelte.js";
 function toCardDB(card) {
   return {
     game_id: card.gameId,
     titulo: card.titulo,
-    conteudo: card.conteudo || '',
-    category: card.category || 'misc',
+    conteudo: card.conteudo || "",
+    category: card.category || "misc",
     tags: card.tags || [],
     imagem_url: card.imagemUrl || null,
     is_visible_to_players: card.isVisibleToPlayers ?? true,
-    order: card.order ?? 0,
+    order: card.order ?? 0
   };
 }
 function fromCardDB(card) {
@@ -27,15 +27,15 @@ function fromCardDB(card) {
     createdBy: card.created_by,
     createdAt: card.created_at,
     updatedAt: card.updated_at,
-    deletedAt: card.deleted_at,
+    deletedAt: card.deleted_at
   };
 }
 function fromCardDBArray(cards) {
   return cards.map(fromCardDB);
 }
 function generateInviteCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
   for (let i = 0; i < 8; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
@@ -45,74 +45,57 @@ const db = {
   async getUserGames() {
     const userId = authState.user?.id;
     if (!userId) return [];
-    const { data, error } = await supabase
-      .from('games')
-      .select(`
+    const { data, error } = await supabase.from("games").select(`
         *,
         user_role:game_members(role),
         member_count:game_members(count),
         last_access:game_members(last_accessed_at)
-      `)
-      .eq('game_members.user_id', userId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      `).eq("game_members.user_id", userId).is("deleted_at", null).order("created_at", { ascending: false });
     if (error) {
-      console.error('Error loading games:', error);
+      console.error("Error loading games:", error);
       return [];
     }
     return data || [];
   },
   async getGameByInviteCode(inviteCode) {
-    const { data, error } = await supabase
-      .from('games')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .is('deleted_at', null)
-      .single();
+    const { data, error } = await supabase.from("games").select("*").eq("invite_code", inviteCode.toUpperCase()).is("deleted_at", null).single();
     if (error || !data) return null;
     return data;
   },
   async getUserGameCount() {
     const userId = authState.user?.id;
     if (!userId) return 0;
-    const { count, error } = await supabase
-      .from('game_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    const { count, error } = await supabase.from("game_members").select("*", { count: "exact", head: true }).eq("user_id", userId);
     if (error) {
-      console.error('Error counting games:', error);
+      console.error("Error counting games:", error);
       return 0;
     }
     return count || 0;
   },
   async createGame(nome, sistema, campanha, capaUrl) {
     const userId = authState.user?.id;
-    if (!userId) throw new Error('Not authenticated');
+    if (!userId) throw new Error("Not authenticated");
     const inviteCode = generateInviteCode();
-    const { data: game, error: gameError } = await supabase
-      .from('games')
-      .insert({
-        nome,
-        owner_id: userId,
-        sistema: sistema || 'RPG Genérico',
-        invite_code: inviteCode,
-        campanha: campanha || null,
-        capa_url: capaUrl || null,
-      })
-      .select()
-      .single();
+    const { data: game, error: gameError } = await supabase.from("games").insert({
+      nome,
+      owner_id: userId,
+      sistema: sistema || "RPG Genérico",
+      invite_code: inviteCode,
+      campanha: campanha || null,
+      capa_url: capaUrl || null
+    }).select().single();
     if (gameError) {
-      console.error('Error creating game:', gameError);
+      console.error("Error creating game:", gameError);
       throw gameError;
     }
-    const { error: memberError } = await supabase.from('game_members').insert({
+    const { error: memberError } = await supabase.from("game_members").insert({
       game_id: game.id,
       user_id: userId,
-      role: 'narrador',
-      last_accessed_at: /* @__PURE__ */ new Date().toISOString(),
+      role: "narrador",
+      last_accessed_at: (/* @__PURE__ */ new Date()).toISOString()
     });
     if (memberError) {
-      console.error('Error adding member:', memberError);
+      console.error("Error adding member:", memberError);
     }
     return game.id;
   },
@@ -121,118 +104,78 @@ const db = {
   },
   async joinGame(inviteCode) {
     const userId = authState.user?.id;
-    if (!userId) throw new Error('Not authenticated');
-    const { data: game, error: gameError } = await supabase
-      .from('games')
-      .select('id, nome')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .is('deleted_at', null)
-      .single();
+    if (!userId) throw new Error("Not authenticated");
+    const { data: game, error: gameError } = await supabase.from("games").select("id, nome").eq("invite_code", inviteCode.toUpperCase()).is("deleted_at", null).single();
     if (gameError || !game) {
-      throw new Error('Código de convite inválido');
+      throw new Error("Código de convite inválido");
     }
-    const existingMember = await supabase
-      .from('game_members')
-      .select('id, role')
-      .eq('game_id', game.id)
-      .eq('user_id', userId)
-      .single();
+    const existingMember = await supabase.from("game_members").select("id, role").eq("game_id", game.id).eq("user_id", userId).single();
     if (existingMember) {
       return { gameId: game.id, alreadyMember: true, role: existingMember.role };
     }
-    const { count } = await supabase
-      .from('game_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    const { count } = await supabase.from("game_members").select("*", { count: "exact", head: true }).eq("user_id", userId);
     if (count !== null && count >= 3) {
-      throw new Error('Limite de 3 mesas atingido. Saia de uma mesa para entrar em outra.');
+      throw new Error("Limite de 3 mesas atingido. Saia de uma mesa para entrar em outra.");
     }
-    const { error: memberError } = await supabase.from('game_members').insert({
+    const { error: memberError } = await supabase.from("game_members").insert({
       game_id: game.id,
       user_id: userId,
-      role: 'jogador',
-      last_accessed_at: /* @__PURE__ */ new Date().toISOString(),
+      role: "jogador",
+      last_accessed_at: (/* @__PURE__ */ new Date()).toISOString()
     });
     if (memberError) {
-      console.error('Error joining game:', memberError);
+      console.error("Error joining game:", memberError);
       throw memberError;
     }
-    return { gameId: game.id, alreadyMember: false, role: 'jogador' };
+    return { gameId: game.id, alreadyMember: false, role: "jogador" };
   },
   async leaveGame(gameId, userRole) {
     const userId = authState.user?.id;
-    if (!userId) throw new Error('Not authenticated');
-    const { data: membersBefore } = await supabase
-      .from('game_members')
-      .select('id, user_id')
-      .eq('game_id', gameId);
-    const isNarrator = userRole === 'narrador';
-    const { error } = await supabase
-      .from('game_members')
-      .delete()
-      .eq('game_id', gameId)
-      .eq('user_id', userId);
+    if (!userId) throw new Error("Not authenticated");
+    const { data: membersBefore } = await supabase.from("game_members").select("id, user_id").eq("game_id", gameId);
+    const isNarrator = userRole === "narrador";
+    const { error } = await supabase.from("game_members").delete().eq("game_id", gameId).eq("user_id", userId);
     if (error) throw error;
-    const { data: membersAfter } = await supabase
-      .from('game_members')
-      .select('id, user_id')
-      .eq('game_id', gameId);
+    const { data: membersAfter } = await supabase.from("game_members").select("id, user_id").eq("game_id", gameId);
     const isLastMember = !membersAfter || membersAfter.length === 0;
     if (isLastMember && isNarrator) {
-      await supabase
-        .from('games')
-        .update({ deleted_at: /* @__PURE__ */ new Date().toISOString() })
-        .eq('id', gameId);
+      await supabase.from("games").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", gameId);
     }
   },
   async softDeleteGame(gameId) {
-    const { error } = await supabase
-      .from('games')
-      .update({ deleted_at: /* @__PURE__ */ new Date().toISOString() })
-      .eq('id', gameId);
+    const { error } = await supabase.from("games").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", gameId);
     if (error) throw error;
   },
   async cancelDeleteGame(gameId) {
-    const { error } = await supabase.from('games').update({ deleted_at: null }).eq('id', gameId);
+    const { error } = await supabase.from("games").update({ deleted_at: null }).eq("id", gameId);
     if (error) throw error;
   },
   async getGameMembers(gameId) {
-    const { data, error } = await supabase
-      .from('game_members')
-      .select(`
+    const { data, error } = await supabase.from("game_members").select(`
         *,
         profile:user_profiles(id, display_name)
-      `)
-      .eq('game_id', gameId);
+      `).eq("game_id", gameId);
     if (error) throw error;
     return data || [];
   },
   async deleteGame(gameId) {
-    const { error } = await supabase.from('games').delete().eq('id', gameId);
+    const { error } = await supabase.from("games").delete().eq("id", gameId);
     if (error) throw error;
   },
   async getInviteCode(gameId) {
-    const { data, error } = await supabase
-      .from('games')
-      .select('invite_code')
-      .eq('id', gameId)
-      .single();
+    const { data, error } = await supabase.from("games").select("invite_code").eq("id", gameId).single();
     if (error) throw error;
     return data?.invite_code;
   },
   subscribeToItems(gameId, callback, onChannelCreated) {
     const loadItems = () => {
-      let q = supabase
-        .from('items')
-        .select('*')
-        .is('deleted_at', null)
-        .order('order', { ascending: true });
+      let q = supabase.from("items").select("*").is("deleted_at", null).order("order", { ascending: true });
       if (gameId) {
-        q = q.eq('game_id', gameId);
+        q = q.eq("game_id", gameId);
       }
       q.then(({ data, error }) => {
         if (error) {
-          console.error('Error loading items:', error);
+          console.error("Error loading items:", error);
           callback([]);
           return;
         }
@@ -240,14 +183,11 @@ const db = {
       });
     };
     loadItems();
-    const channelName = `items:${gameId || 'global'}`;
+    const channelName = `items:${gameId || "global"}`;
     const filter = gameId ? `game_id=eq.${gameId}` : void 0;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter }, () => {
-        loadItems();
-      })
-      .subscribe();
+    const channel = supabase.channel(channelName).on("postgres_changes", { event: "*", schema: "public", table: "items", filter }, () => {
+      loadItems();
+    }).subscribe();
     if (onChannelCreated) {
       onChannelCreated(channel);
     }
@@ -264,18 +204,14 @@ const db = {
       imagemUrl: itemData.imagemUrl,
       isVisibleToPlayers: itemData.isVisibleToPlayers,
       order: itemData.order,
-      gameId: itemData.gameId || '',
+      gameId: itemData.gameId || ""
     });
-    const { data, error } = await supabase
-      .from('items')
-      .insert({
-        ...cardDB,
-        created_by: authState.displayName,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.from("items").insert({
+      ...cardDB,
+      created_by: authState.displayName
+    }).select().single();
     if (error) {
-      console.error('Error adding item:', error);
+      console.error("Error adding item:", error);
       throw error;
     }
     return fromCardDB(data);
@@ -289,220 +225,178 @@ const db = {
       imagemUrl: itemData.imagemUrl,
       isVisibleToPlayers: itemData.isVisibleToPlayers,
       order: itemData.order,
-      gameId: itemData.game_id || '',
+      gameId: itemData.game_id || ""
     });
     delete cardDB.game_id;
     delete cardDB.created_by;
-    const { error } = await supabase
-      .from('items')
-      .update({
-        ...cardDB,
-        updated_at: /* @__PURE__ */ new Date().toISOString(),
-      })
-      .eq('id', itemId);
+    const { error } = await supabase.from("items").update({
+      ...cardDB,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", itemId);
     if (error) {
-      console.error('Error updating item:', error);
+      console.error("Error updating item:", error);
       throw error;
     }
   },
   async deleteItem(itemId) {
-    const { error } = await supabase
-      .from('items')
-      .update({ deleted_at: /* @__PURE__ */ new Date().toISOString() })
-      .eq('id', itemId);
+    const { error } = await supabase.from("items").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", itemId);
     if (error) throw error;
   },
   async getTrashItems(gameId) {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .eq('game_id', gameId)
-      .not('deleted_at', 'is', null)
-      .order('deleted_at', { ascending: false });
+    const { data, error } = await supabase.from("items").select("*").eq("game_id", gameId).not("deleted_at", "is", null).order("deleted_at", { ascending: false });
     if (error) throw error;
     return data || [];
   },
   async restoreItem(itemId) {
-    const { error } = await supabase.from('items').update({ deleted_at: null }).eq('id', itemId);
+    const { error } = await supabase.from("items").update({ deleted_at: null }).eq("id", itemId);
     if (error) throw error;
   },
   async permanentlyDeleteItem(itemId) {
-    const { error } = await supabase.from('items').delete().eq('id', itemId);
+    const { error } = await supabase.from("items").delete().eq("id", itemId);
     if (error) throw error;
   },
   async emptyTrash(gameId) {
-    const { error } = await supabase
-      .from('items')
-      .delete()
-      .eq('game_id', gameId)
-      .not('deleted_at', 'is', null);
+    const { error } = await supabase.from("items").delete().eq("game_id", gameId).not("deleted_at", "is", null);
     if (error) throw error;
   },
   async reorderItems(items) {
     const updates = items.map((item, index) => ({
       id: item.id,
-      order: index,
+      order: index
     }));
-    const { error } = await supabase.from('items').upsert(updates, { onConflict: 'id' });
+    const { error } = await supabase.from("items").upsert(updates, { onConflict: "id" });
     if (error) throw error;
   },
-  subscribeToChat(gameId, callback) {
-    const loadMessages = () => {
-      console.log('[Chat] loadMessages called, gameId:', gameId);
-      let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+  subscribeToChat(gameId, onInitialLoad, onInsert) {
+    const loadMessages = async () => {
+      let q = supabase.from("chat_messages").select("*").order("created_at", { ascending: true });
       if (gameId) {
-        q = q.eq('game_id', gameId);
+        q = q.eq("game_id", gameId);
       }
-      q.then(({ data, error }) => {
-        console.log('[Chat] query result:', { count: data?.length, error });
-        if (error) {
-          console.error('[Chat] Error loading chat:', error);
-          callback([]);
-          return;
-        }
-        console.log('[Chat] messages:', data);
-        callback(data || []);
-      });
+      const { data, error } = await q;
+      if (error) {
+        onInitialLoad([]);
+        return;
+      }
+      onInitialLoad(data || []);
     };
-    loadMessages();
-    return () => {};
+    loadMessages().then(() => {
+      if (!gameId || !onInsert) return;
+      const channel = supabase.channel(`chat:${gameId}`).on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `game_id=eq.${gameId}` },
+        (payload) => onInsert(payload.new)
+      ).subscribe();
+      return () => supabase.removeChannel(channel);
+    });
+    return () => {
+    };
   },
-  async addChatMessage(text, type = 'user', sender, gameId) {
-    console.log('[Chat] addChatMessage called:', { text, type, sender, gameId });
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert({
-        text,
-        type,
-        sender: sender || authState.displayName || 'Anonymous',
-        game_id: gameId,
-      })
-      .select()
-      .single();
-    if (error) {
-      console.error('[Chat] Error inserting message:', error);
-      throw error;
-    }
-    console.log('[Chat] Message inserted:', data);
+  async addChatMessage(text, type = "user", sender, gameId) {
+    const { data, error } = await supabase.from("chat_messages").insert({
+      text,
+      type,
+      sender: sender || authState.displayName || "Anonymous",
+      game_id: gameId
+    }).select().single();
+    if (error) throw error;
     return data;
   },
-  subscribeToRolls(gameId, callback) {
-    const loadRolls = () => {
-      let q = supabase
-        .from('dice_rolls')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+  subscribeToRolls(gameId, onInitialLoad, onInsert) {
+    const loadRolls = async () => {
+      let q = supabase.from("dice_rolls").select("*").order("created_at", { ascending: false }).limit(50);
       if (gameId) {
-        q = q.eq('game_id', gameId);
+        q = q.eq("game_id", gameId);
       }
-      q.then(({ data, error }) => {
-        if (error) {
-          console.error('Error loading rolls:', error);
-          callback([]);
-          return;
-        }
-        callback(data || []);
-      });
+      const { data, error } = await q;
+      if (error) {
+        onInitialLoad([]);
+        return;
+      }
+      onInitialLoad(data || []);
     };
-    loadRolls();
-    return () => {};
+    loadRolls().then(() => {
+      if (!gameId || !onInsert) return;
+      const channel = supabase.channel(`rolls:${gameId}`).on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "dice_rolls", filter: `game_id=eq.${gameId}` },
+        (payload) => onInsert(payload.new)
+      ).subscribe();
+      return () => supabase.removeChannel(channel);
+    });
+    return () => {
+    };
   },
   async addRoll(rollData) {
-    console.log('[Dice] addRoll called:', rollData);
-    const { data, error } = await supabase
-      .from('dice_rolls')
-      .insert({
-        user_name: rollData.userName,
-        formula: rollData.formula,
-        result: rollData.result,
-        details: rollData.details || [],
-        game_id: rollData.gameId,
-      })
-      .select()
-      .single();
-    if (error) {
-      console.error('[Dice] Error inserting roll:', error);
-      throw error;
-    }
-    console.log('[Dice] Roll inserted:', data);
+    const { data, error } = await supabase.from("dice_rolls").insert({
+      user_name: rollData.userName,
+      formula: rollData.formula,
+      result: rollData.result,
+      details: { ...rollData.details, color: rollData.color },
+      game_id: rollData.gameId
+    }).select().single();
+    if (error) throw error;
     return data;
   },
   async getAudioState(gameId) {
-    const { data, error } = await supabase
-      .from('audio_state')
-      .select('*')
-      .eq('game_id', gameId)
-      .single();
-    if (error && error.code !== 'PGRST116') throw error;
+    const { data, error } = await supabase.from("audio_state").select("*").eq("game_id", gameId).single();
+    if (error && error.code !== "PGRST116") throw error;
     if (data) {
       return {
         ...data,
-        current_time: data.current_video_time,
+        current_time: data.current_video_time
       };
     }
     return data;
   },
   async updateAudioState(gameId, updates) {
     const mappedUpdates = { ...updates };
-    if ('current_time' in mappedUpdates) {
+    if ("current_time" in mappedUpdates) {
       mappedUpdates.current_video_time = mappedUpdates.current_time;
       delete mappedUpdates.current_time;
     }
-    const { data, error } = await supabase
-      .from('audio_state')
-      .upsert(
-        {
-          game_id: gameId,
-          ...mappedUpdates,
-          updated_at: /* @__PURE__ */ new Date().toISOString(),
-          created_by: authState.displayName,
-        },
-        { onConflict: 'game_id' },
-      )
-      .select()
-      .single();
+    const { data, error } = await supabase.from("audio_state").upsert(
+      {
+        game_id: gameId,
+        ...mappedUpdates,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString(),
+        created_by: authState.displayName
+      },
+      { onConflict: "game_id" }
+    ).select().single();
     if (error) throw error;
     return data;
   },
-  async getSettings(key = 'main') {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', key)
-      .single();
-    if (error && error.code !== 'PGRST116') throw error;
+  async getSettings(key = "main") {
+    const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).single();
+    if (error && error.code !== "PGRST116") throw error;
     return data?.value || {};
   },
   async updateSettings(key, value) {
-    const { error } = await supabase.from('site_settings').upsert(
+    const { error } = await supabase.from("site_settings").upsert(
       {
         key,
         value,
-        updated_at: /* @__PURE__ */ new Date().toISOString(),
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
       },
-      { onConflict: 'key' },
+      { onConflict: "key" }
     );
     if (error) throw error;
   },
   async removeMember(gameId, userId) {
-    const { error } = await supabase
-      .from('game_members')
-      .delete()
-      .eq('game_id', gameId)
-      .eq('user_id', userId);
+    const { error } = await supabase.from("game_members").delete().eq("game_id", gameId).eq("user_id", userId);
     if (error) throw error;
-  },
+  }
 };
-const STORAGE_KEY = 'rpgboard_current_game';
+const STORAGE_KEY = "rpgboard_current_game";
 function getStoredGameId() {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     return localStorage.getItem(STORAGE_KEY);
   }
   return null;
 }
 function setStoredGameId(gameId) {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     if (gameId) {
       localStorage.setItem(STORAGE_KEY, gameId);
     } else {
@@ -519,14 +413,13 @@ class GameState {
     this.items = [];
     this.chatMessages = [];
     this.rolls = [];
-    this.filters = { search: '', category: 'all', tags: [], visibility: 'all' };
-    this.viewMode = 'grid';
+    this.filters = { search: "", category: "all", tags: [], visibility: "all" };
+    this.viewMode = "grid";
     this.itemChannel = null;
-    this.roomChannel = null;
     this.unsubItems = null;
     this.getUserName = () => authState.displayName;
     this.setUserName = (name) => authState.updateProfile({ display_name: name });
-    this.setNarrator = () => authState.updateProfile({ role: 'narrador' });
+    this.setNarrator = () => authState.updateProfile({ role: "narrador" });
     this.logout = () => authState.signOut();
   }
   get user() {
@@ -536,7 +429,7 @@ class GameState {
     return authState.displayName;
   }
   get isNarrator() {
-    return this.currentGameRole === 'narrador';
+    return this.currentGameRole === "narrador";
   }
   get gameId() {
     return this.currentGameId;
@@ -549,28 +442,23 @@ class GameState {
   }
   get filteredItems() {
     let result = this.items;
-    if (this.currentGameRole !== 'narrador') {
+    if (this.currentGameRole !== "narrador") {
       result = result.filter((item) => item.isVisibleToPlayers);
     }
     if (this.filters.search) {
       const searchLower = this.filters.search.toLowerCase();
-      result = result.filter(
-        (item) =>
-          item.titulo?.toLowerCase().includes(searchLower) ||
-          item.conteudo?.toLowerCase().includes(searchLower) ||
-          item.tags?.some((tag) => tag.toLowerCase().includes(searchLower)),
-      );
+      result = result.filter((item) => item.titulo?.toLowerCase().includes(searchLower) || item.conteudo?.toLowerCase().includes(searchLower) || item.tags?.some((tag) => tag.toLowerCase().includes(searchLower)));
     }
-    if (this.filters.category && this.filters.category !== 'all') {
+    if (this.filters.category && this.filters.category !== "all") {
       result = result.filter((item) => item.category === this.filters.category);
     }
     if (this.filters.tags && this.filters.tags.length > 0) {
       result = result.filter((item) => this.filters.tags.every((tag) => item.tags?.includes(tag)));
     }
-    if (this.filters.visibility !== 'all') {
-      if (this.filters.visibility === 'visible') {
+    if (this.filters.visibility !== "all") {
+      if (this.filters.visibility === "visible") {
         result = result.filter((item) => item.is_visible_to_players);
-      } else if (this.filters.visibility === 'hidden') {
+      } else if (this.filters.visibility === "hidden") {
         result = result.filter((item) => !item.is_visible_to_players);
       }
     }
@@ -609,38 +497,33 @@ class GameState {
       this.items = fromCardDBArray(cards);
       this.isLoading = false;
     });
-    this.setupRoomChannel(gameId);
-  }
-  setupRoomChannel(gameId) {
-    if (!gameId) return;
-    this.roomChannel = supabase.channel(`room:${gameId}`);
-    this.roomChannel
-      .on('broadcast', { event: 'chat_message' }, (payload) => {
-        const message = payload.payload;
-        const currentUserId = authState.user?.id;
-        if (message.senderId !== currentUserId) {
-          this.chatMessages = [...this.chatMessages, message];
+    if (gameId) {
+      db.subscribeToChat(
+        gameId,
+        (messages) => {
+          this.chatMessages = messages;
+        },
+        (newMessage) => {
+          if (!this.chatMessages.find((m) => m.id === newMessage.id)) {
+            this.chatMessages = [...this.chatMessages, newMessage];
+          }
         }
-      })
-      .on('broadcast', { event: 'dice_roll' }, (payload) => {
-        const rollData = payload.payload;
-        const currentUserId = authState.user?.id;
-        if (rollData.userId !== currentUserId) {
-          this.rolls = [rollData, ...this.rolls];
-          import('./diceStore.svelte.js').then((m) =>
-            m.diceStore.playSyncRoll({
-              formula: rollData.formula,
-              result: rollData.result,
-              details: rollData.details,
-              color: rollData.color,
-              userName: rollData.user_name,
-            }),
-          );
+      );
+      db.subscribeToRolls(
+        gameId,
+        (rolls) => {
+          this.rolls = rolls;
+        },
+        (newRoll) => {
+          if (!this.rolls.find((r) => r.id === newRoll.id)) {
+            this.rolls = [newRoll, ...this.rolls];
+            if (newRoll.user_name !== this.userName) {
+              import("./diceStore.svelte.js").then((m) => m.diceStore.playRemoteRoll(newRoll));
+            }
+          }
         }
-      })
-      .subscribe((status) => {
-        console.log('[GameState] Room channel status:', status);
-      });
+      );
+    }
   }
   setGameId(gameId) {
     if (this.currentGameId !== gameId) {
@@ -652,28 +535,15 @@ class GameState {
   }
   async loadGameRole(gameId) {
     if (!authState.user) return;
-    const { data } = await supabase
-      .from('game_members')
-      .select('role')
-      .eq('game_id', gameId)
-      .eq('user_id', authState.user.id)
-      .single();
+    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", authState.user.id).single();
     this.currentGameRole = data?.role || null;
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('nome')
-      .eq('id', gameId)
-      .single();
+    const { data: gameData } = await supabase.from("games").select("nome").eq("id", gameId).single();
     this.currentGameName = gameData?.nome || null;
   }
   cleanupRealtimeChannels() {
     if (this.itemChannel) {
       supabase.removeChannel(this.itemChannel);
       this.itemChannel = null;
-    }
-    if (this.roomChannel) {
-      supabase.removeChannel(this.roomChannel);
-      this.roomChannel = null;
     }
   }
   setSearch(search) {
@@ -693,15 +563,15 @@ class GameState {
   }
   async createCard(cardData) {
     if (!authState.isAuthenticated || !authState.displayName) {
-      console.warn('Cannot create card: not authenticated');
+      console.warn("Cannot create card: not authenticated");
       return null;
     }
     if (!this.currentGameId) {
-      console.warn('Cannot create card: no game selected');
+      console.warn("Cannot create card: no game selected");
       return null;
     }
     if (!this.currentGameId) {
-      console.warn('Cannot create card: no game selected');
+      console.warn("Cannot create card: no game selected");
       return null;
     }
     const result = await db.addItem({
@@ -712,7 +582,7 @@ class GameState {
       tags: cardData.tags,
       imagemUrl: cardData.imagemUrl,
       isVisibleToPlayers: cardData.isVisibleToPlayers,
-      order: cardData.order,
+      order: cardData.order
     });
     await this.refreshItems();
     return result;
@@ -750,34 +620,32 @@ class GameState {
     const message = {
       id: crypto.randomUUID(),
       text,
-      type: 'user',
+      type: "user",
       sender: authState.displayName,
       senderId: authState.user?.id,
       game_id: this.currentGameId,
-      created_at: /* @__PURE__ */ /* @__PURE__ */ new Date().toISOString(),
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
-    this.chatMessages = [...this.chatMessages, message];
-    if (this.roomChannel) {
-      this.roomChannel.send({ type: 'broadcast', event: 'chat_message', payload: message });
+    if (!this.chatMessages.find((m) => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
     }
-    db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
+    db.addChatMessage(text, "user", authState.displayName, this.currentGameId);
   }
   async sendSystemMessage(text) {
     if (!authState.isAuthenticated) return;
     const message = {
       id: crypto.randomUUID(),
       text,
-      type: 'system',
-      sender: 'Sistema',
+      type: "system",
+      sender: "Sistema",
       senderId: null,
       game_id: this.currentGameId,
-      created_at: /* @__PURE__ */ /* @__PURE__ */ new Date().toISOString(),
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
-    this.chatMessages = [...this.chatMessages, message];
-    if (this.roomChannel) {
-      this.roomChannel.send({ type: 'broadcast', event: 'chat_message', payload: message });
+    if (!this.chatMessages.find((m) => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
     }
-    db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
+    db.addChatMessage(text, "system", "Sistema", this.currentGameId);
   }
   async sendRoll(formula, result, details, color) {
     if (!authState.isAuthenticated || !authState.displayName) return;
@@ -790,22 +658,22 @@ class GameState {
       details,
       color,
       game_id: this.currentGameId,
-      created_at: /* @__PURE__ */ /* @__PURE__ */ new Date().toISOString(),
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
-    this.rolls = [rollData, ...this.rolls];
-    if (this.roomChannel) {
-      this.roomChannel.send({ type: 'broadcast', event: 'dice_roll', payload: rollData });
+    if (!this.rolls.find((r) => r.id === rollData.id)) {
+      this.rolls = [rollData, ...this.rolls];
     }
     db.addRoll({
       userName: authState.displayName,
       formula,
       result,
       details,
-      gameId: this.currentGameId,
+      color,
+      gameId: this.currentGameId
     });
   }
   async getGameById(gameId) {
-    const { data, error } = await supabase.from('games').select('*').eq('id', gameId).single();
+    const { data, error } = await supabase.from("games").select("*").eq("id", gameId).single();
     if (error) return null;
     return data;
   }
@@ -818,7 +686,7 @@ class GameState {
       success: true,
       gameId: result.gameId,
       alreadyMember: result.alreadyMember,
-      role: result.role,
+      role: result.role
     };
   }
   async getGameMembers(gameId) {
@@ -827,12 +695,7 @@ class GameState {
   async checkUserGameMembership(gameId) {
     const userId = authState.user?.id;
     if (!userId) return null;
-    const { data } = await supabase
-      .from('game_members')
-      .select('role')
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .single();
+    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", userId).single();
     return data?.role || null;
   }
   async leaveGame(gameId) {
@@ -841,12 +704,7 @@ class GameState {
   }
   async refreshItems() {
     if (!this.currentGameId) return;
-    const { data } = await supabase
-      .from('items')
-      .select('*')
-      .eq('game_id', this.currentGameId)
-      .is('deleted_at', null)
-      .order('order', { ascending: true });
+    const { data } = await supabase.from("items").select("*").eq("game_id", this.currentGameId).is("deleted_at", null).order("order", { ascending: true });
     this.items = fromCardDBArray(data || []);
   }
   async removeMember(gameId, userId) {
@@ -859,4 +717,6 @@ class GameState {
   }
 }
 const gameState = new GameState();
-export { gameState };
+export {
+  gameState
+};

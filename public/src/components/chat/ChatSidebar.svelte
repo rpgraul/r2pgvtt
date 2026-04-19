@@ -2,7 +2,7 @@
 import { tick } from 'svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import { X, Send } from 'lucide-svelte';
+import { Send } from 'lucide-svelte';
 
 let { open = $bindable(false) } = $props();
 
@@ -83,12 +83,7 @@ async function handleSubmit(e) {
     const match = formula.match(/(\d+)d(\d+)/i) || formula.match(/^d(\d+)/i);
 
     if (match) {
-      diceStore
-        .rollDice(formula)
-        .then((result) => {
-          gameState.sendMessage(`🎲 Rolou ${result.formula || formula}: ${result.textual}`);
-        })
-        .catch((err) => console.error('[Chat] Dice error:', err));
+      diceStore.rollDice(formula).catch((err) => console.error('[Chat] Dice error:', err));
     } else {
       await gameState.sendSystemMessage(`Fórmula inválida: ${formula}. Use ex: 2d6 ou d20`);
     }

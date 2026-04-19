@@ -391,17 +391,40 @@ export const db = {
     if (error) throw error;
   },
 
-  subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
-    let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
-    if (gameId) {
-      q = q.eq('game_id', gameId);
-    }
-    q.then(({ data, error }) => {
+  subscribeToChat(
+    gameId: string | null,
+    onInitialLoad: (messages: any[]) => void,
+    onInsert?: (newMessage: any) => void,
+  ) {
+    const loadMessages = async () => {
+      let q = supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (gameId) {
+        q = q.eq('game_id', gameId);
+      }
+      const { data, error } = await q;
       if (error) {
-        callback([]);
+        onInitialLoad([]);
         return;
       }
-      callback(data || []);
+      onInitialLoad(data || []);
+    };
+
+    loadMessages().then(() => {
+      if (!gameId || !onInsert) return;
+
+      const channel = supabase
+        .channel(`chat:${gameId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
+          (payload) => onInsert(payload.new),
+        )
+        .subscribe();
+
+      return () => supabase.removeChannel(channel);
     });
 
     return () => {};
@@ -424,23 +447,43 @@ export const db = {
     return data;
   },
 
-  subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
-    let q = supabase
-      .from('dice_rolls')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+  subscribeToRolls(
+    gameId: string | null,
+    onInitialLoad: (rolls: any[]) => void,
+    onInsert?: (newRoll: any) => void,
+  ) {
+    const loadRolls = async () => {
+      let q = supabase
+        .from('dice_rolls')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (gameId) {
-      q = q.eq('game_id', gameId);
-    }
+      if (gameId) {
+        q = q.eq('game_id', gameId);
+      }
 
-    q.then(({ data, error }) => {
+      const { data, error } = await q;
       if (error) {
-        callback([]);
+        onInitialLoad([]);
         return;
       }
-      callback(data || []);
+      onInitialLoad(data || []);
+    };
+
+    loadRolls().then(() => {
+      if (!gameId || !onInsert) return;
+
+      const channel = supabase
+        .channel(`rolls:${gameId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'dice_rolls', filter: `game_id=eq.${gameId}` },
+          (payload) => onInsert(payload.new),
+        )
+        .subscribe();
+
+      return () => supabase.removeChannel(channel);
     });
 
     return () => {};
@@ -451,6 +494,7 @@ export const db = {
     formula: string;
     result: number;
     details?: any;
+    color?: string;
     gameId?: string;
   }) {
     const { data, error } = await supabase
@@ -459,7 +503,7 @@ export const db = {
         user_name: rollData.userName,
         formula: rollData.formula,
         result: rollData.result,
-        details: rollData.details || [],
+        details: { ...rollData.details, color: rollData.color },
         game_id: rollData.gameId,
       })
       .select()

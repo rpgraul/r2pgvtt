@@ -1,22 +1,11 @@
-import {
-  d as derived,
-  ag as hasContext,
-  n as getContext,
-  af as setContext,
-  s as sanitize_props,
-  e as spread_props,
-  f as slot,
-  o as attributes,
-  c as bind_props,
-  ah as getAllContexts,
-} from './index2.js';
-import { I as Icon } from './Icon.js';
-import parse from 'style-to-object';
-import { clsx } from 'clsx';
-import { c as cn } from './cn.js';
-import { a as tick, m as mount, u as unmount } from './toast.js';
-import { o as on } from './events.js';
-import { isTabbable } from 'tabbable';
+import { d as derived, ag as hasContext, n as getContext, af as setContext, s as sanitize_props, e as spread_props, f as slot, o as attributes, c as bind_props, ah as getAllContexts } from "./index2.js";
+import { I as Icon } from "./Icon.js";
+import parse from "style-to-object";
+import { clsx } from "clsx";
+import { c as cn } from "./cn.js";
+import { a as tick, m as mount, u as unmount } from "./toast.js";
+import { o as on } from "./events.js";
+import { isTabbable } from "tabbable";
 class MediaQuery {
   current;
   /**
@@ -28,27 +17,32 @@ class MediaQuery {
   }
 }
 function createSubscriber(_) {
-  return () => {};
+  return () => {
+  };
 }
 function isFunction(value) {
-  return typeof value === 'function';
+  return typeof value === "function";
 }
 function isObject(value) {
-  return value !== null && typeof value === 'object';
+  return value !== null && typeof value === "object";
 }
-const CLASS_VALUE_PRIMITIVE_TYPES = ['string', 'number', 'bigint', 'boolean'];
+const CLASS_VALUE_PRIMITIVE_TYPES = ["string", "number", "bigint", "boolean"];
 function isClassValue(value) {
-  if (value === null || value === void 0) return true;
-  if (CLASS_VALUE_PRIMITIVE_TYPES.includes(typeof value)) return true;
-  if (Array.isArray(value)) return value.every((item) => isClassValue(item));
-  if (typeof value === 'object') {
-    if (Object.getPrototypeOf(value) !== Object.prototype) return false;
+  if (value === null || value === void 0)
+    return true;
+  if (CLASS_VALUE_PRIMITIVE_TYPES.includes(typeof value))
+    return true;
+  if (Array.isArray(value))
+    return value.every((item) => isClassValue(item));
+  if (typeof value === "object") {
+    if (Object.getPrototypeOf(value) !== Object.prototype)
+      return false;
     return true;
   }
   return false;
 }
-const BoxSymbol = Symbol('box');
-const isWritableSymbol = Symbol('is-writable');
+const BoxSymbol = Symbol("box");
+const isWritableSymbol = Symbol("is-writable");
 function isBox(value) {
   return isObject(value) && BoxSymbol in value;
 }
@@ -65,7 +59,7 @@ function box(initialValue) {
     },
     set current(v) {
       current = v;
-    },
+    }
   };
 }
 function boxWith(getter, setter) {
@@ -79,14 +73,14 @@ function boxWith(getter, setter) {
       },
       set current(v) {
         setter(v);
-      },
+      }
     };
   }
   return {
     [BoxSymbol]: true,
     get current() {
       return getter();
-    },
+    }
   };
 }
 function boxFrom(value) {
@@ -95,29 +89,32 @@ function boxFrom(value) {
   return box(value);
 }
 function boxFlatten(boxes) {
-  return Object.entries(boxes).reduce((acc, [key, b]) => {
-    if (!box.isBox(b)) {
-      return Object.assign(acc, { [key]: b });
-    }
-    if (box.isWritableBox(b)) {
-      Object.defineProperty(acc, key, {
-        get() {
-          return b.current;
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        set(v) {
-          b.current = v;
-        },
-      });
-    } else {
-      Object.defineProperty(acc, key, {
-        get() {
-          return b.current;
-        },
-      });
-    }
-    return acc;
-  }, {});
+  return Object.entries(boxes).reduce(
+    (acc, [key, b]) => {
+      if (!box.isBox(b)) {
+        return Object.assign(acc, { [key]: b });
+      }
+      if (box.isWritableBox(b)) {
+        Object.defineProperty(acc, key, {
+          get() {
+            return b.current;
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          set(v) {
+            b.current = v;
+          }
+        });
+      } else {
+        Object.defineProperty(acc, key, {
+          get() {
+            return b.current;
+          }
+        });
+      }
+      return acc;
+    },
+    {}
+  );
 }
 function toReadonlyBox(b) {
   if (!box.isWritableBox(b)) return b;
@@ -125,7 +122,7 @@ function toReadonlyBox(b) {
     [BoxSymbol]: true,
     get current() {
       return b.current;
-    },
+    }
   };
 }
 box.from = boxFrom;
@@ -135,11 +132,13 @@ box.readonly = toReadonlyBox;
 box.isBox = isBox;
 box.isWritableBox = isWritableBox;
 function composeHandlers(...handlers) {
-  return function (e) {
+  return function(e) {
     for (const handler of handlers) {
-      if (!handler) continue;
-      if (e.defaultPrevented) return;
-      if (typeof handler === 'function') {
+      if (!handler)
+        continue;
+      if (e.defaultPrevented)
+        return;
+      if (typeof handler === "function") {
         handler.call(this, e);
       } else {
         handler.current?.call(this, e);
@@ -148,21 +147,22 @@ function composeHandlers(...handlers) {
   };
 }
 const NUMBER_CHAR_RE = /\d/;
-const STR_SPLITTERS = ['-', '_', '/', '.'];
-function isUppercase(char = '') {
-  if (NUMBER_CHAR_RE.test(char)) return void 0;
+const STR_SPLITTERS = ["-", "_", "/", "."];
+function isUppercase(char = "") {
+  if (NUMBER_CHAR_RE.test(char))
+    return void 0;
   return char !== char.toLowerCase();
 }
 function splitByCase(str) {
   const parts = [];
-  let buff = '';
+  let buff = "";
   let previousUpper;
   let previousSplitter;
   for (const char of str) {
     const isSplitter = STR_SPLITTERS.includes(char);
     if (isSplitter === true) {
       parts.push(buff);
-      buff = '';
+      buff = "";
       previousUpper = void 0;
       continue;
     }
@@ -190,34 +190,29 @@ function splitByCase(str) {
   return parts;
 }
 function pascalCase(str) {
-  if (!str) return '';
-  return splitByCase(str)
-    .map((p) => upperFirst(p))
-    .join('');
+  if (!str)
+    return "";
+  return splitByCase(str).map((p) => upperFirst(p)).join("");
 }
 function camelCase(str) {
-  return lowerFirst(pascalCase(str || ''));
+  return lowerFirst(pascalCase(str || ""));
 }
 function upperFirst(str) {
-  return str ? str[0].toUpperCase() + str.slice(1) : '';
+  return str ? str[0].toUpperCase() + str.slice(1) : "";
 }
 function lowerFirst(str) {
-  return str ? str[0].toLowerCase() + str.slice(1) : '';
+  return str ? str[0].toLowerCase() + str.slice(1) : "";
 }
 function cssToStyleObj(css) {
-  if (!css) return {};
+  if (!css)
+    return {};
   const styleObj = {};
   function iterator(name, value) {
-    if (
-      name.startsWith('-moz-') ||
-      name.startsWith('-webkit-') ||
-      name.startsWith('-ms-') ||
-      name.startsWith('-o-')
-    ) {
+    if (name.startsWith("-moz-") || name.startsWith("-webkit-") || name.startsWith("-ms-") || name.startsWith("-o-")) {
       styleObj[pascalCase(name)] = value;
       return;
     }
-    if (name.startsWith('--')) {
+    if (name.startsWith("--")) {
       styleObj[name] = value;
       return;
     }
@@ -229,49 +224,48 @@ function cssToStyleObj(css) {
 function executeCallbacks(...callbacks) {
   return (...args) => {
     for (const callback of callbacks) {
-      if (typeof callback === 'function') {
+      if (typeof callback === "function") {
         callback(...args);
       }
     }
   };
 }
 function createParser(matcher, replacer) {
-  const regex = RegExp(matcher, 'g');
+  const regex = RegExp(matcher, "g");
   return (str) => {
-    if (typeof str !== 'string') {
+    if (typeof str !== "string") {
       throw new TypeError(`expected an argument of type string, but got ${typeof str}`);
     }
-    if (!str.match(regex)) return str;
+    if (!str.match(regex))
+      return str;
     return str.replace(regex, replacer);
   };
 }
 const camelToKebab = createParser(/[A-Z]/, (match) => `-${match.toLowerCase()}`);
 function styleToCSS(styleObj) {
-  if (!styleObj || typeof styleObj !== 'object' || Array.isArray(styleObj)) {
+  if (!styleObj || typeof styleObj !== "object" || Array.isArray(styleObj)) {
     throw new TypeError(`expected an argument of type object, but got ${typeof styleObj}`);
   }
-  return Object.keys(styleObj)
-    .map((property) => `${camelToKebab(property)}: ${styleObj[property]};`)
-    .join('\n');
+  return Object.keys(styleObj).map((property) => `${camelToKebab(property)}: ${styleObj[property]};`).join("\n");
 }
 function styleToString(style = {}) {
-  return styleToCSS(style).replace('\n', ' ');
+  return styleToCSS(style).replace("\n", " ");
 }
 const srOnlyStyles = {
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  padding: '0',
-  margin: '-1px',
-  overflow: 'hidden',
-  clip: 'rect(0, 0, 0, 0)',
-  whiteSpace: 'nowrap',
-  borderWidth: '0',
-  transform: 'translateX(-100%)',
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: "0",
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  borderWidth: "0",
+  transform: "translateX(-100%)"
 };
 styleToString(srOnlyStyles);
 function isEventHandler(key) {
-  return key.length > 2 && key.startsWith('on') && key[2] === key[2]?.toLowerCase();
+  return key.length > 2 && key.startsWith("on") && key[2] === key[2]?.toLowerCase();
 }
 function mergeProps(...args) {
   const result = { ...args[0] };
@@ -280,15 +274,15 @@ function mergeProps(...args) {
     for (const key in props) {
       const a = result[key];
       const b = props[key];
-      const aIsFunction = typeof a === 'function';
-      const bIsFunction = typeof b === 'function';
+      const aIsFunction = typeof a === "function";
+      const bIsFunction = typeof b === "function";
       if (aIsFunction && typeof bIsFunction && isEventHandler(key)) {
         const aHandler = a;
         const bHandler = b;
         result[key] = composeHandlers(aHandler, bHandler);
       } else if (aIsFunction && bIsFunction) {
         result[key] = executeCallbacks(a, b);
-      } else if (key === 'class') {
+      } else if (key === "class") {
         const aIsClassValue = isClassValue(a);
         const bIsClassValue = isClassValue(b);
         if (aIsClassValue && bIsClassValue) {
@@ -298,11 +292,11 @@ function mergeProps(...args) {
         } else if (bIsClassValue) {
           result[key] = clsx(b);
         }
-      } else if (key === 'style') {
-        const aIsObject = typeof a === 'object';
-        const bIsObject = typeof b === 'object';
-        const aIsString = typeof a === 'string';
-        const bIsString = typeof b === 'string';
+      } else if (key === "style") {
+        const aIsObject = typeof a === "object";
+        const bIsObject = typeof b === "object";
+        const aIsString = typeof a === "string";
+        const bIsString = typeof b === "string";
         if (aIsObject && bIsObject) {
           result[key] = { ...a, ...b };
         } else if (aIsObject && bIsString) {
@@ -329,8 +323,8 @@ function mergeProps(...args) {
       }
     }
   }
-  if (typeof result.style === 'object') {
-    result.style = styleToString(result.style).replaceAll('\n', ' ');
+  if (typeof result.style === "object") {
+    result.style = styleToString(result.style).replaceAll("\n", " ");
   }
   if (result.hidden !== true) {
     result.hidden = void 0;
@@ -347,8 +341,10 @@ function getActiveElement(document2) {
   let activeElement = document2.activeElement;
   while (activeElement?.shadowRoot) {
     const node = activeElement.shadowRoot.activeElement;
-    if (node === activeElement) break;
-    else activeElement = node;
+    if (node === activeElement)
+      break;
+    else
+      activeElement = node;
   }
   return activeElement;
 }
@@ -372,16 +368,17 @@ function runWatcher(sources, flush, effect, options = {}) {
   const { lazy = false } = options;
 }
 function watch(sources, effect, options) {
-  runWatcher(sources, 'post', effect, options);
+  runWatcher(sources, "post", effect, options);
 }
 function watchPre(sources, effect, options) {
-  runWatcher(sources, 'pre', effect, options);
+  runWatcher(sources, "pre", effect, options);
 }
 watch.pre = watchPre;
 class Previous {
   #previous = void 0;
   #curr;
-  constructor(getter) {}
+  constructor(getter) {
+  }
   get current() {
     return this.#previous;
   }
@@ -473,34 +470,31 @@ function Chevron_down($$renderer, $$props) {
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
-  const iconNode = [['path', { d: 'm6 9 6 6 6-6' }]];
-  Icon(
-    $$renderer,
-    spread_props([
-      { name: 'chevron-down' },
-      $$sanitized_props,
-      {
-        /**
-         * @component @name ChevronDown
-         * @description Lucide SVG icon component, renders SVG Element with children.
-         *
-         * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJtNiA5IDYgNiA2LTYiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/chevron-down
-         * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
-         *
-         * @param {Object} props - Lucide icons props and any valid SVG attribute
-         * @returns {FunctionalComponent} Svelte component
-         *
-         */
-        iconNode,
-        children: ($$renderer2) => {
-          $$renderer2.push(`<!--[-->`);
-          slot($$renderer2, $$props, 'default', {});
-          $$renderer2.push(`<!--]-->`);
-        },
-        $$slots: { default: true },
+  const iconNode = [["path", { "d": "m6 9 6 6 6-6" }]];
+  Icon($$renderer, spread_props([
+    { name: "chevron-down" },
+    $$sanitized_props,
+    {
+      /**
+       * @component @name ChevronDown
+       * @description Lucide SVG icon component, renders SVG Element with children.
+       *
+       * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJtNiA5IDYgNiA2LTYiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/chevron-down
+       * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
+       *
+       * @param {Object} props - Lucide icons props and any valid SVG attribute
+       * @returns {FunctionalComponent} Svelte component
+       *
+       */
+      iconNode,
+      children: ($$renderer2) => {
+        $$renderer2.push(`<!--[-->`);
+        slot($$renderer2, $$props, "default", {});
+        $$renderer2.push(`<!--]-->`);
       },
-    ]),
-  );
+      $$slots: { default: true }
+    }
+  ]));
 }
 function Plus($$renderer, $$props) {
   const $$sanitized_props = sanitize_props($$props);
@@ -510,37 +504,31 @@ function Plus($$renderer, $$props) {
    * This source code is licensed under the ISC license.
    * See the LICENSE file in the root directory of this source tree.
    */
-  const iconNode = [
-    ['path', { d: 'M5 12h14' }],
-    ['path', { d: 'M12 5v14' }],
-  ];
-  Icon(
-    $$renderer,
-    spread_props([
-      { name: 'plus' },
-      $$sanitized_props,
-      {
-        /**
-         * @component @name Plus
-         * @description Lucide SVG icon component, renders SVG Element with children.
-         *
-         * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNNSAxMmgxNCIgLz4KICA8cGF0aCBkPSJNMTIgNXYxNCIgLz4KPC9zdmc+Cg==) - https://lucide.dev/icons/plus
-         * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
-         *
-         * @param {Object} props - Lucide icons props and any valid SVG attribute
-         * @returns {FunctionalComponent} Svelte component
-         *
-         */
-        iconNode,
-        children: ($$renderer2) => {
-          $$renderer2.push(`<!--[-->`);
-          slot($$renderer2, $$props, 'default', {});
-          $$renderer2.push(`<!--]-->`);
-        },
-        $$slots: { default: true },
+  const iconNode = [["path", { "d": "M5 12h14" }], ["path", { "d": "M12 5v14" }]];
+  Icon($$renderer, spread_props([
+    { name: "plus" },
+    $$sanitized_props,
+    {
+      /**
+       * @component @name Plus
+       * @description Lucide SVG icon component, renders SVG Element with children.
+       *
+       * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNNSAxMmgxNCIgLz4KICA8cGF0aCBkPSJNMTIgNXYxNCIgLz4KPC9zdmc+Cg==) - https://lucide.dev/icons/plus
+       * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
+       *
+       * @param {Object} props - Lucide icons props and any valid SVG attribute
+       * @returns {FunctionalComponent} Svelte component
+       *
+       */
+      iconNode,
+      children: ($$renderer2) => {
+        $$renderer2.push(`<!--[-->`);
+        slot($$renderer2, $$props, "default", {});
+        $$renderer2.push(`<!--]-->`);
       },
-    ]),
-  );
+      $$slots: { default: true }
+    }
+  ]));
 }
 function X($$renderer, $$props) {
   const $$sanitized_props = sanitize_props($$props);
@@ -551,45 +539,42 @@ function X($$renderer, $$props) {
    * See the LICENSE file in the root directory of this source tree.
    */
   const iconNode = [
-    ['path', { d: 'M18 6 6 18' }],
-    ['path', { d: 'm6 6 12 12' }],
+    ["path", { "d": "M18 6 6 18" }],
+    ["path", { "d": "m6 6 12 12" }]
   ];
-  Icon(
-    $$renderer,
-    spread_props([
-      { name: 'x' },
-      $$sanitized_props,
-      {
-        /**
-         * @component @name X
-         * @description Lucide SVG icon component, renders SVG Element with children.
-         *
-         * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTggNiA2IDE4IiAvPgogIDxwYXRoIGQ9Im02IDYgMTIgMTIiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/x
-         * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
-         *
-         * @param {Object} props - Lucide icons props and any valid SVG attribute
-         * @returns {FunctionalComponent} Svelte component
-         *
-         */
-        iconNode,
-        children: ($$renderer2) => {
-          $$renderer2.push(`<!--[-->`);
-          slot($$renderer2, $$props, 'default', {});
-          $$renderer2.push(`<!--]-->`);
-        },
-        $$slots: { default: true },
+  Icon($$renderer, spread_props([
+    { name: "x" },
+    $$sanitized_props,
+    {
+      /**
+       * @component @name X
+       * @description Lucide SVG icon component, renders SVG Element with children.
+       *
+       * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTggNiA2IDE4IiAvPgogIDxwYXRoIGQ9Im02IDYgMTIgMTIiIC8+Cjwvc3ZnPgo=) - https://lucide.dev/icons/x
+       * @see https://lucide.dev/guide/packages/lucide-svelte - Documentation
+       *
+       * @param {Object} props - Lucide icons props and any valid SVG attribute
+       * @returns {FunctionalComponent} Svelte component
+       *
+       */
+      iconNode,
+      children: ($$renderer2) => {
+        $$renderer2.push(`<!--[-->`);
+        slot($$renderer2, $$props, "default", {});
+        $$renderer2.push(`<!--]-->`);
       },
-    ]),
-  );
+      $$slots: { default: true }
+    }
+  ]));
 }
 function getDataOpenClosed(condition) {
-  return condition ? 'open' : 'closed';
+  return condition ? "open" : "closed";
 }
 function getDataDisabled(condition) {
-  return condition ? '' : void 0;
+  return condition ? "" : void 0;
 }
 function getAriaChecked(checked, indeterminate) {
-  return checked ? 'true' : 'false';
+  return checked ? "true" : "false";
 }
 function getDataOrientation(orientation) {
   return orientation;
@@ -598,19 +583,19 @@ function getDisabled(condition) {
   return condition ? true : void 0;
 }
 function getAriaPressed(condition) {
-  return condition ? 'true' : 'false';
+  return condition ? "true" : "false";
 }
-const ARROW_DOWN = 'ArrowDown';
-const ARROW_LEFT = 'ArrowLeft';
-const ARROW_RIGHT = 'ArrowRight';
-const ARROW_UP = 'ArrowUp';
-const END = 'End';
-const ENTER = 'Enter';
-const ESCAPE = 'Escape';
-const HOME = 'Home';
-const SPACE = ' ';
-const TAB = 'Tab';
-const isBrowser = typeof document !== 'undefined';
+const ARROW_DOWN = "ArrowDown";
+const ARROW_LEFT = "ArrowLeft";
+const ARROW_RIGHT = "ArrowRight";
+const ARROW_UP = "ArrowUp";
+const END = "End";
+const ENTER = "Enter";
+const ESCAPE = "Escape";
+const HOME = "Home";
+const SPACE = " ";
+const TAB = "Tab";
+const isBrowser = typeof document !== "undefined";
 function isHTMLElement(element) {
   return element instanceof HTMLElement;
 }
@@ -618,23 +603,27 @@ function isElement(element) {
   return element instanceof Element;
 }
 function isSelectableInput(element) {
-  return element instanceof HTMLInputElement && 'select' in element;
+  return element instanceof HTMLInputElement && "select" in element;
 }
 function isElementHidden(node, stopAt) {
-  if (getComputedStyle(node).visibility === 'hidden') return true;
+  if (getComputedStyle(node).visibility === "hidden")
+    return true;
   while (node) {
-    if (stopAt !== void 0 && node === stopAt) return false;
-    if (getComputedStyle(node).display === 'none') return true;
+    if (stopAt !== void 0 && node === stopAt)
+      return false;
+    if (getComputedStyle(node).display === "none")
+      return true;
     node = node.parentElement;
   }
   return false;
 }
 globalThis.bitsIdCounter ??= { current: 0 };
-function useId(prefix = 'bits') {
+function useId(prefix = "bits") {
   globalThis.bitsIdCounter.current++;
   return `${prefix}-${globalThis.bitsIdCounter.current}`;
 }
-function noop() {}
+function noop() {
+}
 function useStateMachine(initialState, machine) {
   const state = box(initialState);
   function reducer(event) {
@@ -648,8 +637,8 @@ function useStateMachine(initialState, machine) {
 }
 function usePresence(present, id) {
   let styles = {};
-  let prevAnimationNameState = 'none';
-  const initialState = present.current ? 'mounted' : 'unmounted';
+  let prevAnimationNameState = "none";
+  const initialState = present.current ? "mounted" : "unmounted";
   let node = null;
   const prevPresent = new Previous(() => present.current);
   watch([() => id.current, () => present.current], ([id2, present2]) => {
@@ -659,43 +648,39 @@ function usePresence(present, id) {
     });
   });
   const { state, dispatch } = useStateMachine(initialState, {
-    mounted: { UNMOUNT: 'unmounted', ANIMATION_OUT: 'unmountSuspended' },
-    unmountSuspended: { MOUNT: 'mounted', ANIMATION_END: 'unmounted' },
-    unmounted: { MOUNT: 'mounted' },
+    mounted: { UNMOUNT: "unmounted", ANIMATION_OUT: "unmountSuspended" },
+    unmountSuspended: { MOUNT: "mounted", ANIMATION_END: "unmounted" },
+    unmounted: { MOUNT: "mounted" }
   });
-  watch(
-    () => present.current,
-    (currPresent) => {
-      if (!node) {
-        node = document.getElementById(id.current);
-      }
-      if (!node) return;
-      const hasPresentChanged = currPresent !== prevPresent.current;
-      if (!hasPresentChanged) return;
-      const prevAnimationName = prevAnimationNameState;
-      const currAnimationName = getAnimationName(node);
-      if (currPresent) {
-        dispatch('MOUNT');
-      } else if (currAnimationName === 'none' || styles.display === 'none') {
-        dispatch('UNMOUNT');
+  watch(() => present.current, (currPresent) => {
+    if (!node) {
+      node = document.getElementById(id.current);
+    }
+    if (!node) return;
+    const hasPresentChanged = currPresent !== prevPresent.current;
+    if (!hasPresentChanged) return;
+    const prevAnimationName = prevAnimationNameState;
+    const currAnimationName = getAnimationName(node);
+    if (currPresent) {
+      dispatch("MOUNT");
+    } else if (currAnimationName === "none" || styles.display === "none") {
+      dispatch("UNMOUNT");
+    } else {
+      const isAnimating = prevAnimationName !== currAnimationName;
+      if (prevPresent && isAnimating) {
+        dispatch("ANIMATION_OUT");
       } else {
-        const isAnimating = prevAnimationName !== currAnimationName;
-        if (prevPresent && isAnimating) {
-          dispatch('ANIMATION_OUT');
-        } else {
-          dispatch('UNMOUNT');
-        }
+        dispatch("UNMOUNT");
       }
-    },
-  );
+    }
+  });
   function handleAnimationEnd(event) {
     if (!node) node = document.getElementById(id.current);
     if (!node) return;
     const currAnimationName = getAnimationName(node);
-    const isCurrentAnimation =
-      currAnimationName.includes(event.animationName) || currAnimationName === 'none';
+    const isCurrentAnimation = currAnimationName.includes(event.animationName) || currAnimationName === "none";
     if (event.target === node && isCurrentAnimation) {
-      dispatch('ANIMATION_END');
+      dispatch("ANIMATION_END");
     }
   }
   function handleAnimationStart(event) {
@@ -705,50 +690,37 @@ function usePresence(present, id) {
       prevAnimationNameState = getAnimationName(node);
     }
   }
-  watch(
-    () => state.current,
-    () => {
-      if (!node) node = document.getElementById(id.current);
-      if (!node) return;
-      const currAnimationName = getAnimationName(node);
-      prevAnimationNameState = state.current === 'mounted' ? currAnimationName : 'none';
-    },
-  );
-  watch(
-    () => node,
-    (node2) => {
-      if (!node2) return;
-      styles = getComputedStyle(node2);
-      return executeCallbacks(
-        on(node2, 'animationstart', handleAnimationStart),
-        on(node2, 'animationcancel', handleAnimationEnd),
-        on(node2, 'animationend', handleAnimationEnd),
-      );
-    },
-  );
-  const isPresentDerived = derived(() => ['mounted', 'unmountSuspended'].includes(state.current));
+  watch(() => state.current, () => {
+    if (!node) node = document.getElementById(id.current);
+    if (!node) return;
+    const currAnimationName = getAnimationName(node);
+    prevAnimationNameState = state.current === "mounted" ? currAnimationName : "none";
+  });
+  watch(() => node, (node2) => {
+    if (!node2) return;
+    styles = getComputedStyle(node2);
+    return executeCallbacks(on(node2, "animationstart", handleAnimationStart), on(node2, "animationcancel", handleAnimationEnd), on(node2, "animationend", handleAnimationEnd));
+  });
+  const isPresentDerived = derived(() => ["mounted", "unmountSuspended"].includes(state.current));
   return {
     get current() {
       return isPresentDerived();
-    },
+    }
   };
 }
 function getAnimationName(node) {
-  return node ? getComputedStyle(node).animationName || 'none' : 'none';
+  return node ? getComputedStyle(node).animationName || "none" : "none";
 }
 function Presence_layer($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let { present, forceMount, presence, id } = $$props;
-    const isPresent = usePresence(
-      box.with(() => present),
-      box.with(() => id),
-    );
+    const isPresent = usePresence(box.with(() => present), box.with(() => id));
     if (forceMount || present || isPresent.current) {
-      $$renderer2.push('<!--[0-->');
+      $$renderer2.push("<!--[0-->");
       presence?.($$renderer2, { present: isPresent });
       $$renderer2.push(`<!---->`);
     } else {
-      $$renderer2.push('<!--[-1-->');
+      $$renderer2.push("<!--[-1-->");
     }
     $$renderer2.push(`<!--]-->`);
   });
@@ -762,7 +734,7 @@ function createAttrs(variant) {
     description: `data-${variant}-description`,
     close: `data-${variant}-close`,
     cancel: `data-${variant}-cancel`,
-    action: `data-${variant}-action`,
+    action: `data-${variant}-action`
   };
 }
 class DialogRootState {
@@ -795,7 +767,7 @@ class DialogRootState {
     if (!this.opts.open.current) return;
     this.opts.open.current = false;
   }
-  #sharedProps = derived(() => ({ 'data-state': getDataOpenClosed(this.opts.open.current) }));
+  #sharedProps = derived(() => ({ "data-state": getDataOpenClosed(this.opts.open.current) }));
   get sharedProps() {
     return this.#sharedProps();
   }
@@ -828,12 +800,12 @@ class DialogCloseState {
   }
   #props = derived(() => ({
     id: this.opts.id.current,
-    [this.#attr()]: '',
+    [this.#attr()]: "",
     onclick: this.onclick,
     onkeydown: this.onkeydown,
     disabled: this.opts.disabled.current ? true : void 0,
     tabindex: 0,
-    ...this.root.sharedProps,
+    ...this.root.sharedProps
   }));
   get props() {
     return this.#props();
@@ -853,15 +825,15 @@ class DialogTitleState {
       onRefChange: (node) => {
         this.root.titleId = node?.id;
       },
-      deps: () => this.root.opts.open.current,
+      deps: () => this.root.opts.open.current
     });
   }
   #props = derived(() => ({
     id: this.opts.id.current,
-    role: 'heading',
-    'aria-level': this.opts.level.current,
-    [this.root.attrs.title]: '',
-    ...this.root.sharedProps,
+    role: "heading",
+    "aria-level": this.opts.level.current,
+    [this.root.attrs.title]: "",
+    ...this.root.sharedProps
   }));
   get props() {
     return this.#props();
@@ -882,13 +854,13 @@ class DialogDescriptionState {
       onRefChange: (node) => {
         this.root.descriptionNode = node;
         this.root.descriptionId = node?.id;
-      },
+      }
     });
   }
   #props = derived(() => ({
     id: this.opts.id.current,
-    [this.root.attrs.description]: '',
-    ...this.root.sharedProps,
+    [this.root.attrs.description]: "",
+    ...this.root.sharedProps
   }));
   get props() {
     return this.#props();
@@ -909,7 +881,7 @@ class DialogContentState {
       onRefChange: (node) => {
         this.root.contentNode = node;
         this.root.contentId = node?.id;
-      },
+      }
     });
   }
   #snippetProps = derived(() => ({ open: this.root.opts.open.current }));
@@ -921,17 +893,17 @@ class DialogContentState {
   }
   #props = derived(() => ({
     id: this.opts.id.current,
-    role: this.root.opts.variant.current === 'alert-dialog' ? 'alertdialog' : 'dialog',
-    'aria-modal': 'true',
-    'aria-describedby': this.root.descriptionId,
-    'aria-labelledby': this.root.titleId,
-    [this.root.attrs.content]: '',
+    role: this.root.opts.variant.current === "alert-dialog" ? "alertdialog" : "dialog",
+    "aria-modal": "true",
+    "aria-describedby": this.root.descriptionId,
+    "aria-labelledby": this.root.titleId,
+    [this.root.attrs.content]: "",
     style: {
-      pointerEvents: 'auto',
-      outline: this.root.opts.variant.current === 'alert-dialog' ? 'none' : void 0,
+      pointerEvents: "auto",
+      outline: this.root.opts.variant.current === "alert-dialog" ? "none" : void 0
     },
-    tabindex: this.root.opts.variant.current === 'alert-dialog' ? -1 : void 0,
-    ...this.root.sharedProps,
+    tabindex: this.root.opts.variant.current === "alert-dialog" ? -1 : void 0,
+    ...this.root.sharedProps
   }));
   get props() {
     return this.#props();
@@ -957,9 +929,9 @@ class DialogOverlayState {
   }
   #props = derived(() => ({
     id: this.opts.id.current,
-    [this.root.attrs.overlay]: '',
-    style: { pointerEvents: 'auto' },
-    ...this.root.sharedProps,
+    [this.root.attrs.overlay]: "",
+    style: { pointerEvents: "auto" },
+    ...this.root.sharedProps
   }));
   get props() {
     return this.#props();
@@ -968,7 +940,7 @@ class DialogOverlayState {
     return this.#props($$value);
   }
 }
-const DialogRootContext = new Context('Dialog.Root');
+const DialogRootContext = new Context("Dialog.Root");
 function useDialogRoot(props) {
   return DialogRootContext.set(new DialogRootState(props));
 }
@@ -1002,18 +974,15 @@ function Dialog_title($$renderer, $$props) {
     const titleState = useDialogTitle({
       id: box.with(() => id),
       level: box.with(() => level),
-      ref: box.with(
-        () => ref,
-        (v) => (ref = v),
-      ),
+      ref: box.with(() => ref, (v) => ref = v)
     });
     const mergedProps = derived(() => mergeProps(restProps, titleState.props));
     if (child) {
-      $$renderer2.push('<!--[0-->');
+      $$renderer2.push("<!--[0-->");
       child($$renderer2, { props: mergedProps() });
       $$renderer2.push(`<!---->`);
     } else {
-      $$renderer2.push('<!--[-1-->');
+      $$renderer2.push("<!--[-1-->");
       $$renderer2.push(`<div${attributes({ ...mergedProps() })}>`);
       children?.($$renderer2);
       $$renderer2.push(`<!----></div>`);
@@ -1024,17 +993,17 @@ function Dialog_title($$renderer, $$props) {
 }
 function Portal($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let { to = 'body', children, disabled } = $$props;
+    let { to = "body", children, disabled } = $$props;
     getAllContexts();
     let target = derived(getTarget);
     function getTarget() {
       if (!isBrowser || disabled) return null;
       let localTarget = null;
-      if (typeof to === 'string') {
+      if (typeof to === "string") {
         localTarget = document.querySelector(to);
       } else if (to instanceof HTMLElement || to instanceof DocumentFragment) {
         localTarget = to;
-      } else;
+      } else ;
       return localTarget;
     }
     let instance;
@@ -1055,11 +1024,11 @@ function Portal($$renderer, $$props) {
       };
     });
     if (disabled) {
-      $$renderer2.push('<!--[0-->');
+      $$renderer2.push("<!--[0-->");
       children?.($$renderer2);
       $$renderer2.push(`<!---->`);
     } else {
-      $$renderer2.push('<!--[-1-->');
+      $$renderer2.push("<!--[-1-->");
     }
     $$renderer2.push(`<!--]-->`);
   });
@@ -1081,7 +1050,7 @@ class CustomEventDispatcher {
   createEvent(detail) {
     return new CustomEvent(this.eventName, {
       ...this.options,
-      detail,
+      detail
     });
   }
   dispatch(element, detail) {
@@ -1146,7 +1115,7 @@ class DismissibleLayerState {
       deps: () => opts.enabled.current,
       onRefChange: (node) => {
         this.currNode = node;
-      },
+      }
     });
     this.#behaviorType = opts.interactOutsideBehavior;
     this.#interactOutsideProp = opts.onInteractOutside;
@@ -1188,26 +1157,17 @@ class DismissibleLayerState {
        * to avoid checking if is responsible layer during interaction end
        * when a new floating element may have been opened.
        */
-      on(
-        this.#documentObj,
-        'pointerdown',
-        executeCallbacks(this.#markInterceptedEvent, this.#markResponsibleLayer),
-        { capture: true },
-      ),
+      on(this.#documentObj, "pointerdown", executeCallbacks(this.#markInterceptedEvent, this.#markResponsibleLayer), { capture: true }),
       /**
        * BUBBLE INTERACTION START
        * Mark interaction-start event as non-intercepted. Debounce `onInteractOutsideStart`
        * to avoid prematurely checking if other events were intercepted.
        */
-      on(
-        this.#documentObj,
-        'pointerdown',
-        executeCallbacks(this.#markNonInterceptedEvent, this.#handleInteractOutside),
-      ),
+      on(this.#documentObj, "pointerdown", executeCallbacks(this.#markNonInterceptedEvent, this.#handleInteractOutside)),
       /**
        * HANDLE FOCUS OUTSIDE
        */
-      on(this.#documentObj, 'focusin', this.#handleFocus),
+      on(this.#documentObj, "focusin", this.#handleFocus)
     );
   }
   #handleDismiss = (e) => {
@@ -1217,37 +1177,34 @@ class DismissibleLayerState {
     }
     this.#interactOutsideProp.current(e);
   };
-  #handleInteractOutside = debounce((e) => {
-    if (!this.currNode) {
-      this.#unsubClickListener();
-      return;
-    }
-    const isEventValid =
-      this.opts.isValidEvent.current(e, this.currNode) || isValidEvent(e, this.currNode);
-    if (!this.#isResponsibleLayer || this.#isAnyEventIntercepted() || !isEventValid) {
-      this.#unsubClickListener();
-      return;
-    }
-    let event = e;
-    if (event.defaultPrevented) {
-      event = createWrappedEvent(event);
-    }
-    if (
-      this.#behaviorType.current !== 'close' &&
-      this.#behaviorType.current !== 'defer-otherwise-close'
-    ) {
-      this.#unsubClickListener();
-      return;
-    }
-    if (e.pointerType === 'touch') {
-      this.#unsubClickListener();
-      this.#unsubClickListener = addEventListener(this.#documentObj, 'click', this.#handleDismiss, {
-        once: true,
-      });
-    } else {
-      this.#interactOutsideProp.current(event);
-    }
-  }, 10);
+  #handleInteractOutside = debounce(
+    (e) => {
+      if (!this.currNode) {
+        this.#unsubClickListener();
+        return;
+      }
+      const isEventValid = this.opts.isValidEvent.current(e, this.currNode) || isValidEvent(e, this.currNode);
+      if (!this.#isResponsibleLayer || this.#isAnyEventIntercepted() || !isEventValid) {
+        this.#unsubClickListener();
+        return;
+      }
+      let event = e;
+      if (event.defaultPrevented) {
+        event = createWrappedEvent(event);
+      }
+      if (this.#behaviorType.current !== "close" && this.#behaviorType.current !== "defer-otherwise-close") {
+        this.#unsubClickListener();
+        return;
+      }
+      if (e.pointerType === "touch") {
+        this.#unsubClickListener();
+        this.#unsubClickListener = addEventListener(this.#documentObj, "click", this.#handleDismiss, { once: true });
+      } else {
+        this.#interactOutsideProp.current(event);
+      }
+    },
+    10
+  );
   #markInterceptedEvent = (e) => {
     this.#interceptedEvents[e.type] = true;
   };
@@ -1262,12 +1219,15 @@ class DismissibleLayerState {
     if (!this.node.current) return false;
     return isOrContainsTarget(this.node.current, target);
   };
-  #resetState = debounce(() => {
-    for (const eventType in this.#interceptedEvents) {
-      this.#interceptedEvents[eventType] = false;
-    }
-    this.#isResponsibleLayer = false;
-  }, 20);
+  #resetState = debounce(
+    () => {
+      for (const eventType in this.#interceptedEvents) {
+        this.#interceptedEvents[eventType] = false;
+      }
+      this.#isResponsibleLayer = false;
+    },
+    20
+  );
   #isAnyEventIntercepted() {
     const i = Object.values(this.#interceptedEvents).some(Boolean);
     return i;
@@ -1280,16 +1240,14 @@ class DismissibleLayerState {
   };
   props = {
     onfocuscapture: this.#onfocuscapture,
-    onblurcapture: this.#onblurcapture,
+    onblurcapture: this.#onblurcapture
   };
 }
 function useDismissibleLayer(props) {
   return new DismissibleLayerState(props);
 }
 function getTopMostLayer(layersArr) {
-  return layersArr.findLast(
-    ([_, { current: behaviorType }]) => behaviorType === 'close' || behaviorType === 'ignore',
-  );
+  return layersArr.findLast(([_, { current: behaviorType }]) => behaviorType === "close" || behaviorType === "ignore");
 }
 function isResponsibleLayer(node) {
   const layersArr = [...globalThis.bitsDismissableLayers];
@@ -1299,14 +1257,11 @@ function isResponsibleLayer(node) {
   return firstLayerNode.node.current === node;
 }
 function isValidEvent(e, node) {
-  if ('button' in e && e.button > 0) return false;
+  if ("button" in e && e.button > 0) return false;
   const target = e.target;
   if (!isElement(target)) return false;
   const ownerDocument = getOwnerDocument(target);
-  const isValid =
-    ownerDocument.documentElement.contains(target) &&
-    !isOrContainsTarget(node, target) &&
-    isClickTrulyOutside(e, node);
+  const isValid = ownerDocument.documentElement.contains(target) && !isOrContainsTarget(node, target) && isClickTrulyOutside(e, node);
   return isValid;
 }
 function createWrappedEvent(e) {
@@ -1316,46 +1271,46 @@ function createWrappedEvent(e) {
   if (e instanceof PointerEvent) {
     newEvent = new PointerEvent(e.type, e);
   } else {
-    newEvent = new PointerEvent('pointerdown', e);
+    newEvent = new PointerEvent("pointerdown", e);
   }
   let isPrevented = false;
   const wrappedEvent = new Proxy(newEvent, {
     get: (target, prop) => {
-      if (prop === 'currentTarget') {
+      if (prop === "currentTarget") {
         return capturedCurrentTarget;
       }
-      if (prop === 'target') {
+      if (prop === "target") {
         return capturedTarget;
       }
-      if (prop === 'preventDefault') {
+      if (prop === "preventDefault") {
         return () => {
           isPrevented = true;
-          if (typeof target.preventDefault === 'function') {
+          if (typeof target.preventDefault === "function") {
             target.preventDefault();
           }
         };
       }
-      if (prop === 'defaultPrevented') {
+      if (prop === "defaultPrevented") {
         return isPrevented;
       }
       if (prop in target) {
         return target[prop];
       }
       return e[prop];
-    },
+    }
   });
   return wrappedEvent;
 }
 function Dismissible_layer($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let {
-      interactOutsideBehavior = 'close',
+      interactOutsideBehavior = "close",
       onInteractOutside = noop,
       onFocusOutside = noop,
       id,
       children,
       enabled,
-      isValidEvent: isValidEvent2 = () => false,
+      isValidEvent: isValidEvent2 = () => false
     } = $$props;
     const dismissibleLayerState = useDismissibleLayer({
       id: box.with(() => id),
@@ -1363,7 +1318,7 @@ function Dismissible_layer($$renderer, $$props) {
       onInteractOutside: box.with(() => onInteractOutside),
       enabled: box.with(() => enabled),
       onFocusOutside: box.with(() => onFocusOutside),
-      isValidEvent: box.with(() => isValidEvent2),
+      isValidEvent: box.with(() => isValidEvent2)
     });
     children?.($$renderer2, { props: dismissibleLayerState.props });
     $$renderer2.push(`<!---->`);
@@ -1375,29 +1330,26 @@ class EscapeLayerState {
   constructor(opts) {
     this.opts = opts;
     let unsubEvents = noop;
-    watch(
-      () => opts.enabled.current,
-      (enabled) => {
-        if (enabled) {
-          globalThis.bitsEscapeLayers.set(this, opts.escapeKeydownBehavior);
-          unsubEvents = this.#addEventListener();
-        }
-        return () => {
-          unsubEvents();
-          globalThis.bitsEscapeLayers.delete(this);
-        };
-      },
-    );
+    watch(() => opts.enabled.current, (enabled) => {
+      if (enabled) {
+        globalThis.bitsEscapeLayers.set(this, opts.escapeKeydownBehavior);
+        unsubEvents = this.#addEventListener();
+      }
+      return () => {
+        unsubEvents();
+        globalThis.bitsEscapeLayers.delete(this);
+      };
+    });
   }
   #addEventListener = () => {
-    return on(document, 'keydown', this.#onkeydown, { passive: false });
+    return on(document, "keydown", this.#onkeydown, { passive: false });
   };
   #onkeydown = (e) => {
     if (e.key !== ESCAPE || !isResponsibleEscapeLayer(this)) return;
     const clonedEvent = new KeyboardEvent(e.type, e);
     e.preventDefault();
     const behaviorType = this.opts.escapeKeydownBehavior.current;
-    if (behaviorType !== 'close' && behaviorType !== 'defer-otherwise-close') return;
+    if (behaviorType !== "close" && behaviorType !== "defer-otherwise-close") return;
     this.opts.onEscapeKeydown.current(clonedEvent);
   };
 }
@@ -1406,20 +1358,23 @@ function useEscapeLayer(props) {
 }
 function isResponsibleEscapeLayer(instance) {
   const layersArr = [...globalThis.bitsEscapeLayers];
-  const topMostLayer = layersArr.findLast(
-    ([_, { current: behaviorType }]) => behaviorType === 'close' || behaviorType === 'ignore',
-  );
+  const topMostLayer = layersArr.findLast(([_, { current: behaviorType }]) => behaviorType === "close" || behaviorType === "ignore");
   if (topMostLayer) return topMostLayer[0] === instance;
   const [firstLayerNode] = layersArr[0];
   return firstLayerNode === instance;
 }
 function Escape_layer($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let { escapeKeydownBehavior = 'close', onEscapeKeydown = noop, children, enabled } = $$props;
+    let {
+      escapeKeydownBehavior = "close",
+      onEscapeKeydown = noop,
+      children,
+      enabled
+    } = $$props;
     useEscapeLayer({
       escapeKeydownBehavior: box.with(() => escapeKeydownBehavior),
       onEscapeKeydown: box.with(() => onEscapeKeydown),
-      enabled: box.with(() => enabled),
+      enabled: box.with(() => enabled)
     });
     children?.($$renderer2);
     $$renderer2.push(`<!---->`);
@@ -1442,7 +1397,7 @@ function createFocusScopeStack() {
     },
     get current() {
       return focusStack.current;
-    },
+    }
   };
 }
 function createFocusScopeAPI() {
@@ -1464,18 +1419,20 @@ function createFocusScopeAPI() {
     },
     resume() {
       paused = false;
-    },
+    }
   };
 }
 function removeFromFocusScopeArray(arr, item) {
   return [...arr].filter((i) => i.id !== item.id);
 }
 function removeLinks(items) {
-  return items.filter((item) => item.tagName !== 'A');
+  return items.filter((item) => item.tagName !== "A");
 }
 function focus(element, { select = false } = {}) {
-  if (!(element && element.focus)) return;
-  if (document.activeElement === element) return;
+  if (!(element && element.focus))
+    return;
+  if (document.activeElement === element)
+    return;
   const previouslyFocusedElement = document.activeElement;
   element.focus({ preventScroll: true });
   if (element !== previouslyFocusedElement && isSelectableInput(element) && select) {
@@ -1486,12 +1443,14 @@ function focusFirst(candidates, { select = false } = {}) {
   const previouslyFocusedElement = document.activeElement;
   for (const candidate of candidates) {
     focus(candidate, { select });
-    if (document.activeElement !== previouslyFocusedElement) return true;
+    if (document.activeElement !== previouslyFocusedElement)
+      return true;
   }
 }
 function findVisible(elements, container) {
   for (const element of elements) {
-    if (!isElementHidden(element, container)) return element;
+    if (!isElementHidden(element, container))
+      return element;
   }
 }
 function getTabbableCandidates(container) {
@@ -1499,12 +1458,14 @@ function getTabbableCandidates(container) {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     acceptNode: (node) => {
-      const isHiddenInput = node.tagName === 'INPUT' && node.type === 'hidden';
-      if (node.disabled || node.hidden || isHiddenInput) return NodeFilter.FILTER_SKIP;
+      const isHiddenInput = node.tagName === "INPUT" && node.type === "hidden";
+      if (node.disabled || node.hidden || isHiddenInput)
+        return NodeFilter.FILTER_SKIP;
       return node.tabIndex >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    },
+    }
   });
-  while (walker.nextNode()) nodes.push(walker.currentNode);
+  while (walker.nextNode())
+    nodes.push(walker.currentNode);
   return nodes;
 }
 function getTabbableEdges(container) {
@@ -1513,16 +1474,17 @@ function getTabbableEdges(container) {
   const last = findVisible(candidates.reverse(), container);
   return [first, last];
 }
-const AutoFocusOnMountEvent = new CustomEventDispatcher('focusScope.autoFocusOnMount', {
-  bubbles: false,
-  cancelable: true,
-});
-const AutoFocusOnDestroyEvent = new CustomEventDispatcher('focusScope.autoFocusOnDestroy', {
-  bubbles: false,
-  cancelable: true,
-});
-const FocusScopeContext = new Context('FocusScope');
-function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, forceMount }) {
+const AutoFocusOnMountEvent = new CustomEventDispatcher("focusScope.autoFocusOnMount", { bubbles: false, cancelable: true });
+const AutoFocusOnDestroyEvent = new CustomEventDispatcher("focusScope.autoFocusOnDestroy", { bubbles: false, cancelable: true });
+const FocusScopeContext = new Context("FocusScope");
+function useFocusScope({
+  id,
+  loop,
+  enabled,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+  forceMount
+}) {
   const focusScopeStack = createFocusScopeStack();
   const focusScope = createFocusScopeAPI();
   const ref = box(null);
@@ -1536,14 +1498,14 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
       const target = event.target;
       if (!isHTMLElement(target)) return;
       const isWithinActiveScope = ref.current.contains(target);
-      if (event.type === 'focusin') {
+      if (event.type === "focusin") {
         if (isWithinActiveScope) {
           lastFocusedElement = target;
         } else {
           if (ctx.ignoreCloseAutoFocus) return;
           focus(lastFocusedElement, { select: true });
         }
-      } else if (event.type === 'focusout') {
+      } else if (event.type === "focusout") {
         if (!isWithinActiveScope && !ctx.ignoreCloseAutoFocus) {
           focus(lastFocusedElement, { select: true });
         }
@@ -1556,16 +1518,13 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
     if (!lastFocusedElement || !ref.current) return;
     let elementWasRemoved = false;
     for (const mutation of mutations) {
-      if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+      if (mutation.type === "childList" && mutation.removedNodes.length > 0) {
         for (const removedNode of mutation.removedNodes) {
           if (removedNode === lastFocusedElement) {
             elementWasRemoved = true;
             break;
           }
-          if (
-            removedNode.nodeType === Node.ELEMENT_NODE &&
-            removedNode.contains(lastFocusedElement)
-          ) {
+          if (removedNode.nodeType === Node.ELEMENT_NODE && removedNode.contains(lastFocusedElement)) {
             elementWasRemoved = true;
             break;
           }
@@ -1579,10 +1538,7 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
   }
   watch([() => ref.current, () => enabled.current], ([container, enabled2]) => {
     if (!container || !enabled2) return;
-    const removeEvents = executeCallbacks(
-      on(document, 'focusin', manageFocus),
-      on(document, 'focusout', manageFocus),
-    );
+    const removeEvents = executeCallbacks(on(document, "focusin", manageFocus), on(document, "focusout", manageFocus));
     const mutationObserver = new MutationObserver(handleMutations);
     mutationObserver.observe(container, { childList: true, subtree: true, attributes: false });
     return () => {
@@ -1600,7 +1556,11 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
     };
   });
   watch(
-    [() => forceMount.current, () => ref.current, () => enabled.current],
+    [
+      () => forceMount.current,
+      () => ref.current,
+      () => enabled.current
+    ],
     ([forceMount2, container]) => {
       if (!forceMount2) return;
       const prevFocusedElement = document.activeElement;
@@ -1609,7 +1569,7 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
         if (!container) return;
         handleClose(prevFocusedElement);
       };
-    },
+    }
   );
   function handleOpen(container, prevFocusedElement) {
     if (!container) container = document.getElementById(id.current);
@@ -1622,9 +1582,7 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
       if (!mountEvent.defaultPrevented) {
         afterTick(() => {
           if (!container) return;
-          const result = focusFirst(removeLinks(getTabbableCandidates(container)), {
-            select: true,
-          });
+          const result = focusFirst(removeLinks(getTabbableCandidates(container)), { select: true });
           if (!result) focus(container);
         });
       }
@@ -1636,9 +1594,7 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
     const shouldIgnore = ctx.ignoreCloseAutoFocus;
     afterSleep(0, () => {
       if (!destroyEvent.defaultPrevented && prevFocusedElement && !shouldIgnore) {
-        focus(isTabbable(prevFocusedElement) ? prevFocusedElement : document.body, {
-          select: true,
-        });
+        focus(isTabbable(prevFocusedElement) ? prevFocusedElement : document.body, { select: true });
       }
       focusScopeStack.remove(focusScope);
     });
@@ -1672,7 +1628,7 @@ function useFocusScope({ id, loop, enabled, onOpenAutoFocus, onCloseAutoFocus, f
   return {
     get props() {
       return props();
-    },
+    }
   };
 }
 function Focus_scope($$renderer, $$props) {
@@ -1684,7 +1640,7 @@ function Focus_scope($$renderer, $$props) {
       onCloseAutoFocus = noop,
       onOpenAutoFocus = noop,
       focusScope,
-      forceMount = false,
+      forceMount = false
     } = $$props;
     const focusScopeState = useFocusScope({
       enabled: box.with(() => trapFocus),
@@ -1692,7 +1648,7 @@ function Focus_scope($$renderer, $$props) {
       onCloseAutoFocus: box.with(() => onCloseAutoFocus),
       onOpenAutoFocus: box.with(() => onOpenAutoFocus),
       id: box.with(() => id),
-      forceMount: box.with(() => forceMount),
+      forceMount: box.with(() => forceMount)
     });
     focusScope?.($$renderer2, { props: focusScopeState.props });
     $$renderer2.push(`<!---->`);
@@ -1708,34 +1664,24 @@ class TextSelectionLayerState {
     useRefById({
       id: opts.id,
       ref: this.#ref,
-      deps: () => this.opts.enabled.current,
+      deps: () => this.opts.enabled.current
     });
     let unsubEvents = noop;
-    watch(
-      () => this.opts.enabled.current,
-      (isEnabled) => {
-        if (isEnabled) {
-          globalThis.bitsTextSelectionLayers.set(this, this.opts.enabled);
-          unsubEvents();
-          unsubEvents = this.#addEventListeners();
-        }
-        return () => {
-          unsubEvents();
-          this.#resetSelectionLock();
-          globalThis.bitsTextSelectionLayers.delete(this);
-        };
-      },
-    );
+    watch(() => this.opts.enabled.current, (isEnabled) => {
+      if (isEnabled) {
+        globalThis.bitsTextSelectionLayers.set(this, this.opts.enabled);
+        unsubEvents();
+        unsubEvents = this.#addEventListeners();
+      }
+      return () => {
+        unsubEvents();
+        this.#resetSelectionLock();
+        globalThis.bitsTextSelectionLayers.delete(this);
+      };
+    });
   }
   #addEventListeners() {
-    return executeCallbacks(
-      on(document, 'pointerdown', this.#pointerdown),
-      on(
-        document,
-        'pointerup',
-        composeHandlers(this.#resetSelectionLock, this.opts.onPointerUp.current),
-      ),
-    );
+    return executeCallbacks(on(document, "pointerdown", this.#pointerdown), on(document, "pointerup", composeHandlers(this.#resetSelectionLock, this.opts.onPointerUp.current)));
   }
   #pointerdown = (e) => {
     const node = this.#ref.current;
@@ -1759,8 +1705,8 @@ function preventTextSelectionOverflow(node) {
   const body = document.body;
   const originalBodyUserSelect = getUserSelect(body);
   const originalNodeUserSelect = getUserSelect(node);
-  setUserSelect(body, 'none');
-  setUserSelect(node, 'text');
+  setUserSelect(body, "none");
+  setUserSelect(node, "text");
   return () => {
     setUserSelect(body, originalBodyUserSelect);
     setUserSelect(node, originalNodeUserSelect);
@@ -1785,13 +1731,13 @@ function Text_selection_layer($$renderer, $$props) {
       onPointerUp = noop,
       id,
       children,
-      enabled,
+      enabled
     } = $$props;
     useTextSelectionLayer({
       id: box.with(() => id),
       onPointerDown: box.with(() => onPointerDown),
       onPointerUp: box.with(() => onPointerUp),
-      enabled: box.with(() => enabled && preventOverflowTextSelection),
+      enabled: box.with(() => enabled && preventOverflowTextSelection)
     });
     children?.($$renderer2);
     $$renderer2.push(`<!---->`);
@@ -1835,23 +1781,20 @@ function Dialog_overlay($$renderer, $$props) {
     } = $$props;
     const overlayState = useDialogOverlay({
       id: box.with(() => id),
-      ref: box.with(
-        () => ref,
-        (v) => (ref = v),
-      ),
+      ref: box.with(() => ref, (v) => ref = v)
     });
     const mergedProps = derived(() => mergeProps(restProps, overlayState.props));
     {
-      let presence = function ($$renderer3) {
+      let presence = function($$renderer3) {
         if (child) {
-          $$renderer3.push('<!--[0-->');
+          $$renderer3.push("<!--[0-->");
           child($$renderer3, {
             props: mergeProps(mergedProps()),
-            ...overlayState.snippetProps,
+            ...overlayState.snippetProps
           });
           $$renderer3.push(`<!---->`);
         } else {
-          $$renderer3.push('<!--[-1-->');
+          $$renderer3.push("<!--[-1-->");
           $$renderer3.push(`<div${attributes({ ...mergeProps(mergedProps()) })}>`);
           children?.($$renderer3, overlayState.snippetProps);
           $$renderer3.push(`<!----></div>`);
@@ -1861,7 +1804,7 @@ function Dialog_overlay($$renderer, $$props) {
       Presence_layer($$renderer2, {
         id,
         present: overlayState.root.opts.open.current || forceMount,
-        presence,
+        presence
       });
     }
     bind_props($$props, { ref });
@@ -1871,14 +1814,11 @@ function Dialog($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let { open = false, onOpenChange = noop, children } = $$props;
     useDialogRoot({
-      variant: box.with(() => 'dialog'),
-      open: box.with(
-        () => open,
-        (v) => {
-          open = v;
-          onOpenChange(v);
-        },
-      ),
+      variant: box.with(() => "dialog"),
+      open: box.with(() => open, (v) => {
+        open = v;
+        onOpenChange(v);
+      })
     });
     children?.($$renderer2);
     $$renderer2.push(`<!---->`);
@@ -1898,21 +1838,18 @@ function Dialog_close($$renderer, $$props) {
       ...restProps
     } = $$props;
     const closeState = useDialogClose({
-      variant: box.with(() => 'close'),
+      variant: box.with(() => "close"),
       id: box.with(() => id),
-      ref: box.with(
-        () => ref,
-        (v) => (ref = v),
-      ),
-      disabled: box.with(() => Boolean(disabled)),
+      ref: box.with(() => ref, (v) => ref = v),
+      disabled: box.with(() => Boolean(disabled))
     });
     const mergedProps = derived(() => mergeProps(restProps, closeState.props));
     if (child) {
-      $$renderer2.push('<!--[0-->');
+      $$renderer2.push("<!--[0-->");
       child($$renderer2, { props: mergedProps() });
       $$renderer2.push(`<!---->`);
     } else {
-      $$renderer2.push('<!--[-1-->');
+      $$renderer2.push("<!--[-1-->");
       $$renderer2.push(`<button${attributes({ ...mergedProps() })}>`);
       children?.($$renderer2);
       $$renderer2.push(`<!----></button>`);
@@ -1942,89 +1879,72 @@ function Dialog_content($$renderer, $$props) {
     } = $$props;
     const contentState = useDialogContent({
       id: box.with(() => id),
-      ref: box.with(
-        () => ref,
-        (v) => (ref = v),
-      ),
+      ref: box.with(() => ref, (v) => ref = v)
     });
     const mergedProps = derived(() => mergeProps(restProps, contentState.props));
     {
-      let presence = function ($$renderer3) {
+      let presence = function($$renderer3) {
         {
-          let focusScope = function ($$renderer4, { props: focusScopeProps }) {
-            Escape_layer(
-              $$renderer4,
-              spread_props([
-                mergedProps(),
-                {
-                  enabled: contentState.root.opts.open.current,
-                  onEscapeKeydown: (e) => {
-                    onEscapeKeydown(e);
-                    if (e.defaultPrevented) return;
-                    contentState.root.handleClose();
-                  },
-                  children: ($$renderer5) => {
-                    Dismissible_layer(
-                      $$renderer5,
-                      spread_props([
-                        mergedProps(),
-                        {
-                          enabled: contentState.root.opts.open.current,
-                          onInteractOutside: (e) => {
-                            onInteractOutside(e);
-                            if (e.defaultPrevented) return;
-                            contentState.root.handleClose();
-                          },
-                          children: ($$renderer6) => {
-                            Text_selection_layer(
-                              $$renderer6,
-                              spread_props([
-                                mergedProps(),
-                                {
-                                  enabled: contentState.root.opts.open.current,
-                                  children: ($$renderer7) => {
-                                    if (child) {
-                                      $$renderer7.push('<!--[0-->');
-                                      if (contentState.root.opts.open.current) {
-                                        $$renderer7.push('<!--[0-->');
-                                        Scroll_lock($$renderer7, {
-                                          preventScroll,
-                                          restoreScrollDelay,
-                                        });
-                                      } else {
-                                        $$renderer7.push('<!--[-1-->');
-                                      }
-                                      $$renderer7.push(`<!--]--> `);
-                                      child($$renderer7, {
-                                        props: mergeProps(mergedProps(), focusScopeProps),
-                                        ...contentState.snippetProps,
-                                      });
-                                      $$renderer7.push(`<!---->`);
-                                    } else {
-                                      $$renderer7.push('<!--[-1-->');
-                                      Scroll_lock($$renderer7, { preventScroll });
-                                      $$renderer7.push(
-                                        `<!----> <div${attributes({ ...mergeProps(mergedProps(), focusScopeProps) })}>`,
-                                      );
-                                      children?.($$renderer7);
-                                      $$renderer7.push(`<!----></div>`);
-                                    }
-                                    $$renderer7.push(`<!--]-->`);
-                                  },
-                                  $$slots: { default: true },
-                                },
-                              ]),
-                            );
-                          },
-                          $$slots: { default: true },
-                        },
-                      ]),
-                    );
-                  },
-                  $$slots: { default: true },
+          let focusScope = function($$renderer4, { props: focusScopeProps }) {
+            Escape_layer($$renderer4, spread_props([
+              mergedProps(),
+              {
+                enabled: contentState.root.opts.open.current,
+                onEscapeKeydown: (e) => {
+                  onEscapeKeydown(e);
+                  if (e.defaultPrevented) return;
+                  contentState.root.handleClose();
                 },
-              ]),
-            );
+                children: ($$renderer5) => {
+                  Dismissible_layer($$renderer5, spread_props([
+                    mergedProps(),
+                    {
+                      enabled: contentState.root.opts.open.current,
+                      onInteractOutside: (e) => {
+                        onInteractOutside(e);
+                        if (e.defaultPrevented) return;
+                        contentState.root.handleClose();
+                      },
+                      children: ($$renderer6) => {
+                        Text_selection_layer($$renderer6, spread_props([
+                          mergedProps(),
+                          {
+                            enabled: contentState.root.opts.open.current,
+                            children: ($$renderer7) => {
+                              if (child) {
+                                $$renderer7.push("<!--[0-->");
+                                if (contentState.root.opts.open.current) {
+                                  $$renderer7.push("<!--[0-->");
+                                  Scroll_lock($$renderer7, { preventScroll, restoreScrollDelay });
+                                } else {
+                                  $$renderer7.push("<!--[-1-->");
+                                }
+                                $$renderer7.push(`<!--]--> `);
+                                child($$renderer7, {
+                                  props: mergeProps(mergedProps(), focusScopeProps),
+                                  ...contentState.snippetProps
+                                });
+                                $$renderer7.push(`<!---->`);
+                              } else {
+                                $$renderer7.push("<!--[-1-->");
+                                Scroll_lock($$renderer7, { preventScroll });
+                                $$renderer7.push(`<!----> <div${attributes({ ...mergeProps(mergedProps(), focusScopeProps) })}>`);
+                                children?.($$renderer7);
+                                $$renderer7.push(`<!----></div>`);
+                              }
+                              $$renderer7.push(`<!--]-->`);
+                            },
+                            $$slots: { default: true }
+                          }
+                        ]));
+                      },
+                      $$slots: { default: true }
+                    }
+                  ]));
+                },
+                $$slots: { default: true }
+              }
+            ]));
           };
           Focus_scope($$renderer3, {
             loop: true,
@@ -2032,7 +1952,7 @@ function Dialog_content($$renderer, $$props) {
               forceMount,
               present: contentState.root.opts.open.current,
               trapFocus,
-              open: contentState.root.opts.open.current,
+              open: contentState.root.opts.open.current
             }),
             onOpenAutoFocus,
             id,
@@ -2041,59 +1961,60 @@ function Dialog_content($$renderer, $$props) {
               if (e.defaultPrevented) return;
               contentState.root.triggerNode?.focus();
             },
-            focusScope,
+            focusScope
           });
         }
       };
-      Presence_layer(
-        $$renderer2,
-        spread_props([
-          mergedProps(),
-          {
-            forceMount,
-            present: contentState.root.opts.open.current || forceMount,
-            presence,
-            $$slots: { presence: true },
-          },
-        ]),
-      );
+      Presence_layer($$renderer2, spread_props([
+        mergedProps(),
+        {
+          forceMount,
+          present: contentState.root.opts.open.current || forceMount,
+          presence,
+          $$slots: { presence: true }
+        }
+      ]));
     }
     bind_props($$props, { ref });
   });
 }
 function Dialog_1($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let { open = false, onOpenChange, children, $$slots, $$events, ...restProps } = $$props;
+    let {
+      open = false,
+      onOpenChange,
+      children,
+      $$slots,
+      $$events,
+      ...restProps
+    } = $$props;
     let $$settled = true;
     let $$inner_renderer;
     function $$render_inner($$renderer3) {
       if (Dialog) {
-        $$renderer3.push('<!--[-->');
-        Dialog(
-          $$renderer3,
-          spread_props([
-            { onOpenChange },
-            restProps,
-            {
-              get open() {
-                return open;
-              },
-              set open($$value) {
-                open = $$value;
-                $$settled = false;
-              },
-              children: ($$renderer4) => {
-                children?.($$renderer4);
-                $$renderer4.push(`<!---->`);
-              },
-              $$slots: { default: true },
+        $$renderer3.push("<!--[-->");
+        Dialog($$renderer3, spread_props([
+          { onOpenChange },
+          restProps,
+          {
+            get open() {
+              return open;
             },
-          ]),
-        );
-        $$renderer3.push('<!--]-->');
+            set open($$value) {
+              open = $$value;
+              $$settled = false;
+            },
+            children: ($$renderer4) => {
+              children?.($$renderer4);
+              $$renderer4.push(`<!---->`);
+            },
+            $$slots: { default: true }
+          }
+        ]));
+        $$renderer3.push("<!--]-->");
       } else {
-        $$renderer3.push('<!--[!-->');
-        $$renderer3.push('<!--]-->');
+        $$renderer3.push("<!--[!-->");
+        $$renderer3.push("<!--]-->");
       }
     }
     do {
@@ -2107,95 +2028,90 @@ function Dialog_1($$renderer, $$props) {
 }
 function DialogContent($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let { class: className = '', children, $$slots, $$events, ...restProps } = $$props;
+    let {
+      class: className = "",
+      children,
+      $$slots,
+      $$events,
+      ...restProps
+    } = $$props;
     if (Portal) {
-      $$renderer2.push('<!--[-->');
+      $$renderer2.push("<!--[-->");
       Portal($$renderer2, {
         children: ($$renderer3) => {
           if (Dialog_overlay) {
-            $$renderer3.push('<!--[-->');
+            $$renderer3.push("<!--[-->");
             Dialog_overlay($$renderer3, {
-              class:
-                'fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              class: "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
             });
-            $$renderer3.push('<!--]-->');
+            $$renderer3.push("<!--]-->");
           } else {
-            $$renderer3.push('<!--[!-->');
-            $$renderer3.push('<!--]-->');
+            $$renderer3.push("<!--[!-->");
+            $$renderer3.push("<!--]-->");
           }
           $$renderer3.push(` `);
           if (Dialog_content) {
-            $$renderer3.push('<!--[-->');
-            Dialog_content(
-              $$renderer3,
-              spread_props([
-                {
-                  class: cn(
-                    'fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-popover p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg',
-                    className,
-                  ),
+            $$renderer3.push("<!--[-->");
+            Dialog_content($$renderer3, spread_props([
+              {
+                class: cn("fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-popover p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg", className)
+              },
+              restProps,
+              {
+                children: ($$renderer4) => {
+                  children?.($$renderer4);
+                  $$renderer4.push(`<!----> `);
+                  if (Dialog_close) {
+                    $$renderer4.push("<!--[-->");
+                    Dialog_close($$renderer4, {
+                      class: "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+                      children: ($$renderer5) => {
+                        X($$renderer5, { class: "h-4 w-4" });
+                        $$renderer5.push(`<!----> <span class="sr-only">Close</span>`);
+                      },
+                      $$slots: { default: true }
+                    });
+                    $$renderer4.push("<!--]-->");
+                  } else {
+                    $$renderer4.push("<!--[!-->");
+                    $$renderer4.push("<!--]-->");
+                  }
                 },
-                restProps,
-                {
-                  children: ($$renderer4) => {
-                    children?.($$renderer4);
-                    $$renderer4.push(`<!----> `);
-                    if (Dialog_close) {
-                      $$renderer4.push('<!--[-->');
-                      Dialog_close($$renderer4, {
-                        class:
-                          'absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground',
-                        children: ($$renderer5) => {
-                          X($$renderer5, { class: 'h-4 w-4' });
-                          $$renderer5.push(`<!----> <span class="sr-only">Close</span>`);
-                        },
-                        $$slots: { default: true },
-                      });
-                      $$renderer4.push('<!--]-->');
-                    } else {
-                      $$renderer4.push('<!--[!-->');
-                      $$renderer4.push('<!--]-->');
-                    }
-                  },
-                  $$slots: { default: true },
-                },
-              ]),
-            );
-            $$renderer3.push('<!--]-->');
+                $$slots: { default: true }
+              }
+            ]));
+            $$renderer3.push("<!--]-->");
           } else {
-            $$renderer3.push('<!--[!-->');
-            $$renderer3.push('<!--]-->');
+            $$renderer3.push("<!--[!-->");
+            $$renderer3.push("<!--]-->");
           }
-        },
+        }
       });
-      $$renderer2.push('<!--]-->');
+      $$renderer2.push("<!--]-->");
     } else {
-      $$renderer2.push('<!--[!-->');
-      $$renderer2.push('<!--]-->');
+      $$renderer2.push("<!--[!-->");
+      $$renderer2.push("<!--]-->");
     }
   });
 }
 function DialogTitle($$renderer, $$props) {
   let { children, $$slots, $$events, ...restProps } = $$props;
   if (Dialog_title) {
-    $$renderer.push('<!--[-->');
-    Dialog_title(
-      $$renderer,
-      spread_props([
-        restProps,
-        {
-          children: ($$renderer2) => {
-            children?.($$renderer2);
-            $$renderer2.push(`<!---->`);
-          },
-          $$slots: { default: true },
+    $$renderer.push("<!--[-->");
+    Dialog_title($$renderer, spread_props([
+      restProps,
+      {
+        children: ($$renderer2) => {
+          children?.($$renderer2);
+          $$renderer2.push(`<!---->`);
         },
-      ]),
-    );
-    $$renderer.push('<!--]-->');
+        $$slots: { default: true }
+      }
+    ]));
+    $$renderer.push("<!--]-->");
   } else {
-    $$renderer.push('<!--[!-->');
-    $$renderer.push('<!--]-->');
+    $$renderer.push("<!--[!-->");
+    $$renderer.push("<!--]-->");
   }
 }
 export {
@@ -2228,5 +2144,5 @@ export {
   mergeProps as r,
   useDialogDescription as s,
   useRefById as u,
-  watch as w,
+  watch as w
 };

@@ -89,12 +89,7 @@ function handleAction(action) {
     case 'd20':
     case 'd100':
       isExpanded = false;
-      diceStore
-        .rollDice(`1${action}`)
-        .then((result) => {
-          gameState.sendMessage(`🎲 Rolou ${result.formula || `1${action}`}: ${result.textual}`);
-        })
-        .catch((err) => console.error('[FAB] Dice error:', err));
+      diceStore.rollDice(`1${action}`).catch((err) => console.error('[FAB] Dice error:', err));
       break;
     case 'add-card':
       showAddCard = true;

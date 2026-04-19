@@ -1,2 +1,4 @@
 const browser = false;
-export { browser as b };
+export {
+  browser as b
+};

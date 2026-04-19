@@ -1,13 +1,5 @@
-import {
-  ac as define_property,
-  P as set_active_reaction,
-  O as set_active_effect,
-  T as active_reaction,
-  E as active_effect,
-  D as queue_micro_task,
-  al as without_reactive_context,
-} from './index2.js';
-const event_symbol = Symbol('events');
+import { ac as define_property, P as set_active_reaction, O as set_active_effect, T as active_reaction, E as active_effect, D as queue_micro_task, al as without_reactive_context } from "./index2.js";
+const event_symbol = Symbol("events");
 const all_registered_events = /* @__PURE__ */ new Set();
 const root_event_handles = /* @__PURE__ */ new Set();
 function create_event(event_name, dom, handler, options = {}) {
@@ -21,11 +13,7 @@ function create_event(event_name, dom, handler, options = {}) {
       });
     }
   }
-  if (
-    event_name.startsWith('pointer') ||
-    event_name.startsWith('touch') ||
-    event_name === 'wheel'
-  ) {
+  if (event_name.startsWith("pointer") || event_name.startsWith("touch") || event_name === "wheel") {
     queue_micro_task(() => {
       dom.addEventListener(event_name, target_handler, options);
     });
@@ -43,23 +31,23 @@ function on(element, type, handler, options = {}) {
 let last_propagated_event = null;
 function handle_event_propagation(event) {
   var handler_element = this;
-  var owner_document =
+  var owner_document = (
     /** @type {Node} */
-    handler_element.ownerDocument;
+    handler_element.ownerDocument
+  );
   var event_name = event.type;
   var path = event.composedPath?.() || [];
-  var current_target =
+  var current_target = (
     /** @type {null | Element} */
-    path[0] || event.target;
+    path[0] || event.target
+  );
   last_propagated_event = event;
   var path_idx = 0;
   var handled_at = last_propagated_event === event && event[event_symbol];
   if (handled_at) {
     var at_idx = path.indexOf(handled_at);
-    if (
-      at_idx !== -1 &&
-      (handler_element === document || handler_element === /** @type {any} */ window)
-    ) {
+    if (at_idx !== -1 && (handler_element === document || handler_element === /** @type {any} */
+    window)) {
       event[event_symbol] = handler_element;
       return;
     }
@@ -71,13 +59,14 @@ function handle_event_propagation(event) {
       path_idx = at_idx;
     }
   }
-  current_target = /** @type {Element} */ path[path_idx] || event.target;
+  current_target = /** @type {Element} */
+  path[path_idx] || event.target;
   if (current_target === handler_element) return;
-  define_property(event, 'currentTarget', {
+  define_property(event, "currentTarget", {
     configurable: true,
     get() {
       return current_target || owner_document;
-    },
+    }
   });
   var previous_reaction = active_reaction;
   var previous_effect = active_effect;
@@ -87,20 +76,14 @@ function handle_event_propagation(event) {
     var throw_error;
     var other_errors = [];
     while (current_target !== null) {
-      var parent_element =
-        current_target.assignedSlot ||
-        current_target.parentNode ||
-        /** @type {any} */
-        current_target.host ||
-        null;
+      var parent_element = current_target.assignedSlot || current_target.parentNode || /** @type {any} */
+      current_target.host || null;
       try {
         var delegated = current_target[event_symbol]?.[event_name];
-        if (
-          delegated != null &&
-          (!(/** @type {any} */ current_target.disabled) || // DOM could've been updated already by the time this is reached, so we check this as well
-            // -> the target could not have been disabled because it emits the event in the first place
-            event.target === current_target)
-        ) {
+        if (delegated != null && (!/** @type {any} */
+        current_target.disabled || // DOM could've been updated already by the time this is reached, so we check this as well
+        // -> the target could not have been disabled because it emits the event in the first place
+        event.target === current_target)) {
           delegated.call(current_target, event);
         }
       } catch (error) {
@@ -134,5 +117,5 @@ export {
   all_registered_events as a,
   handle_event_propagation as h,
   on as o,
-  root_event_handles as r,
+  root_event_handles as r
 };

@@ -43,7 +43,6 @@ class GameState {
 
   // Realtime channels
   private itemChannel: any = null;
-  private roomChannel: any = null;
 
   private unsubItems: (() => void) | null = null;
 
@@ -149,41 +148,26 @@ class GameState {
       this.isLoading = false;
     });
 
-    this.setupRoomChannel(gameId);
-  }
-
-  private setupRoomChannel(gameId: string | null) {
-    if (!gameId) return;
-
-    this.roomChannel = supabase.channel(`room:${gameId}`, { config: { broadcast: { ack: true } } });
-
-    this.roomChannel
-      .on('broadcast', { event: 'chat_message' }, (payload) => {
-        const message = payload.payload;
-        const currentUserId = authState.user?.id;
-        if (message.senderId !== currentUserId) {
-          this.chatMessages = [...this.chatMessages, message];
+    if (gameId) {
+      db.subscribeToChat(gameId, (messages) => {
+        this.chatMessages = messages;
+      }, (newMessage) => {
+        if (!this.chatMessages.find(m => m.id === newMessage.id)) {
+          this.chatMessages = [...this.chatMessages, newMessage];
         }
-      })
-      .on('broadcast', { event: 'dice_roll' }, (payload) => {
-        const rollData = payload.payload;
-        const currentUserId = authState.user?.id;
-        if (rollData.userId !== currentUserId) {
-          this.rolls = [rollData, ...this.rolls];
-          import('./diceStore.svelte.js').then((m) =>
-            m.diceStore.playSyncRoll({
-              formula: rollData.formula,
-              result: rollData.result,
-              details: rollData.details,
-              color: rollData.color,
-              userName: rollData.user_name,
-            }),
-          );
-        }
-      })
-      .subscribe((status) => {
-        console.log('[GameState] Room channel status:', status);
       });
+
+      db.subscribeToRolls(gameId, (rolls) => {
+        this.rolls = rolls;
+      }, (newRoll) => {
+        if (!this.rolls.find(r => r.id === newRoll.id)) {
+          this.rolls = [newRoll, ...this.rolls];
+          if (newRoll.user_name !== this.userName) {
+            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(newRoll));
+          }
+        }
+      });
+    }
   }
 
   setGameId(gameId: string | null) {
@@ -220,10 +204,6 @@ class GameState {
     if (this.itemChannel) {
       supabase.removeChannel(this.itemChannel);
       this.itemChannel = null;
-    }
-    if (this.roomChannel) {
-      supabase.removeChannel(this.roomChannel);
-      this.roomChannel = null;
     }
   }
 
@@ -328,14 +308,8 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
-    this.chatMessages = [...this.chatMessages, message];
-
-    if (this.roomChannel) {
-      this.roomChannel.send({
-        type: 'broadcast',
-        event: 'chat_message',
-        payload: message,
-      });
+    if (!this.chatMessages.find(m => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
     }
 
     db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
@@ -354,14 +328,8 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
-    this.chatMessages = [...this.chatMessages, message];
-
-    if (this.roomChannel) {
-      this.roomChannel.send({
-        type: 'broadcast',
-        event: 'chat_message',
-        payload: message,
-      });
+    if (!this.chatMessages.find(m => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
     }
 
     db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
@@ -382,14 +350,8 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
-    this.rolls = [rollData, ...this.rolls];
-
-    if (this.roomChannel) {
-      this.roomChannel.send({
-        type: 'broadcast',
-        event: 'dice_roll',
-        payload: rollData,
-      });
+    if (!this.rolls.find(r => r.id === rollData.id)) {
+      this.rolls = [rollData, ...this.rolls];
     }
 
     db.addRoll({
@@ -397,6 +359,7 @@ class GameState {
       formula,
       result,
       details,
+      color,
       gameId: this.currentGameId,
     });
   }
