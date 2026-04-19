@@ -1,68 +1,29 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import { useDiceBox } from '$lib/actions/useDiceBox.js';
 import Button from '../ui/Button.svelte';
 
 const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
 let customFormula = $state('');
 let lastResult = $state(null);
-let diceContainer;
-let diceBox = $state(null);
 let isLoading = $state(false);
 
-onMount(() => {
-  if (diceContainer) {
-    diceBox = useDiceBox(diceContainer, {
-      onRollComplete: (result) => {
-        lastResult = result;
-
-        if (gameState.user) {
-          if (result.shouldSum || result.rolls.length <= 1) {
-            if (result.rolls.length > 1) {
-              gameState.sendMessage(
-                `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
-              );
-            } else {
-              gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
-            }
-          } else {
-            gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}**`);
-          }
-          gameState.sendRoll(
-            result.formula,
-            result.total,
-            {
-              rolls: result.rolls,
-              diceType: result.diceType,
-            },
-            diceStore.currentDiceColor,
-          );
-        }
-      },
-    });
-  }
-
-  return () => {
-    if (diceBox) {
-      diceBox.destroy();
-    }
-  };
-});
-
 async function rollDice(dice) {
-  if (!diceBox || !diceBox.isInitialized()) {
-    await fallbackRoll(dice);
-    return;
-  }
-
   isLoading = true;
   try {
-    await diceBox.roll(`1${dice}`);
+    const result = await diceStore.rollDice(`1${dice}`);
+    lastResult = result;
+    if (gameState.user) {
+      if (result.rolls.length > 1) {
+        gameState.sendMessage(
+          `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
+        );
+      } else {
+        gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
+      }
+    }
   } catch (error) {
     console.error('Dice roll error:', error);
-    await fallbackRoll(dice);
   } finally {
     isLoading = false;
   }
@@ -71,60 +32,28 @@ async function rollDice(dice) {
 async function rollCustom() {
   if (!customFormula.trim()) return;
 
-  if (!diceBox || !diceBox.isInitialized()) {
-    await fallbackCustomRoll();
-    return;
-  }
-
   isLoading = true;
   try {
-    await diceBox.roll(customFormula);
+    const result = await diceStore.rollDice(customFormula);
+    lastResult = result;
+    if (gameState.user) {
+      if (result.rolls.length > 1) {
+        gameState.sendMessage(
+          `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
+        );
+      } else {
+        gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
+      }
+    }
   } catch (error) {
     console.error('Dice roll error:', error);
-    await fallbackCustomRoll();
   } finally {
     isLoading = false;
-  }
-}
-
-function fallbackRoll(dice) {
-  const result = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
-  lastResult = { dice, result, total: result, rolls: [result] };
-
-  if (gameState.user) {
-    gameState.sendRoll(dice, result, { dice, rolls: [result] }, diceStore.currentDiceColor);
-  }
-}
-
-function fallbackCustomRoll() {
-  const match = customFormula.match(/(\d+)d(\d+)/i);
-  if (!match) return;
-
-  const count = parseInt(match[1]);
-  const sides = parseInt(match[2]);
-  let total = 0;
-  const details = [];
-
-  for (let i = 0; i < count; i++) {
-    const roll = Math.floor(Math.random() * sides) + 1;
-    details.push(roll);
-    total += roll;
-  }
-
-  lastResult = { dice: customFormula, result: total, details };
-
-  if (gameState.user) {
-    gameState.sendRoll(customFormula, total, { details, count, sides }, diceStore.currentDiceColor);
   }
 }
 </script>
 
 <div class="space-y-4">
-  <div 
-    bind:this={diceContainer}
-    class="w-full h-48 bg-muted/30 rounded-lg overflow-hidden"
-  ></div>
-  
   <div class="flex flex-wrap gap-2">
     {#each diceTypes as dice}
       <Button
@@ -153,8 +82,8 @@ function fallbackCustomRoll() {
   
   {#if lastResult}
     <div class="rounded-lg bg-card p-4 text-center">
-      <p class="text-sm text-muted-foreground">{lastResult.formula || lastResult.dice}</p>
-      <p class="text-4xl font-bold text-foreground">{lastResult.total || lastResult.result}</p>
+      <p class="text-sm text-muted-foreground">{lastResult.formula}</p>
+      <p class="text-4xl font-bold text-foreground">{lastResult.total}</p>
       {#if lastResult.rolls && lastResult.rolls.length > 0}
         <p class="text-xs text-muted-foreground mt-2">
           Detalhes: {lastResult.rolls.join(', ')}
@@ -168,8 +97,8 @@ function fallbackCustomRoll() {
       <h4 class="text-sm font-medium text-foreground">Histórico</h4>
       {#each gameState.rolls.slice(0, 5) as roll}
         <div class="flex justify-between text-sm p-2 rounded bg-muted/50 text-foreground">
-          <span>{roll.autor}: {roll.expressao}</span>
-          <span class="font-bold text-foreground">{roll.resultado}</span>
+          <span>{roll.user_name}: {roll.formula}</span>
+          <span class="font-bold text-foreground">{roll.result}</span>
         </div>
       {/each}
     </div>

@@ -392,31 +392,22 @@ export const db = {
   },
 
   subscribeToChat(gameId: string | null, callback: (messages: any[]) => void) {
-    const loadMessages = () => {
-      console.log('[Chat] loadMessages called, gameId:', gameId);
-      let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
-      if (gameId) {
-        q = q.eq('game_id', gameId);
+    let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    if (gameId) {
+      q = q.eq('game_id', gameId);
+    }
+    q.then(({ data, error }) => {
+      if (error) {
+        callback([]);
+        return;
       }
-      q.then(({ data, error }) => {
-        console.log('[Chat] query result:', { count: data?.length, error });
-        if (error) {
-          console.error('[Chat] Error loading chat:', error);
-          callback([]);
-          return;
-        }
-        console.log('[Chat] messages:', data);
-        callback(data || []);
-      });
-    };
-
-    loadMessages();
+      callback(data || []);
+    });
 
     return () => {};
   },
 
   async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string) {
-    console.log('[Chat] addChatMessage called:', { text, type, sender, gameId });
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -428,38 +419,29 @@ export const db = {
       .select()
       .single();
 
-    if (error) {
-      console.error('[Chat] Error inserting message:', error);
-      throw error;
-    }
-    console.log('[Chat] Message inserted:', data);
+    if (error) throw error;
 
     return data;
   },
 
   subscribeToRolls(gameId: string | null, callback: (rolls: any[]) => void) {
-    const loadRolls = () => {
-      let q = supabase
-        .from('dice_rolls')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+    let q = supabase
+      .from('dice_rolls')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-      if (gameId) {
-        q = q.eq('game_id', gameId);
+    if (gameId) {
+      q = q.eq('game_id', gameId);
+    }
+
+    q.then(({ data, error }) => {
+      if (error) {
+        callback([]);
+        return;
       }
-
-      q.then(({ data, error }) => {
-        if (error) {
-          console.error('Error loading rolls:', error);
-          callback([]);
-          return;
-        }
-        callback(data || []);
-      });
-    };
-
-    loadRolls();
+      callback(data || []);
+    });
 
     return () => {};
   },
@@ -471,7 +453,6 @@ export const db = {
     details?: any;
     gameId?: string;
   }) {
-    console.log('[Dice] addRoll called:', rollData);
     const { data, error } = await supabase
       .from('dice_rolls')
       .insert({
@@ -484,11 +465,7 @@ export const db = {
       .select()
       .single();
 
-    if (error) {
-      console.error('[Dice] Error inserting roll:', error);
-      throw error;
-    }
-    console.log('[Dice] Roll inserted:', data);
+    if (error) throw error;
 
     return data;
   },

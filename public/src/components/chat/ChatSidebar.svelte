@@ -87,15 +87,6 @@ async function handleSubmit(e) {
         .rollDice(formula)
         .then((result) => {
           gameState.sendMessage(`🎲 Rolou ${result.formula || formula}: ${result.textual}`);
-          gameState.sendRoll(
-            result.formula || formula,
-            result.total,
-            {
-              rolls: result.rolls,
-              diceType: result.diceType,
-            },
-            diceStore.currentDiceColor,
-          );
         })
         .catch((err) => console.error('[Chat] Dice error:', err));
     } else {

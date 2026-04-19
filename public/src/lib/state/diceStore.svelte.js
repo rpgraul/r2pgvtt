@@ -96,12 +96,12 @@ function createDiceStore() {
       }
 
       const result = fallbackRoll(parsedData);
+      result.formula = formula;
 
-      import('./gameState.svelte.ts').then((m) =>
-        m.gameState.sendRoll(formula, result.total, result, currentDiceColor),
-      );
+      const gameStateModule = await import('./gameState.svelte.ts');
+      gameStateModule.gameState.sendRoll(formula, result.total, result, currentDiceColor);
 
-      playSyncRoll({
+      await playSyncRoll({
         formula,
         result: result.total,
         details: result,
