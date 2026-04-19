@@ -10,8 +10,8 @@ function createDiceStore() {
   let isDiceVisible = $state(false);
   let alertTimeoutId = null;
   let diceBoxInstance = null;
-  let diceBoxResolve = null;
-  let diceBoxData = null;
+  const diceBoxResolve = null;
+  const diceBoxData = null;
 
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
@@ -39,6 +39,7 @@ function createDiceStore() {
       userName: alertData.userName,
       rolls: alertData.details?.rolls || [],
       diceType: alertData.details?.diceType || alertData.formula,
+      color: alertData.color || '#0000ff',
       isRemote: true,
       timestamp: Date.now(),
     };

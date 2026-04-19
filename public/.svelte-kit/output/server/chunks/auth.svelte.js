@@ -1,5 +1,5 @@
-import "clsx";
-import { s as supabase } from "./client.js";
+import 'clsx';
+import { s as supabase } from './client.js';
 function createAuthState() {
   let user = null;
   let profile = null;
@@ -17,9 +17,9 @@ function createAuthState() {
     isLoading = false;
     supabase.auth.onAuthStateChange(async (event, session) => {
       user = session?.user ?? null;
-      if (user && event === "SIGNED_IN") {
+      if (user && event === 'SIGNED_IN') {
         await loadProfile();
-      } else if (event === "SIGNED_OUT") {
+      } else if (event === 'SIGNED_OUT') {
         profile = null;
       }
     });
@@ -27,45 +27,53 @@ function createAuthState() {
   async function loadProfile() {
     if (!user) return;
     try {
-      const { data, error } = await supabase.from("user_profiles").select("*").eq("id", user.id).single();
-      if (error?.code === "PGRST116") {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error?.code === 'PGRST116') {
         await createProfile();
-      } else if (error?.code === "PGRST205") {
-        console.error("Tabela user_profiles não existe. Criando automaticamente...");
+      } else if (error?.code === 'PGRST205') {
+        console.error('Tabela user_profiles não existe. Criando automaticamente...');
         await createProfile();
       } else if (error) {
-        console.error("Error loading profile:", error);
+        console.error('Error loading profile:', error);
         profile = null;
       } else {
         profile = data;
       }
     } catch (e) {
-      console.error("Error loading profile:", e);
+      console.error('Error loading profile:', e);
       profile = null;
     }
   }
   async function createProfile() {
     if (!user) return;
-    const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Usuário";
+    const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'Usuário';
     try {
-      const { data, error } = await supabase.from("user_profiles").insert({ id: user.id, display_name: displayName, role: "jogador" }).select().single();
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .insert({ id: user.id, display_name: displayName, role: 'jogador' })
+        .select()
+        .single();
       if (error) {
-        if (error.code === "PGRST205") {
-          console.error("Tabela profiles não existe ainda.");
+        if (error.code === 'PGRST205') {
+          console.error('Tabela profiles não existe ainda.');
           return;
         }
-        console.error("Error creating profile:", error);
+        console.error('Error creating profile:', error);
       } else {
         profile = data;
       }
     } catch (e) {
-      console.error("Error creating profile:", e);
+      console.error('Error creating profile:', e);
     }
   }
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) throw error;
   }
@@ -78,7 +86,7 @@ function createAuthState() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } }
+      options: { data: { display_name: displayName } },
     });
     if (error) throw error;
     return data;
@@ -89,7 +97,12 @@ function createAuthState() {
   }
   async function updateProfile(updates) {
     if (!user) return;
-    const { data, error } = await supabase.from("user_profiles").update(updates).eq("id", user.id).select().single();
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single();
     if (error) throw error;
     profile = data;
     return data;
@@ -111,10 +124,10 @@ function createAuthState() {
       return !!user;
     },
     get role() {
-      return profile?.role ?? "jogador";
+      return profile?.role ?? 'jogador';
     },
     get displayName() {
-      return profile?.display_name ?? user?.email?.split("@")[0] ?? "Usuário";
+      return profile?.display_name ?? user?.email?.split('@')[0] ?? 'Usuário';
     },
     init,
     destroy,
@@ -123,10 +136,8 @@ function createAuthState() {
     signUp,
     signOut,
     updateProfile,
-    loadProfile
+    loadProfile,
   };
 }
 const authState = createAuthState();
-export {
-  authState as a
-};
+export { authState as a };

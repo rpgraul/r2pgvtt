@@ -1,6 +1,7 @@
 <script>
 import { onMount, onDestroy } from 'svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { useDiceBox } from '$lib/actions/useDiceBox.js';
 import Button from '../ui/Button.svelte';
 
@@ -29,10 +30,15 @@ onMount(() => {
           } else {
             gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}**`);
           }
-          gameState.sendRoll(result.formula, result.total, {
-            rolls: result.rolls,
-            diceType: result.diceType,
-          });
+          gameState.sendRoll(
+            result.formula,
+            result.total,
+            {
+              rolls: result.rolls,
+              diceType: result.diceType,
+            },
+            diceStore.currentDiceColor,
+          );
         }
       },
     });
@@ -86,7 +92,7 @@ function fallbackRoll(dice) {
   lastResult = { dice, result, total: result, rolls: [result] };
 
   if (gameState.user) {
-    gameState.sendRoll(dice, result, { dice, rolls: [result] });
+    gameState.sendRoll(dice, result, { dice, rolls: [result] }, diceStore.currentDiceColor);
   }
 }
 
@@ -108,7 +114,7 @@ function fallbackCustomRoll() {
   lastResult = { dice: customFormula, result: total, details };
 
   if (gameState.user) {
-    gameState.sendRoll(customFormula, total, { details, count, sides });
+    gameState.sendRoll(customFormula, total, { details, count, sides }, diceStore.currentDiceColor);
   }
 }
 </script>

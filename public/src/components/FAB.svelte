@@ -93,10 +93,15 @@ function handleAction(action) {
         .rollDice(`1${action}`)
         .then((result) => {
           gameState.sendMessage(`🎲 Rolou ${result.formula || `1${action}`}: ${result.textual}`);
-          gameState.sendRoll(result.formula || `1${action}`, result.total, {
-            rolls: result.rolls,
-            diceType: action,
-          });
+          gameState.sendRoll(
+            result.formula || `1${action}`,
+            result.total,
+            {
+              rolls: result.rolls,
+              diceType: action,
+            },
+            diceStore.currentDiceColor,
+          );
         })
         .catch((err) => console.error('[FAB] Dice error:', err));
       break;

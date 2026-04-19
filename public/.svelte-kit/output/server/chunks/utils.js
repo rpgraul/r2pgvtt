@@ -9,14 +9,14 @@ function get_relative_path(from, to) {
     to_parts.shift();
   }
   let i = from_parts.length;
-  while (i--) from_parts[i] = "..";
-  return from_parts.concat(to_parts).join("/");
+  while (i--) from_parts[i] = '..';
+  return from_parts.concat(to_parts).join('/');
 }
 function base64_encode(bytes) {
   if (globalThis.Buffer) {
-    return globalThis.Buffer.from(bytes).toString("base64");
+    return globalThis.Buffer.from(bytes).toString('base64');
   }
-  let binary = "";
+  let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
@@ -24,7 +24,7 @@ function base64_encode(bytes) {
 }
 function base64_decode(encoded) {
   if (globalThis.Buffer) {
-    const buffer = globalThis.Buffer.from(encoded, "base64");
+    const buffer = globalThis.Buffer.from(encoded, 'base64');
     return new Uint8Array(buffer);
   }
   const binary = atob(encoded);
@@ -39,5 +39,5 @@ export {
   base64_encode as b,
   base64_decode as c,
   get_relative_path as g,
-  text_decoder as t
+  text_decoder as t,
 };

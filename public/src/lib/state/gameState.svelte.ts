@@ -155,7 +155,7 @@ class GameState {
   private setupRoomChannel(gameId: string | null) {
     if (!gameId) return;
 
-    this.roomChannel = supabase.channel(`room:${gameId}`);
+    this.roomChannel = supabase.channel(`room:${gameId}`, { config: { broadcast: { ack: true } } });
 
     this.roomChannel
       .on('broadcast', { event: 'chat_message' }, (payload) => {

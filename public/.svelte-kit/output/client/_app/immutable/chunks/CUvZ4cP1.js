@@ -1,1 +1,34 @@
-import{a as n,f as u}from"./wRaPAkex.js";import{p,a as c}from"./BesqfEI8.js";import{d as m,b}from"./DgSRL2mV.js";import{b as v}from"./CeCyYOpZ.js";import{p as t,r as g}from"./DQIjwT0e.js";var h=u("<input/>");function k(r,e){p(e,!0);let a=t(e,"class",3,""),i=t(e,"type",3,"text"),l=t(e,"value",15,""),s=t(e,"placeholder",3,""),d=g(e,["$$slots","$$events","$$legacy","id","class","type","value","placeholder"]);var o=h();m(o,f=>({id:e.id,type:i(),placeholder:s(),class:f,...d}),[()=>b("flex h-10 w-full rounded-md border bg-popover px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground",a())],void 0,void 0,void 0,!0),v(o,l),n(r,o),c()}export{k as I};
+import { a as n, f as u } from './wRaPAkex.js';
+import { p, a as c } from './BesqfEI8.js';
+import { d as m, b } from './DgSRL2mV.js';
+import { b as v } from './CeCyYOpZ.js';
+import { p as t, r as g } from './DQIjwT0e.js';
+var h = u('<input/>');
+function k(r, e) {
+  p(e, !0);
+  let a = t(e, 'class', 3, ''),
+    i = t(e, 'type', 3, 'text'),
+    l = t(e, 'value', 15, ''),
+    s = t(e, 'placeholder', 3, ''),
+    d = g(e, ['$$slots', '$$events', '$$legacy', 'id', 'class', 'type', 'value', 'placeholder']);
+  var o = h();
+  m(
+    o,
+    (f) => ({ id: e.id, type: i(), placeholder: s(), class: f, ...d }),
+    [
+      () =>
+        b(
+          'flex h-10 w-full rounded-md border bg-popover px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground',
+          a(),
+        ),
+    ],
+    void 0,
+    void 0,
+    void 0,
+    !0,
+  ),
+    v(o, l),
+    n(r, o),
+    c();
+}
+export { k as I };

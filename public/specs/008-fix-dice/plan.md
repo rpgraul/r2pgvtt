@@ -1,14 +1,19 @@
-# Plan: Perfect Sync 3D Dice & Chat Fix
+# Plan: Perfect Sync Dice & Chat Fix
 
 ## 1. Objetivo
-Garantir que a animação dos dados 3D exiba exatamente os mesmos números e a mesma cor para todos os jogadores simultaneamente, e corrigir o carregamento inicial do histórico do chat que estava exibindo "Nenhuma mensagem ainda".
+Corrigir o carregamento inicial do chat e garantir que todos os jogadores vejam o mesmo resultado e cor das rolagens, eliminando vazamentos de conexão no Supabase que estavam bloqueando o sistema em tempo real.
 
-## 2. Estratégia de Arquitetura (Dice Sync)
-Em vez de deixar a engine de física 3D calcular resultados aleatórios em cada navegador:
-1. O jogador que iniciar a rolagem calcula o resultado final matematicamente de forma instantânea (usando a função local `fallbackRoll`).
-2. O resultado (incluindo os valores individuais de cada dado), a cor escolhida pelo jogador e a fórmula são enviados imediatamente via Broadcast (`roomChannel`) para todos os clientes.
-3. Todos os navegadores (incluindo o do próprio jogador) recebem esse pacote e instruem a biblioteca `@3d-dice/dice-box` a renderizar os dados 3D com **valores e cores forçados**.
-4. Quando a animação 3D forçada termina, o alerta de tela (DiceAlert) é exibido para todos.
+## 2. Estratégia de Arquitetura
 
-## 3. Correção do Chat
-O chat pode estar falhando em carregar os dados iniciais por problemas de reatividade ou atraso na Promise do Supabase. Adicionaremos logs de depuração e garantiremos que o array `chatMessages` seja reatribuído corretamente quando a busca inicial for concluída no banco de dados.
+**A. Correção do Vazamento de Broadcast (Channel Leak):**
+O `tables.ts` estava instanciando um novo `supabase.channel()` a cada chamada de `addChatMessage` e `addRoll`. Isso esgota os limites de conexão do Supabase e quebra o Realtime.
+- **Ação:** Remover totalmente os disparos de broadcast do `tables.ts` e do `+layout.svelte`. Todo o tráfego em tempo real passará estritamente pelo canal único gerido pelo `gameState.svelte.ts` (`roomChannel`).
+
+**B. Consistência dos Dados Rolados:**
+Como a engine de física 3D atua localmente e gera números diferentes para cada navegador, faremos o seguinte:
+- O dado 3D rola **apenas** na tela do jogador que o acionou.
+- Quando o dado termina de rolar (ou seja, quando temos o número definitivo), o resultado, os detalhes e a cor do jogador são enviados via `roomChannel` para a sala.
+- Os demais navegadores recebem o evento e exibem imediatamente o **DiceAlert** (com a cor e número exatos) e a mensagem no **Chat**. Isso impede qualquer divergência de resultados.
+
+**C. Estabilidade do Chat:**
+Limpar os wrappers que impediam o `subscribeToChat` de povoar a tela inicial com o histórico do banco de dados.

@@ -1,8 +1,8 @@
-import { p as noop, ak as safe_not_equal } from "./index2.js";
+import { p as noop, ak as safe_not_equal } from './index2.js';
 const subscriber_queue = [];
 function readable(value, start) {
   return {
-    subscribe: writable(value, start).subscribe
+    subscribe: writable(value, start).subscribe,
   };
 }
 function writable(value, start = noop) {
@@ -27,10 +27,12 @@ function writable(value, start = noop) {
     }
   }
   function update(fn) {
-    set(fn(
-      /** @type {T} */
-      value
-    ));
+    set(
+      fn(
+        /** @type {T} */
+        value,
+      ),
+    );
   }
   function subscribe(run, invalidate = noop) {
     const subscriber = [run, invalidate];
@@ -40,7 +42,7 @@ function writable(value, start = noop) {
     }
     run(
       /** @type {T} */
-      value
+      value,
     );
     return () => {
       subscribers.delete(subscriber);
@@ -52,7 +54,4 @@ function writable(value, start = noop) {
   }
   return { set, update, subscribe };
 }
-export {
-  readable as r,
-  writable as w
-};
+export { readable as r, writable as w };
