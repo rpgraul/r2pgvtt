@@ -164,6 +164,9 @@ class GameState {
       }, (newRoll) => {
         if (!this.rolls.find(r => r.id === newRoll.id)) {
           this.rolls = [newRoll, ...this.rolls];
+          if (newRoll.user_name !== this.userName) {
+            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(newRoll));
+          }
         }
       });
 
