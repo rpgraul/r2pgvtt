@@ -1,6 +1,7 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
 import { authState } from './auth.svelte.ts';
 import { parseFormula, evaluateRolls } from '../utils/diceLogic.js';
+import { gameState } from './gameState.svelte.ts';
 
 function createDiceStore() {
   let activeDice = $state([]);
@@ -99,21 +100,24 @@ function createDiceStore() {
         const evaluated = evaluateRolls(parsedData, physicsResult.rolls);
         evaluated.formula = formula;
 
-        const { gameState } = await import('./gameState.svelte.ts');
-        gameState.sendRoll(formula, evaluated.total, evaluated, currentDiceColor, `🎲 Rolou ${formula}: ${evaluated.textual}`);
+        const textual = `🎲 Rolou ${formula}: ${evaluated.textual}`;
+        gameState.sendRoll(formula, evaluated.total, evaluated, currentDiceColor, textual);
 
         const rollId = generateId();
-        pendingAlerts = [...pendingAlerts, {
-          id: rollId,
-          userName: getUserName(),
-          formula,
-          result: evaluated.total,
-          successes: evaluated.successes,
-          textual: evaluated.textual,
-          rolls: evaluated.details ? evaluated.details.map((d) => d.value) : evaluated.rolls,
-          diceType: `d${parsedData.sides}`,
-          timestamp: Date.now()
-        }];
+        pendingAlerts = [
+          ...pendingAlerts,
+          {
+            id: rollId,
+            userName: getUserName(),
+            formula,
+            result: evaluated.total,
+            successes: evaluated.successes,
+            textual: evaluated.textual,
+            rolls: evaluated.details ? evaluated.details.map((d) => d.value) : evaluated.rolls,
+            diceType: `d${parsedData.sides}`,
+            timestamp: Date.now(),
+          },
+        ];
         processNextAlert();
         resolve(evaluated);
       } catch (error) {
@@ -205,13 +209,17 @@ function createDiceStore() {
   }
 
   async function playRemoteRoll(roll) {
+    console.log('[DiceStore] playRemoteRoll received:', roll);
     const color = roll.color || roll.details?.color || '#0000ff';
     const rawDetails = roll.details?.details || [];
 
-    if (rawDetails.length === 0) return;
+    if (rawDetails.length === 0) {
+      console.warn('[DiceStore] playRemoteRoll: no rawDetails', roll);
+      return;
+    }
 
     const sides = roll.details?.parsedData?.sides || 20;
-    const forcedArray = rawDetails.map(d => ({
+    const forcedArray = rawDetails.map((d) => ({
       qty: 1,
       sides,
       value: d.value,
@@ -219,29 +227,39 @@ function createDiceStore() {
     }));
 
     const rollId = generateId();
-    pendingAlerts = [...pendingAlerts, {
-      id: rollId,
-      userName: roll.user_name,
-      formula: roll.formula,
-      result: roll.result,
-      successes: roll.details?.successes,
-      textual: roll.details?.textual,
-      rolls: rawDetails.map(d => d.value),
-      diceType: `d${sides}`,
-      color,
-      isRemote: true,
-      timestamp: Date.now(),
-    }];
+    pendingAlerts = [
+      ...pendingAlerts,
+      {
+        id: rollId,
+        userName: roll.user_name,
+        formula: roll.formula,
+        result: roll.result,
+        successes: roll.details?.successes,
+        textual: roll.details?.textual,
+        rolls: rawDetails.map((d) => d.value),
+        diceType: `d${sides}`,
+        color,
+        isRemote: true,
+        timestamp: Date.now(),
+      },
+    ];
     processNextAlert();
 
     isDiceVisible = true;
     ensureInitialized(null).then(() => {
+      console.log('[DiceStore] Remote dice init ready, rolling forced array:', forcedArray);
       if (diceBoxInstance && diceBoxInstance.isInitialized()) {
         try {
           diceBoxInstance.getInstance().roll(forcedArray);
+          console.log('[DiceStore] Forced roll called successfully');
         } catch (e) {
           console.warn('[DiceStore] Remote dice animation error', e);
         }
+      } else {
+        console.warn(
+          '[DiceStore] Remote dice not initialized,Instance:',
+          !!diceBoxInstance?.getInstance,
+        );
       }
     });
   }

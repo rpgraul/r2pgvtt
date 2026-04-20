@@ -2,6 +2,7 @@ import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte';
 import { fromCardDBArray } from '$lib/utils/cardMapper';
+import { diceStore } from './diceStore.svelte.js';
 
 const STORAGE_KEY = 'rpgboard_current_game';
 
@@ -151,24 +152,32 @@ class GameState {
     });
 
     if (gameId) {
-      db.subscribeToChat(gameId, (messages) => {
-        this.chatMessages = messages;
-      }, (newMessage) => {
-        if (!this.chatMessages.find(m => m.id === newMessage.id)) {
-          this.chatMessages = [...this.chatMessages, newMessage];
-        }
-      });
-
-      db.subscribeToRolls(gameId, (rolls) => {
-        this.rolls = rolls;
-      }, (newRoll) => {
-        if (!this.rolls.find(r => r.id === newRoll.id)) {
-          this.rolls = [newRoll, ...this.rolls];
-          if (newRoll.user_name !== this.userName) {
-            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(newRoll));
+      db.subscribeToChat(
+        gameId,
+        (messages) => {
+          this.chatMessages = messages;
+        },
+        (newMessage) => {
+          if (!this.chatMessages.find((m) => m.id === newMessage.id)) {
+            this.chatMessages = [...this.chatMessages, newMessage];
           }
-        }
-      });
+        },
+      );
+
+      db.subscribeToRolls(
+        gameId,
+        (rolls) => {
+          this.rolls = rolls;
+        },
+        (newRoll) => {
+          if (!this.rolls.find((r) => r.id === newRoll.id)) {
+            this.rolls = [newRoll, ...this.rolls];
+            if (newRoll.user_name !== this.userName) {
+              import('./diceStore.svelte.js').then((m) => m.diceStore.playRemoteRoll(newRoll));
+            }
+          }
+        },
+      );
 
       this.setupRoomChannel();
     }
@@ -225,7 +234,7 @@ class GameState {
       .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
         console.log('[Broadcast] Chat received:', payload);
         if (payload.userId !== authState.user?.id) {
-          if (!this.chatMessages.find(m => m.id === payload.message.id)) {
+          if (!this.chatMessages.find((m) => m.id === payload.message.id)) {
             this.chatMessages = [...this.chatMessages, payload.message];
           }
         }
@@ -234,12 +243,12 @@ class GameState {
         console.log('[Broadcast] Roll received:', payload);
         if (payload.userId !== authState.user?.id) {
           const { roll, chatMsg } = payload.payload || {};
-          if (chatMsg && !this.chatMessages.find(m => m.id === chatMsg.id)) {
+          if (chatMsg && !this.chatMessages.find((m) => m.id === chatMsg.id)) {
             this.chatMessages = [...this.chatMessages, chatMsg];
           }
-          if (roll && !this.rolls.find(r => r.id === roll.id)) {
+          if (roll && !this.rolls.find((r) => r.id === roll.id)) {
             this.rolls = [roll, ...this.rolls];
-            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(roll));
+            diceStore.playRemoteRoll(roll);
           }
         }
       })
@@ -344,14 +353,26 @@ class GameState {
   async sendMessage(text: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
     const msgId = crypto.randomUUID();
-    const message = { id: msgId, text, type: 'user', sender: authState.displayName, senderId: authState.user?.id, game_id: this.currentGameId, created_at: new Date().toISOString() };
+    const message = {
+      id: msgId,
+      text,
+      type: 'user',
+      sender: authState.displayName,
+      senderId: authState.user?.id,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
 
-    if (!this.chatMessages.find(m => m.id === message.id)) {
+    if (!this.chatMessages.find((m) => m.id === message.id)) {
       this.chatMessages = [...this.chatMessages, message];
     }
 
     if (this.roomChannel) {
-      this.roomChannel.send({ type: 'broadcast', event: 'chat_message', payload: { message, userId: authState.user?.id } });
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'chat_message',
+        payload: { message, userId: authState.user?.id },
+      });
     }
     db.addChatMessage(text, 'user', authState.displayName, this.currentGameId, msgId);
   }
@@ -369,7 +390,7 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
-    if (!this.chatMessages.find(m => m.id === message.id)) {
+    if (!this.chatMessages.find((m) => m.id === message.id)) {
       this.chatMessages = [...this.chatMessages, message];
     }
 
@@ -401,16 +422,20 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
-    if (!this.rolls.find(r => r.id === rollData.id)) {
+    if (!this.rolls.find((r) => r.id === rollData.id)) {
       this.rolls = [rollData, ...this.rolls];
     }
 
-    if (!this.chatMessages.find(m => m.id === chatMsg.id)) {
+    if (!this.chatMessages.find((m) => m.id === chatMsg.id)) {
       this.chatMessages = [...this.chatMessages, chatMsg];
     }
 
     if (this.roomChannel) {
-      this.roomChannel.send({ type: 'broadcast', event: 'dice_roll', payload: { roll: rollData, chatMsg, color } });
+      this.roomChannel.send({
+        type: 'broadcast',
+        event: 'dice_roll',
+        payload: { roll: rollData, chatMsg, color },
+      });
     }
 
     db.addRoll({
