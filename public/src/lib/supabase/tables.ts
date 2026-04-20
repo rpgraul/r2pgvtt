@@ -430,20 +430,11 @@ export const db = {
     return () => {};
   },
 
-  async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string) {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert({
-        text,
-        type,
-        sender: sender || authState.displayName || 'Anonymous',
-        game_id: gameId,
-      })
-      .select()
-      .single();
-
+  async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string, id?: string) {
+    const payload: any = { text, type, sender: sender || authState.displayName || 'Anonymous', game_id: gameId };
+    if (id) payload.id = id;
+    const { data, error } = await supabase.from('chat_messages').insert(payload).select().single();
     if (error) throw error;
-
     return data;
   },
 
@@ -496,21 +487,12 @@ export const db = {
     details?: any;
     color?: string;
     gameId?: string;
+    id?: string;
   }) {
-    const { data, error } = await supabase
-      .from('dice_rolls')
-      .insert({
-        user_name: rollData.userName,
-        formula: rollData.formula,
-        result: rollData.result,
-        details: { ...rollData.details, color: rollData.color },
-        game_id: rollData.gameId,
-      })
-      .select()
-      .single();
-
+    const payload: any = { user_name: rollData.userName, formula: rollData.formula, result: rollData.result, details: { ...rollData.details, color: rollData.color }, game_id: rollData.gameId };
+    if (rollData.id) payload.id = rollData.id;
+    const { data, error } = await supabase.from('dice_rolls').insert(payload).select().single();
     if (error) throw error;
-
     return data;
   },
 
