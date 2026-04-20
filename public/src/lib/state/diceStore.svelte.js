@@ -95,11 +95,36 @@ function createDiceStore() {
         return;
       }
 
-      const result = fallbackRoll(parsedData);
-      result.formula = formula;
+      const result = await new Promise<void>(async (res) => {
+        if (!diceBoxInstance && !diceInitializing) {
+          await initDiceBox();
+        }
+
+        if (diceInitializing) {
+          await diceInitializing;
+        }
+
+        if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+          const fallbackResult = fallbackRoll(parsedData);
+          fallbackResult.formula = formula;
+          res(fallbackResult);
+          return;
+        }
+
+        const sides = parsedData.sides;
+        const diceArray = Array(parsedData.count).fill({ sides, themeColor: currentDiceColor });
+
+        diceBoxInstance.getInstance().roll(diceArray).then((rollResult) => {
+          const evaluated = evaluateRolls(parsedData, rollResult.rolls);
+          evaluated.formula = formula;
+          res(evaluated);
+        });
+      });
+
+      const text = '🎲 Rolou ' + formula + ': ' + result.textual;
 
       const gameStateModule = await import('./gameState.svelte.ts');
-      gameStateModule.gameState.sendRoll(formula, result.total, result, currentDiceColor);
+      gameStateModule.gameState.sendRoll(formula, result.total, result, currentDiceColor, text);
 
       await playSyncRoll({
         formula,

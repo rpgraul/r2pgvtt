@@ -412,20 +412,7 @@ export const db = {
       onInitialLoad(data || []);
     };
 
-    loadMessages().then(() => {
-      if (!gameId || !onInsert) return;
-
-      const channel = supabase
-        .channel(`chat:${gameId}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
-          (payload) => onInsert(payload.new),
-        )
-        .subscribe();
-
-      return () => supabase.removeChannel(channel);
-    });
+    loadMessages();
 
     return () => {};
   },
@@ -471,20 +458,7 @@ export const db = {
       onInitialLoad(data || []);
     };
 
-    loadRolls().then(() => {
-      if (!gameId || !onInsert) return;
-
-      const channel = supabase
-        .channel(`rolls:${gameId}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'dice_rolls', filter: `game_id=eq.${gameId}` },
-          (payload) => onInsert(payload.new),
-        )
-        .subscribe();
-
-      return () => supabase.removeChannel(channel);
-    });
+    loadRolls();
 
     return () => {};
   },

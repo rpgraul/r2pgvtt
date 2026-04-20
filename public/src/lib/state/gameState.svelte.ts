@@ -43,8 +43,10 @@ class GameState {
 
   // Realtime channels
   private itemChannel: any = null;
+  private roomChannel: any = null;
 
   private unsubItems: (() => void) | null = null;
+  private unsubRoom: (() => void) | null = null;
 
   get user() {
     return authState.user;
@@ -162,11 +164,10 @@ class GameState {
       }, (newRoll) => {
         if (!this.rolls.find(r => r.id === newRoll.id)) {
           this.rolls = [newRoll, ...this.rolls];
-          if (newRoll.user_name !== this.userName) {
-            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(newRoll));
-          }
         }
       });
+
+      this.setupRoomChannel();
     }
   }
 
@@ -187,7 +188,7 @@ class GameState {
       .select('role')
       .eq('game_id', gameId)
       .eq('user_id', authState.user.id)
-      .single();
+      .maybeSingle();
 
     this.currentGameRole = data?.role || null;
 
@@ -195,7 +196,7 @@ class GameState {
       .from('games')
       .select('nome')
       .eq('id', gameId)
-      .single();
+      .maybeSingle();
 
     this.currentGameName = gameData?.nome || null;
   }
@@ -205,6 +206,37 @@ class GameState {
       supabase.removeChannel(this.itemChannel);
       this.itemChannel = null;
     }
+    if (this.roomChannel) {
+      supabase.removeChannel(this.roomChannel);
+      this.roomChannel = null;
+    }
+  }
+
+  private setupRoomChannel() {
+    if (!this.currentGameId || this.roomChannel) return;
+
+    const channelName = `room:${this.currentGameId}`;
+    this.roomChannel = supabase.channel(channelName);
+
+    this.roomChannel.on('broadcast', { event: 'dice_roll' }, (payload: any) => {
+      const { roll, chatMsg, color } = payload.payload || {};
+      if (roll && chatMsg) {
+        if (!this.chatMessages.find(m => m.id === chatMsg.id)) {
+          this.chatMessages = [...this.chatMessages, chatMsg];
+        }
+        if (!this.rolls.find(r => r.id === roll.id)) {
+          this.rolls = [roll, ...this.rolls];
+          import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(roll));
+        }
+      }
+    }).subscribe();
+
+    this.unsubRoom = () => {
+      if (this.roomChannel) {
+        supabase.removeChannel(this.roomChannel);
+        this.roomChannel = null;
+      }
+    };
   }
 
   setSearch(search: string) {
@@ -335,7 +367,7 @@ class GameState {
     db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
   }
 
-  async sendRoll(formula: string, result: number, details: any, color: string) {
+  async sendRoll(formula: string, result: number, details: any, color: string, textual: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
 
     const rollData = {
@@ -350,8 +382,26 @@ class GameState {
       created_at: new Date().toISOString(),
     };
 
+    const chatMsg = {
+      id: crypto.randomUUID(),
+      text: textual,
+      type: 'user',
+      sender: authState.displayName,
+      senderId: authState.user?.id,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
     if (!this.rolls.find(r => r.id === rollData.id)) {
       this.rolls = [rollData, ...this.rolls];
+    }
+
+    if (!this.chatMessages.find(m => m.id === chatMsg.id)) {
+      this.chatMessages = [...this.chatMessages, chatMsg];
+    }
+
+    if (this.roomChannel) {
+      this.roomChannel.send({ type: 'broadcast', event: 'dice_roll', payload: { roll: rollData, chatMsg, color } });
     }
 
     db.addRoll({
@@ -362,6 +412,8 @@ class GameState {
       color,
       gameId: this.currentGameId,
     });
+
+    db.addChatMessage(textual, 'user', authState.displayName, this.currentGameId);
   }
 
   async getGameById(gameId: string) {
@@ -397,7 +449,7 @@ class GameState {
       .select('role')
       .eq('game_id', gameId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     return data?.role || null;
   }
@@ -425,6 +477,8 @@ class GameState {
   destroy() {
     if (this.unsubItems) this.unsubItems();
     this.unsubItems = null;
+    if (this.unsubRoom) this.unsubRoom();
+    this.unsubRoom = null;
     this.cleanupRealtimeChannels();
   }
 

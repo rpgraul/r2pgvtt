@@ -673,7 +673,7 @@ async function handleGoogleSignIn() {
 import { tick } from 'svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import { X, Send } from 'lucide-svelte';
+import { Send } from 'lucide-svelte';
 
 let { open = $bindable(false) } = $props();
 
@@ -754,16 +754,7 @@ async function handleSubmit(e) {
     const match = formula.match(/(\d+)d(\d+)/i) || formula.match(/^d(\d+)/i);
 
     if (match) {
-      diceStore
-        .rollDice(formula)
-        .then((result) => {
-          gameState.sendMessage(`🎲 Rolou ${result.formula || formula}: ${result.textual}`);
-          gameState.sendRoll(result.formula || formula, result.total, {
-            rolls: result.rolls,
-            diceType: result.diceType,
-          });
-        })
-        .catch((err) => console.error('[Chat] Dice error:', err));
+      diceStore.rollDice(formula).catch((err) => console.error('[Chat] Dice error:', err));
     } else {
       await gameState.sendSystemMessage(`Fórmula inválida: ${formula}. Use ex: 2d6 ou d20`);
     }
@@ -977,7 +968,7 @@ onMount(() => {
 });
 </script>
 
-{#if diceStore.activeDice.length > 0}
+{#if diceStore.isDiceVisible}
   <button
     class="fixed inset-0 z-[9999] bg-transparent cursor-pointer"
     onclick={() => diceStore.canDismiss && diceStore.clearDice()}
@@ -1270,64 +1261,21 @@ function handleOverlayClick(e) {
 
 <file path="src/components/dice/DiceRoller.svelte">
 <script>
-import { onMount, onDestroy } from 'svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
-import { useDiceBox } from '$lib/actions/useDiceBox.js';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
 import Button from '../ui/Button.svelte';
 
 const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
 let customFormula = $state('');
 let lastResult = $state(null);
-let diceContainer;
-let diceBox = $state(null);
 let isLoading = $state(false);
 
-onMount(() => {
-  if (diceContainer) {
-    diceBox = useDiceBox(diceContainer, {
-      onRollComplete: (result) => {
-        lastResult = result;
-
-        if (gameState.user) {
-          if (result.shouldSum || result.rolls.length <= 1) {
-            if (result.rolls.length > 1) {
-              gameState.sendMessage(
-                `🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}** = !!!${result.total}!!!`,
-              );
-            } else {
-              gameState.sendMessage(`🎲 Rolou ${result.formula}: !!!${result.total}!!!`);
-            }
-          } else {
-            gameState.sendMessage(`🎲 Rolou ${result.formula}: **${result.rolls.join(', ')}**`);
-          }
-          gameState.sendRoll(result.formula, result.total, {
-            rolls: result.rolls,
-            diceType: result.diceType,
-          });
-        }
-      },
-    });
-  }
-
-  return () => {
-    if (diceBox) {
-      diceBox.destroy();
-    }
-  };
-});
-
 async function rollDice(dice) {
-  if (!diceBox || !diceBox.isInitialized()) {
-    await fallbackRoll(dice);
-    return;
-  }
-
   isLoading = true;
   try {
-    await diceBox.roll(`1${dice}`);
+    lastResult = await diceStore.rollDice(`1${dice}`);
   } catch (error) {
     console.error('Dice roll error:', error);
-    await fallbackRoll(dice);
   } finally {
     isLoading = false;
   }
@@ -1336,60 +1284,18 @@ async function rollDice(dice) {
 async function rollCustom() {
   if (!customFormula.trim()) return;
 
-  if (!diceBox || !diceBox.isInitialized()) {
-    await fallbackCustomRoll();
-    return;
-  }
-
   isLoading = true;
   try {
-    await diceBox.roll(customFormula);
+    lastResult = await diceStore.rollDice(customFormula);
   } catch (error) {
     console.error('Dice roll error:', error);
-    await fallbackCustomRoll();
   } finally {
     isLoading = false;
-  }
-}
-
-function fallbackRoll(dice) {
-  const result = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
-  lastResult = { dice, result, total: result, rolls: [result] };
-
-  if (gameState.user) {
-    gameState.sendRoll(dice, result, { dice, rolls: [result] });
-  }
-}
-
-function fallbackCustomRoll() {
-  const match = customFormula.match(/(\d+)d(\d+)/i);
-  if (!match) return;
-
-  const count = parseInt(match[1]);
-  const sides = parseInt(match[2]);
-  let total = 0;
-  const details = [];
-
-  for (let i = 0; i < count; i++) {
-    const roll = Math.floor(Math.random() * sides) + 1;
-    details.push(roll);
-    total += roll;
-  }
-
-  lastResult = { dice: customFormula, result: total, details };
-
-  if (gameState.user) {
-    gameState.sendRoll(customFormula, total, { details, count, sides });
   }
 }
 </script>
 
 <div class="space-y-4">
-  <div 
-    bind:this={diceContainer}
-    class="w-full h-48 bg-muted/30 rounded-lg overflow-hidden"
-  ></div>
-  
   <div class="flex flex-wrap gap-2">
     {#each diceTypes as dice}
       <Button
@@ -1418,8 +1324,8 @@ function fallbackCustomRoll() {
   
   {#if lastResult}
     <div class="rounded-lg bg-card p-4 text-center">
-      <p class="text-sm text-muted-foreground">{lastResult.formula || lastResult.dice}</p>
-      <p class="text-4xl font-bold text-foreground">{lastResult.total || lastResult.result}</p>
+      <p class="text-sm text-muted-foreground">{lastResult.formula}</p>
+      <p class="text-4xl font-bold text-foreground">{lastResult.total}</p>
       {#if lastResult.rolls && lastResult.rolls.length > 0}
         <p class="text-xs text-muted-foreground mt-2">
           Detalhes: {lastResult.rolls.join(', ')}
@@ -1433,8 +1339,8 @@ function fallbackCustomRoll() {
       <h4 class="text-sm font-medium text-foreground">Histórico</h4>
       {#each gameState.rolls.slice(0, 5) as roll}
         <div class="flex justify-between text-sm p-2 rounded bg-muted/50 text-foreground">
-          <span>{roll.autor}: {roll.expressao}</span>
-          <span class="font-bold text-foreground">{roll.resultado}</span>
+          <span>{roll.user_name}: {roll.formula}</span>
+          <span class="font-bold text-foreground">{roll.result}</span>
         </div>
       {/each}
     </div>
@@ -4031,33 +3937,33 @@ function clearError() {
 
 <file path="src/components/player/Playlist.svelte">
 <script>
-  import { musicState } from '$lib/state/music.svelte.js';
-  import { X, Music, Play, Pause } from 'lucide-svelte';
+import { musicState } from '$lib/state/music.svelte.js';
+import { X, Music, Play, Pause } from 'lucide-svelte';
 
-  const playlist = $derived(musicState.playlist());
-  const currentTrack = $derived(musicState.currentTrack());
-  const isPlaying = $derived(musicState.isPlaying());
-  const isLoading = $derived(musicState.isLoading());
+const playlist = $derived(musicState.playlist());
+const currentTrack = $derived(musicState.currentTrack());
+const isPlaying = $derived(musicState.isPlaying());
+const isLoading = $derived(musicState.isLoading());
 
-  function isCurrentTrack(trackId) {
-    return currentTrack?.id === trackId;
+function isCurrentTrack(trackId) {
+  return currentTrack?.id === trackId;
+}
+
+async function handleRemove(trackId) {
+  try {
+    await musicState.removeTrack(trackId);
+  } catch (e) {
+    console.error('Failed to remove track:', e);
   }
+}
 
-  async function handleRemove(trackId) {
-    try {
-      await musicState.removeTrack(trackId);
-    } catch (e) {
-      console.error('Failed to remove track:', e);
-    }
+async function handlePlayTrack(track, index) {
+  if (currentTrack?.id === track.id && isPlaying) {
+    await musicState.pause();
+  } else {
+    await musicState.setTrack(index);
   }
-
-  async function handlePlayTrack(track, index) {
-    if (currentTrack?.id === track.id && isPlaying) {
-      await musicState.pause();
-    } else {
-      await musicState.setTrack(index);
-    }
-  }
+}
 </script>
 
 <div class="playlist-container">
@@ -4374,18 +4280,18 @@ $effect(() => {
   }
 });
 
-  $effect(() => {
-    if (playerReady && player && videoId) {
-      if (previousVideoId !== videoId) {
-        previousVideoId = videoId;
-        const currentVideo = player.getVideoData?.();
-        if (currentVideo && currentVideo.video_id !== videoId) {
-          player.loadVideoById(videoId);
-          lastSeekTarget = null;
-        }
+$effect(() => {
+  if (playerReady && player && videoId) {
+    if (previousVideoId !== videoId) {
+      previousVideoId = videoId;
+      const currentVideo = player.getVideoData?.();
+      if (currentVideo && currentVideo.video_id !== videoId) {
+        player.loadVideoById(videoId);
+        lastSeekTarget = null;
       }
     }
-  });
+  }
+});
 
 export function seekTo(seconds) {
   if (player && playerReady) {
@@ -5677,16 +5583,7 @@ function handleAction(action) {
     case 'd20':
     case 'd100':
       isExpanded = false;
-      diceStore
-        .rollDice(`1${action}`)
-        .then((result) => {
-          gameState.sendMessage(`🎲 Rolou ${result.formula || `1${action}`}: ${result.textual}`);
-          gameState.sendRoll(result.formula || `1${action}`, result.total, {
-            rolls: result.rolls,
-            diceType: action,
-          });
-        })
-        .catch((err) => console.error('[FAB] Dice error:', err));
+      diceStore.rollDice(`1${action}`).catch((err) => console.error('[FAB] Dice error:', err));
       break;
     case 'add-card':
       showAddCard = true;
@@ -7454,14 +7351,12 @@ function createChatState() {
   async function sendMessage(content) {
     if (!gameId || !userId || !userName || !content.trim()) return;
 
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        game_id: gameId,
-        user_id: userId,
-        author_name: userName,
-        content: content.trim(),
-      });
+    const { error } = await supabase.from('chat_messages').insert({
+      game_id: gameId,
+      user_id: userId,
+      author_name: userName,
+      content: content.trim(),
+    });
 
     if (error) {
       console.error('Error sending message:', error);
@@ -7493,12 +7388,16 @@ function createChatState() {
 
     channel = supabase
       .channel(`chat:${gameId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `game_id=eq.${gameId}`,
-      }, handleRealtime)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `game_id=eq.${gameId}`,
+        },
+        handleRealtime,
+      )
       .subscribe();
   }
 
@@ -7546,8 +7445,8 @@ function createDiceStore() {
   let isDiceVisible = $state(false);
   let alertTimeoutId = null;
   let diceBoxInstance = null;
-  let diceBoxResolve = null;
-  let diceBoxData = null;
+  const diceBoxResolve = null;
+  const diceBoxData = null;
 
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
@@ -7575,6 +7474,7 @@ function createDiceStore() {
       userName: alertData.userName,
       rolls: alertData.details?.rolls || [],
       diceType: alertData.details?.diceType || alertData.formula,
+      color: alertData.color || '#0000ff',
       isRemote: true,
       timestamp: Date.now(),
     };
@@ -7604,25 +7504,6 @@ function createDiceStore() {
 
     diceBoxInstance = createDiceBoxManager(container, {
       themeColor: currentDiceColor,
-      onRollComplete: (result) => {
-        console.log('[DiceStore] onRollComplete called:', result);
-        if (diceBoxResolve && diceBoxData) {
-          const diceId = diceBoxData.id;
-          console.log('[DiceStore] Resolving dice:', diceId, result);
-
-          const evaluated = evaluateRolls(diceBoxData.parsedData, result.rolls);
-          // Adiciona os dados passados para fallback
-          evaluated.formula = diceBoxData.formula;
-          evaluated.diceType = diceBoxData.diceType;
-
-          diceBoxResolve(evaluated);
-          completeDice(diceId, evaluated);
-          diceBoxResolve = null;
-          diceBoxData = null;
-        } else {
-          console.log('[DiceStore] No resolve or data, ignoring result');
-        }
-      },
     });
 
     diceInitializing = diceBoxInstance.init().then(() => {
@@ -7649,58 +7530,21 @@ function createDiceStore() {
         return;
       }
 
-      const diceId = generateId();
-      const diceType = `d${parsedData.sides}`;
+      const result = fallbackRoll(parsedData);
+      result.formula = formula;
 
-      activeDice = [
-        ...activeDice,
-        {
-          id: diceId,
-          formula,
-          parsedData, // Guarda estrutura completa
-          diceType,
-          rolling: true,
-        },
-      ];
+      const gameStateModule = await import('./gameState.svelte.ts');
+      gameStateModule.gameState.sendRoll(formula, result.total, result, currentDiceColor);
 
-      hasUserDismissed = false;
-      isDiceVisible = true;
+      await playSyncRoll({
+        formula,
+        result: result.total,
+        details: result,
+        color: currentDiceColor,
+        userName: getUserName(),
+      });
 
-      // Tenta recuperar no ambiente dev (HMR) se a store for recriada
-      if (!diceBoxInstance && !diceInitializing) {
-        console.log('[DiceStore] Recarregando DiceBox devido a HMR...');
-        initDiceBox();
-      }
-
-      // Se está inicializando, aguardar
-      if (diceInitializing) {
-        console.log('[DiceStore] Waiting for DiceBox initialization...');
-        try {
-          await diceInitializing;
-        } catch (err) {
-          console.error('[DiceStore] Init failed:', err);
-        }
-      }
-
-      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
-        console.error('[DiceStore] DiceBox not ready after wait');
-        activeDice = activeDice.filter((d) => d.id !== diceId);
-        reject(new Error('DiceBox not ready'));
-        return;
-      }
-
-      diceBoxResolve = resolve;
-      diceBoxData = { id: diceId, formula, parsedData, diceType };
-
-      try {
-        await diceBoxInstance.roll(parsedData.baseFormula);
-      } catch (error) {
-        console.error('[DiceStore] Roll error:', error);
-        const fallback = fallbackRoll(parsedData);
-        completeDice(diceId, fallback);
-        activeDice = activeDice.filter((d) => d.id !== diceId);
-        resolve(fallback);
-      }
+      resolve(result);
     });
   }
 
@@ -7786,6 +7630,120 @@ function createDiceStore() {
     return diceBoxInstance;
   }
 
+  function playSyncRoll(payload) {
+    const { formula, result, details, color, userName } = payload;
+    const sides = details.parsedData.sides;
+    const forcedArray = details.details.map((d) => ({
+      sides,
+      themeColor: color,
+      value: d.value,
+    }));
+
+    isDiceVisible = true;
+
+    if (!diceBoxInstance && !diceInitializing) {
+      initDiceBox();
+    }
+
+    const finishRoll = () => {
+      const rollId = generateId();
+      pendingAlerts = [
+        ...pendingAlerts,
+        {
+          id: rollId,
+          userName,
+          formula,
+          result,
+          successes: details.successes,
+          textual: details.textual,
+          rolls: details.details.map((d) => d.value),
+          diceType: `d${sides}`,
+          timestamp: Date.now(),
+        },
+      ];
+      processNextAlert();
+      setTimeout(() => {
+        clear3DDice();
+      }, 3000);
+    };
+
+    const doRoll = () => {
+      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+        console.error('[DiceStore] playSyncRoll: DiceBox not ready');
+        return;
+      }
+      diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+    };
+
+    if (diceInitializing) {
+      diceInitializing.then(doRoll);
+    } else {
+      doRoll();
+    }
+  }
+
+  async function playRemoteRoll(roll) {
+    const color = roll.details?.color || '#0000ff';
+    const rawDetails = roll.details?.details || [];
+
+    if (rawDetails.length === 0) return;
+
+    const sides = roll.details?.parsedData?.sides || 6;
+    const forcedArray = rawDetails.map(d => ({
+      qty: 1,
+      sides,
+      value: d.value,
+      themeColor: color,
+    }));
+
+    isDiceVisible = true;
+
+    const finishRoll = () => {
+      const rollId = generateId();
+      pendingAlerts = [
+        ...pendingAlerts,
+        {
+          id: rollId,
+          userName: roll.user_name,
+          formula: roll.formula,
+          result: roll.result,
+          successes: roll.details?.successes,
+          textual: roll.details?.textual,
+          rolls: rawDetails.map(d => d.value),
+          diceType: `d${sides}`,
+          color,
+          isRemote: true,
+          timestamp: Date.now(),
+        },
+      ];
+      processNextAlert();
+      setTimeout(() => {
+        clear3DDice();
+      }, 3000);
+    };
+
+    const doRoll = () => {
+      if (!diceBoxInstance || !diceBoxInstance.isInitialized()) {
+        if (!diceInitializing) {
+          initDiceBox();
+        }
+        diceInitializing.then(() => {
+          if (diceBoxInstance) {
+            diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+          }
+        });
+        return;
+      }
+      diceBoxInstance.getInstance().roll(forcedArray).then(finishRoll);
+    };
+
+    if (diceInitializing) {
+      diceInitializing.then(doRoll);
+    } else {
+      doRoll();
+    }
+  }
+
   return {
     get activeDice() {
       return activeDice;
@@ -7810,6 +7768,8 @@ function createDiceStore() {
     },
 
     rollDice,
+    playSyncRoll,
+    playRemoteRoll,
     dismissAlert,
     dismissAll,
     clearDice,
@@ -8123,16 +8083,10 @@ class GameState {
 
   viewMode = $state('grid');
 
-  // Polling for shared real-time updates
-  private chatPollingInterval: any = null;
-  private dicePollingInterval: any = null;
+  // Realtime channels
+  private itemChannel: any = null;
 
   private unsubItems: (() => void) | null = null;
-  private unsubChat: (() => void) | null = null;
-  private unsubRolls: (() => void) | null = null;
-  private rollCallback: ((roll: any) => void) | null = null;
-  private lastRollId: string | null = null;
-  private realtimeChannels: any = { items: null, chat: null, rolls: null };
 
   get user() {
     return authState.user;
@@ -8231,44 +8185,31 @@ class GameState {
 
     this.cleanupRealtimeChannels();
 
-    this.unsubItems = db.subscribeToItems(
-      gameId,
-      (cards) => {
-        this.items = fromCardDBArray(cards);
-        this.isLoading = false;
-      },
-      (channel) => {
-        this.realtimeChannels.items = channel;
-      },
-    );
+    this.unsubItems = db.subscribeToItems(gameId, (cards) => {
+      this.items = fromCardDBArray(cards);
+      this.isLoading = false;
+    });
 
-    this.unsubChat = db.subscribeToChat(
-      gameId,
-      (messages) => {
+    if (gameId) {
+      db.subscribeToChat(gameId, (messages) => {
         this.chatMessages = messages;
-      },
-      (channel) => {
-        this.realtimeChannels.chat = channel;
-      },
-    );
+      }, (newMessage) => {
+        if (!this.chatMessages.find(m => m.id === newMessage.id)) {
+          this.chatMessages = [...this.chatMessages, newMessage];
+        }
+      });
 
-    this.unsubRolls = db.subscribeToRolls(
-      gameId,
-      (rollData) => {
-        this.rolls = rollData;
-
-        if (rollData.length > 0) {
-          const latestRoll = rollData[0];
-          if (latestRoll.id !== this.lastRollId && this.rollCallback) {
-            this.lastRollId = latestRoll.id;
-            this.rollCallback(latestRoll);
+      db.subscribeToRolls(gameId, (rolls) => {
+        this.rolls = rolls;
+      }, (newRoll) => {
+        if (!this.rolls.find(r => r.id === newRoll.id)) {
+          this.rolls = [newRoll, ...this.rolls];
+          if (newRoll.user_name !== this.userName) {
+            import('./diceStore.svelte.js').then(m => m.diceStore.playRemoteRoll(newRoll));
           }
         }
-      },
-      (channel) => {
-        this.realtimeChannels.rolls = channel;
-      },
-    );
+      });
+    }
   }
 
   setGameId(gameId: string | null) {
@@ -8302,17 +8243,9 @@ class GameState {
   }
 
   private cleanupRealtimeChannels() {
-    if (this.realtimeChannels.items) {
-      supabase.removeChannel(this.realtimeChannels.items);
-      this.realtimeChannels.items = null;
-    }
-    if (this.realtimeChannels.chat) {
-      supabase.removeChannel(this.realtimeChannels.chat);
-      this.realtimeChannels.chat = null;
-    }
-    if (this.realtimeChannels.rolls) {
-      supabase.removeChannel(this.realtimeChannels.rolls);
-      this.realtimeChannels.rolls = null;
+    if (this.itemChannel) {
+      supabase.removeChannel(this.itemChannel);
+      this.itemChannel = null;
     }
   }
 
@@ -8334,10 +8267,6 @@ class GameState {
 
   setViewMode(mode: string) {
     this.viewMode = mode;
-  }
-
-  onRollReceived(callback: (roll: any) => void) {
-    this.rollCallback = callback;
   }
 
   async createCard(cardData: any) {
@@ -8410,52 +8339,71 @@ class GameState {
 
   async sendMessage(text: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
-    await this.refreshChat();
-    await this.refreshRolls(); // Also refresh dice to show for everyone
+
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: 'user',
+      sender: authState.displayName,
+      senderId: authState.user?.id,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    if (!this.chatMessages.find(m => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
+    }
+
+    db.addChatMessage(text, 'user', authState.displayName, this.currentGameId);
   }
 
   async sendSystemMessage(text: string) {
     if (!authState.isAuthenticated) return;
-    await db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
-    await this.refreshChat();
-  }
 
-  async refreshChat() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('game_id', this.currentGameId)
-      .order('created_at', { ascending: true });
-    if (!error) {
-      this.chatMessages = data || [];
+    const message = {
+      id: crypto.randomUUID(),
+      text,
+      type: 'system',
+      sender: 'Sistema',
+      senderId: null,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    if (!this.chatMessages.find(m => m.id === message.id)) {
+      this.chatMessages = [...this.chatMessages, message];
     }
+
+    db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
   }
 
-  async refreshRolls() {
-    if (!this.currentGameId) return;
-    const { data, error } = await supabase
-      .from('dice_rolls')
-      .select('*')
-      .eq('game_id', this.currentGameId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (!error) {
-      this.rolls = data || [];
-    }
-  }
-
-  async sendRoll(formula: string, result: number, details: any) {
+  async sendRoll(formula: string, result: number, details: any, color: string) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    await db.addRoll({
+
+    const rollData = {
+      id: crypto.randomUUID(),
+      user_name: authState.displayName,
+      userId: authState.user?.id,
+      formula,
+      result,
+      details,
+      color,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
+
+    if (!this.rolls.find(r => r.id === rollData.id)) {
+      this.rolls = [rollData, ...this.rolls];
+    }
+
+    db.addRoll({
       userName: authState.displayName,
       formula,
       result,
       details,
+      color,
       gameId: this.currentGameId,
     });
-    await this.refreshRolls();
   }
 
   async getGameById(gameId: string) {
@@ -8518,41 +8466,8 @@ class GameState {
 
   destroy() {
     if (this.unsubItems) this.unsubItems();
-    if (this.unsubChat) this.unsubChat();
-    if (this.unsubRolls) this.unsubRolls();
     this.unsubItems = null;
-    this.unsubChat = null;
-    this.unsubRolls = null;
-    this.stopPolling();
-    this.chatPollingInterval = null;
-    this.dicePollingInterval = null;
-  }
-
-  startPolling() {
-    const self = this;
-    // Polling for chat - cada 1.5 segundos
-    if (!this.chatPollingInterval && this.currentGameId) {
-      this.chatPollingInterval = setInterval(() => {
-        self.refreshChat();
-      }, 1500);
-    }
-    // Polling for dice - cada 1.5 segundos
-    if (!this.dicePollingInterval && this.currentGameId) {
-      this.dicePollingInterval = setInterval(() => {
-        self.refreshRolls();
-      }, 1500);
-    }
-  }
-
-  stopPolling() {
-    if (this.chatPollingInterval) {
-      clearInterval(this.chatPollingInterval);
-      this.chatPollingInterval = null;
-    }
-    if (this.dicePollingInterval) {
-      clearInterval(this.dicePollingInterval);
-      this.dicePollingInterval = null;
-    }
+    this.cleanupRealtimeChannels();
   }
 
   getUserName = () => authState.displayName;
@@ -8823,7 +8738,7 @@ function createMusicState() {
 
     playlist = playlist.filter((t) => t.id !== trackId);
 
-    if (currentTrackId && !playlist.find(t => t.id === currentTrackId)) {
+    if (currentTrackId && !playlist.find((t) => t.id === currentTrackId)) {
       currentTrackId = playlist.length > 0 ? playlist[0].id : null;
     }
   }
@@ -9631,58 +9546,44 @@ export const db = {
 
   subscribeToChat(
     gameId: string | null,
-    callback: (messages: any[]) => void,
-    onChannelCreated?: (channel: any) => void,
+    onInitialLoad: (messages: any[]) => void,
+    onInsert?: (newMessage: any) => void,
   ) {
-    const loadMessages = () => {
-      console.log('[Chat] loadMessages called, gameId:', gameId);
-      let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    const loadMessages = async () => {
+      let q = supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: true });
       if (gameId) {
         q = q.eq('game_id', gameId);
       }
-      q.then(({ data, error }) => {
-        console.log('[Chat] query result:', { count: data?.length, error });
-        if (error) {
-          console.error('[Chat] Error loading chat:', error);
-          callback([]);
-          return;
-        }
-        console.log('[Chat] messages:', data);
-        callback(data || []);
-      });
+      const { data, error } = await q;
+      if (error) {
+        onInitialLoad([]);
+        return;
+      }
+      onInitialLoad(data || []);
     };
 
-    loadMessages();
+    loadMessages().then(() => {
+      if (!gameId || !onInsert) return;
 
-    const channelName = `chat:${gameId || 'global'}`;
+      const channel = supabase
+        .channel(`chat:${gameId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
+          (payload) => onInsert(payload.new),
+        )
+        .subscribe();
 
-    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+      return () => supabase.removeChannel(channel);
+    });
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chat_messages', filter },
-        (payload) => {
-          console.log('[Chat] Realtime event received:', payload);
-          loadMessages();
-        },
-      )
-      .subscribe((status) => {
-        console.log('[Chat] Realtime channel status:', status);
-      });
-
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => {};
   },
 
   async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string) {
-    console.log('[Chat] addChatMessage called:', { text, type, sender, gameId });
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -9694,35 +9595,17 @@ export const db = {
       .select()
       .single();
 
-    if (error) {
-      console.error('[Chat] Error inserting message:', error);
-      throw error;
-    }
-    console.log('[Chat] Message inserted:', data);
-
-    // Broadcast para outros jogadores - criar canal e enviar imediatamente
-    if (gameId) {
-      const chatBroadcast = supabase.channel(`chat:${gameId}`);
-      chatBroadcast.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          chatBroadcast.send({
-            type: 'broadcast',
-            event: 'message',
-            payload: { text, sender, type },
-          });
-        }
-      });
-    }
+    if (error) throw error;
 
     return data;
   },
 
   subscribeToRolls(
     gameId: string | null,
-    callback: (rolls: any[]) => void,
-    onChannelCreated?: (channel: any) => void,
+    onInitialLoad: (rolls: any[]) => void,
+    onInsert?: (newRoll: any) => void,
   ) {
-    const loadRolls = () => {
+    const loadRolls = async () => {
       let q = supabase
         .from('dice_rolls')
         .select('*')
@@ -9733,75 +9616,53 @@ export const db = {
         q = q.eq('game_id', gameId);
       }
 
-      q.then(({ data, error }) => {
-        if (error) {
-          console.error('Error loading rolls:', error);
-          callback([]);
-          return;
-        }
-        callback(data || []);
-      });
+      const { data, error } = await q;
+      if (error) {
+        onInitialLoad([]);
+        return;
+      }
+      onInitialLoad(data || []);
     };
 
-    loadRolls();
+    loadRolls().then(() => {
+      if (!gameId || !onInsert) return;
 
-    const channelName = `rolls:${gameId || 'global'}`;
+      const channel = supabase
+        .channel(`rolls:${gameId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'dice_rolls', filter: `game_id=eq.${gameId}` },
+          (payload) => onInsert(payload.new),
+        )
+        .subscribe();
 
-    const filter = gameId ? `game_id=eq.${gameId}` : undefined;
+      return () => supabase.removeChannel(channel);
+    });
 
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls', filter }, (payload) => {
-        console.log('[Dice] Realtime event received:', payload);
-        loadRolls();
-      })
-      .subscribe((status) => {
-        console.log('[Dice] Realtime channel status:', status);
-      });
-
-    if (onChannelCreated) {
-      onChannelCreated(channel);
-    }
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => {};
   },
 
-  async addRoll(rollData: { userName: string; formula: string; result: number; details?: any; gameId?: string }) {
-    console.log('[Dice] addRoll called:', rollData);
+  async addRoll(rollData: {
+    userName: string;
+    formula: string;
+    result: number;
+    details?: any;
+    color?: string;
+    gameId?: string;
+  }) {
     const { data, error } = await supabase
       .from('dice_rolls')
       .insert({
         user_name: rollData.userName,
         formula: rollData.formula,
         result: rollData.result,
-        details: rollData.details || [],
+        details: { ...rollData.details, color: rollData.color },
         game_id: rollData.gameId,
       })
       .select()
       .single();
 
-    if (error) {
-      console.error('[Dice] Error inserting roll:', error);
-      throw error;
-    }
-    console.log('[Dice] Roll inserted:', data);
-
-    // Broadcast para outros jogadores usando Realtime Broadcast
-    if (rollData.gameId) {
-      const channel = supabase.channel(`dice:${rollData.gameId}`);
-      channel.send({
-        type: 'broadcast',
-        event: 'roll',
-        payload: {
-          userName: rollData.userName,
-          formula: rollData.formula,
-          result: rollData.result,
-          details: rollData.details,
-        },
-      });
-    }
+    if (error) throw error;
 
     return data;
   },
@@ -12198,7 +12059,6 @@ import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { musicState } from '$lib/state/music.svelte.js';
-import { supabase } from '$lib/supabase/client';
 import '../app.css';
 
 let { children } = $props();
@@ -12234,45 +12094,6 @@ $effect(() => {
   }
 });
 
-// Listener para Broadcast de dice (fora do onMount - nível do módulo)
-let diceChannelInstance = null;
-
-$effect(() => {
-  const gameId = gameState?.gameId;
-  if (gameId && !diceChannelInstance) {
-    console.log('[Layout] Creating dice broadcast listener for game:', gameId);
-    diceChannelInstance = supabase.channel(`dice:${gameId}`);
-    diceChannelInstance.on('broadcast', { event: 'roll' }, (payload) => {
-      console.log('[Layout] Broadcast roll received:', payload);
-      const rollData = payload.payload;
-      diceStore.addRemoteAlert({
-        formula: rollData.formula,
-        result: rollData.result,
-        userName: rollData.userName,
-        details: rollData.details,
-      });
-    });
-    diceChannelInstance.subscribe();
-  }
-});
-
-// Listener para Broadcast de chat
-let chatChannelInstance = null;
-
-$effect(() => {
-  const gameId = gameState?.gameId;
-  if (gameId && !chatChannelInstance) {
-    console.log('[Layout] Creating chat broadcast listener for game:', gameId);
-    chatChannelInstance = supabase.channel(`chat:${gameId}`);
-    chatChannelInstance.on('broadcast', { event: 'message' }, (payload) => {
-      console.log('[Layout] Chat broadcast received:', payload);
-      const message = payload.payload;
-      gameState.refreshChat(); // Forçar refresh quando nova msg recebida
-    });
-    chatChannelInstance.subscribe();
-  }
-});
-
 onMount(async () => {
   authState.init();
 
@@ -12294,28 +12115,9 @@ onMount(async () => {
 
   diceStore.initDiceBox(diceContainer);
 
-  // Conectar callback de rolls para todos os jogadores
-  gameState.onRollReceived((roll) => {
-    console.log('[Layout] Roll received:', roll);
-    diceStore.addRemoteAlert({
-      formula: roll.formula,
-      result: roll.result,
-      userName: roll.user_name,
-      details: roll.details,
-    });
-  });
-
   return () => {
     gameState.destroy();
     audioStore.destroy();
-    if (diceChannelInstance) {
-      supabase.removeChannel(diceChannelInstance);
-      diceChannelInstance = null;
-    }
-    if (chatChannelInstance) {
-      supabase.removeChannel(chatChannelInstance);
-      chatChannelInstance = null;
-    }
     if (diceContainer.parentNode) {
       diceContainer.parentNode.removeChild(diceContainer);
     }
