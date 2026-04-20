@@ -1,7 +1,6 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
 import { authState } from './auth.svelte.ts';
 import { parseFormula, evaluateRolls } from '../utils/diceLogic.js';
-import { gameState } from './gameState.svelte.ts';
 
 function createDiceStore() {
   let activeDice = $state([]);
@@ -101,7 +100,17 @@ function createDiceStore() {
         evaluated.formula = formula;
 
         const textual = `🎲 Rolou ${formula}: ${evaluated.textual}`;
-        gameState.sendRoll(formula, evaluated.total, evaluated, currentDiceColor, textual);
+        window.dispatchEvent(
+          new CustomEvent('outgoing_local_roll', {
+            detail: {
+              formula,
+              result: evaluated.total,
+              details: evaluated,
+              color: currentDiceColor,
+              text: textual,
+            },
+          }),
+        );
 
         const rollId = generateId();
         pendingAlerts = [
@@ -303,3 +312,9 @@ function createDiceStore() {
 }
 
 export const diceStore = createDiceStore();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('incoming_remote_roll', (e) => {
+    diceStore.playRemoteRoll(e.detail);
+  });
+}

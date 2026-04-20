@@ -2,7 +2,6 @@ import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/supabase/tables';
 import { authState } from './auth.svelte';
 import { fromCardDBArray } from '$lib/utils/cardMapper';
-import { diceStore } from './diceStore.svelte.js';
 
 const STORAGE_KEY = 'rpgboard_current_game';
 
@@ -173,13 +172,20 @@ class GameState {
           if (!this.rolls.find((r) => r.id === newRoll.id)) {
             this.rolls = [newRoll, ...this.rolls];
             if (newRoll.user_name !== this.userName) {
-              import('./diceStore.svelte.js').then((m) => m.diceStore.playRemoteRoll(newRoll));
+              window.dispatchEvent(new CustomEvent('incoming_remote_roll', { detail: newRoll }));
             }
           }
         },
       );
 
       this.setupRoomChannel();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('outgoing_local_roll', ((e: CustomEvent) => {
+        const { formula, result, details, color, text } = e.detail;
+        this.sendRoll(formula, result, details, color, text);
+      }) as EventListener);
     }
   }
 
@@ -248,7 +254,7 @@ class GameState {
           }
           if (roll && !this.rolls.find((r) => r.id === roll.id)) {
             this.rolls = [roll, ...this.rolls];
-            diceStore.playRemoteRoll(roll);
+            window.dispatchEvent(new CustomEvent('incoming_remote_roll', { detail: roll }));
           }
         }
       })
