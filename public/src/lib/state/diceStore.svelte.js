@@ -223,9 +223,9 @@ function createDiceStore() {
 
     if (diceBoxInstance && diceBoxInstance.isInitialized()) {
       try {
-        await diceBoxInstance.roll(forcedArray);
+        await diceBoxInstance.getInstance().roll(forcedArray);
       } catch (e) {
-        console.warn('Remote dice animation skipped', e);
+        console.warn('[DiceStore] Remote dice animation error', e);
       }
     }
 

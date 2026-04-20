@@ -223,6 +223,7 @@ class GameState {
 
     this.roomChannel
       .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
+        console.log('[Broadcast] Chat received:', payload);
         if (payload.userId !== authState.user?.id) {
           if (!this.chatMessages.find(m => m.id === payload.message.id)) {
             this.chatMessages = [...this.chatMessages, payload.message];
@@ -230,6 +231,7 @@ class GameState {
         }
       })
       .on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
+        console.log('[Broadcast] Roll received:', payload);
         if (payload.userId !== authState.user?.id) {
           const { roll, chatMsg } = payload.payload || {};
           if (chatMsg && !this.chatMessages.find(m => m.id === chatMsg.id)) {
@@ -241,7 +243,7 @@ class GameState {
           }
         }
       })
-      .subscribe();
+      .subscribe((status) => console.log('[Broadcast] Room channel status:', status));
 
     this.unsubRoom = () => {
       if (this.roomChannel) {
