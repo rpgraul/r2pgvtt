@@ -218,17 +218,6 @@ function createDiceStore() {
       themeColor: color,
     }));
 
-    isDiceVisible = true;
-    await ensureInitialized(null);
-
-    if (diceBoxInstance && diceBoxInstance.isInitialized()) {
-      try {
-        await diceBoxInstance.getInstance().roll(forcedArray);
-      } catch (e) {
-        console.warn('[DiceStore] Remote dice animation error', e);
-      }
-    }
-
     const rollId = generateId();
     pendingAlerts = [...pendingAlerts, {
       id: rollId,
@@ -244,6 +233,17 @@ function createDiceStore() {
       timestamp: Date.now(),
     }];
     processNextAlert();
+
+    isDiceVisible = true;
+    ensureInitialized(null).then(() => {
+      if (diceBoxInstance && diceBoxInstance.isInitialized()) {
+        try {
+          diceBoxInstance.getInstance().roll(forcedArray);
+        } catch (e) {
+          console.warn('[DiceStore] Remote dice animation error', e);
+        }
+      }
+    });
   }
 
   return {
