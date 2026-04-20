@@ -155,9 +155,9 @@ $effect(() => {
         <span class="font-medium text-sm">
           {msg.sender || 'Anônimo'}
         </span>
-        {#if msg.createdAt}
+        {#if msg.created_at || msg.createdAt}
           <span class="text-xs text-muted-foreground">
-            {formatTime(msg.createdAt)}
+            {formatTime(msg.created_at || msg.createdAt)}
           </span>
         {/if}
       </div>

@@ -89,26 +89,33 @@ function createDiceStore() {
     return new Promise(async (resolve, reject) => {
       try {
         const parsedData = parseFormula(formula);
-        if (!parsedData) {
-          throw new Error('Invalid formula');
-        }
+        if (!parsedData) throw new Error('Invalid formula');
 
-        const result = fallbackRoll(parsedData);
-        result.formula = formula;
+        isDiceVisible = true;
+        await ensureInitialized(null);
+
+        const physicsResult = await diceBoxInstance.roll(parsedData.baseFormula);
+
+        const evaluated = evaluateRolls(parsedData, physicsResult.rolls);
+        evaluated.formula = formula;
 
         const { gameState } = await import('./gameState.svelte.ts');
+        gameState.sendRoll(formula, evaluated.total, evaluated, currentDiceColor, `🎲 Rolou ${formula}: ${evaluated.textual}`);
 
-        gameState.sendRoll(formula, result.total, result, currentDiceColor, `🎲 Rolou ${formula}: ${result.textual}`);
-
-        await playSyncRoll({
-          formula,
-          result: result.total,
-          details: result,
-          color: currentDiceColor,
+        const rollId = generateId();
+        pendingAlerts = [...pendingAlerts, {
+          id: rollId,
           userName: getUserName(),
-        });
-
-        resolve(result);
+          formula,
+          result: evaluated.total,
+          successes: evaluated.successes,
+          textual: evaluated.textual,
+          rolls: evaluated.details ? evaluated.details.map((d) => d.value) : evaluated.rolls,
+          diceType: `d${parsedData.sides}`,
+          timestamp: Date.now()
+        }];
+        processNextAlert();
+        resolve(evaluated);
       } catch (error) {
         reject(error);
       }
@@ -197,54 +204,13 @@ function createDiceStore() {
     return diceBoxInstance;
   }
 
-  async function playSyncRoll(payload) {
-    const { formula, result, details, color, userName } = payload;
-    const sides = details.parsedData.sides;
-    const forcedArray = details.details.map((d) => ({
-      sides,
-      themeColor: color,
-      value: d.value,
-    }));
-
-    isDiceVisible = true;
-    await ensureInitialized(null);
-
-    if (diceBoxInstance && diceBoxInstance.isInitialized()) {
-      try {
-        await diceBoxInstance.getInstance().roll(forcedArray);
-      } catch (e) {
-        console.warn('Dice animation skipped', e);
-      }
-    }
-
-    const rollId = generateId();
-    pendingAlerts = [
-      ...pendingAlerts,
-      {
-        id: rollId,
-        userName,
-        formula,
-        result,
-        successes: details.successes,
-        textual: details.textual,
-        rolls: details.details.map((d) => d.value),
-        diceType: `d${sides}`,
-        timestamp: Date.now(),
-      },
-    ];
-    processNextAlert();
-    setTimeout(() => {
-      clear3DDice();
-    }, 3000);
-  }
-
   async function playRemoteRoll(roll) {
-    const color = roll.details?.color || '#0000ff';
+    const color = roll.color || roll.details?.color || '#0000ff';
     const rawDetails = roll.details?.details || [];
 
     if (rawDetails.length === 0) return;
 
-    const sides = roll.details?.parsedData?.sides || 6;
+    const sides = roll.details?.parsedData?.sides || 20;
     const forcedArray = rawDetails.map(d => ({
       qty: 1,
       sides,
@@ -257,33 +223,27 @@ function createDiceStore() {
 
     if (diceBoxInstance && diceBoxInstance.isInitialized()) {
       try {
-        await diceBoxInstance.getInstance().roll(forcedArray);
+        await diceBoxInstance.roll(forcedArray);
       } catch (e) {
         console.warn('Remote dice animation skipped', e);
       }
     }
 
     const rollId = generateId();
-    pendingAlerts = [
-      ...pendingAlerts,
-      {
-        id: rollId,
-        userName: roll.user_name,
-        formula: roll.formula,
-        result: roll.result,
-        successes: roll.details?.successes,
-        textual: roll.details?.textual,
-        rolls: rawDetails.map(d => d.value),
-        diceType: `d${sides}`,
-        color,
-        isRemote: true,
-        timestamp: Date.now(),
-      },
-    ];
+    pendingAlerts = [...pendingAlerts, {
+      id: rollId,
+      userName: roll.user_name,
+      formula: roll.formula,
+      result: roll.result,
+      successes: roll.details?.successes,
+      textual: roll.details?.textual,
+      rolls: rawDetails.map(d => d.value),
+      diceType: `d${sides}`,
+      color,
+      isRemote: true,
+      timestamp: Date.now(),
+    }];
     processNextAlert();
-    setTimeout(() => {
-      clear3DDice();
-    }, 3000);
   }
 
   return {
@@ -310,7 +270,6 @@ function createDiceStore() {
     },
 
     rollDice,
-    playSyncRoll,
     playRemoteRoll,
     dismissAlert,
     dismissAll,

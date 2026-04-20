@@ -112,17 +112,24 @@ export function createDiceBoxManager(container, options = {}) {
       }
 
       let shouldSum = false;
-      let effectiveFormula = formula.trim();
+      let effectiveFormula = formula;
+      let originalFormula = formula;
 
-      if (effectiveFormula.endsWith('+')) {
-        shouldSum = true;
-        effectiveFormula = effectiveFormula.slice(0, -1).trim();
+      if (typeof formula === 'string') {
+        effectiveFormula = formula.trim();
+        if (effectiveFormula.endsWith('+')) {
+          shouldSum = true;
+          effectiveFormula = effectiveFormula.slice(0, -1).trim();
+        }
+      } else if (Array.isArray(formula)) {
+        effectiveFormula = 'forced';
+        originalFormula = 'forced';
       }
 
       currentRollResolve = resolve;
       currentRollData = {
         formula: effectiveFormula,
-        originalFormula: formula,
+        originalFormula,
         shouldSum,
       };
 
