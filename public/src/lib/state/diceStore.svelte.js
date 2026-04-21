@@ -61,7 +61,11 @@ function createDiceStore() {
   }
 
   let diceInitializing = null;
-  let rollCompleteListener = null;
+  const rollCompleteListener = () => processNextAlert();
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('dice:3d:finished', rollCompleteListener);
+  }
 
   function initDiceBox(container = null) {
     if (diceBoxInstance) return Promise.resolve(diceBoxInstance);
@@ -99,15 +103,23 @@ function createDiceStore() {
       const result = evaluateRolls(parsedData, rawRolls);
       result.formula = formula;
 
-      const dicePayload = result.details.filter((d) => d.isKept).map((d) => ({
-        sides: parsedData.sides,
-        value: d.value,
-      }));
+      const dicePayload = result.details
+        .filter((d) => d.isKept)
+        .map((d) => ({
+          sides: parsedData.sides,
+          value: d.value,
+        }));
 
       const text = `🎲 Rolou ${formula}: ${result.textual}`;
       const sidesNum = parseInt(parsedData.sides, 10);
 
-      gameState.broadcastDiceAction(formula, result.total, { ...result, dicePayload }, currentDiceColor, text);
+      gameState.broadcastDiceAction(
+        formula,
+        result.total,
+        { ...result, dicePayload },
+        currentDiceColor,
+        text,
+      );
 
       await forceDisplayRoll({
         formula,
@@ -136,14 +148,16 @@ function createDiceStore() {
       details,
       dicePayload,
       color = currentDiceColor,
-      userName: userName,
+      userName,
       textual,
       sides: sidesNum,
       isRemote = false,
     } = rollData;
 
     const sides = parseInt(sidesNum || details?.parsedData?.sides || 20, 10);
-    const rolls = dicePayload || details?.details?.map((d) => d.value) || details?.rolls || [result];
+    const rolls = dicePayload ||
+      details?.details?.map((d) => d.value) ||
+      details?.rolls || [result];
 
     isDiceVisible = true;
     await ensureInitialized(null);
