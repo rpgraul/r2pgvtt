@@ -12,12 +12,6 @@ function createDiceStore() {
   let alertTimeoutId = null;
   let diceBoxInstance = null;
 
-  if (typeof window !== 'undefined') {
-    window.addEventListener('dice:3d:finished', () => {
-      processNextAlert();
-    });
-  }
-
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
     typeof window !== 'undefined'
@@ -157,15 +151,13 @@ function createDiceStore() {
     if (instance) {
       instance.show();
       try {
-        if (dicePayload && Array.isArray(dicePayload) && dicePayload.length > 0) {
-          await instance.roll(dicePayload);
-        } else {
-          await instance.roll(`${rolls.length}d${sides}`);
-        }
+        await instance.roll(`${rolls.length}d${sides}`);
       } catch (e) {
         console.warn('[DiceStore] 3D animation error:', e);
       }
     }
+
+    processNextAlert();
 
     const rollId = generateId();
     pendingAlerts = [
