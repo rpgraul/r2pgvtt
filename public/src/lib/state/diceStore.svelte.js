@@ -61,6 +61,7 @@ function createDiceStore() {
   }
 
   let diceInitializing = null;
+  let rollCompleteListener = null;
 
   function initDiceBox(container = null) {
     if (diceBoxInstance) return Promise.resolve(diceBoxInstance);
@@ -148,16 +149,16 @@ function createDiceStore() {
     await ensureInitialized(null);
     const instance = diceBoxInstance.getInstance();
 
+    const diceToRoll = Array.isArray(rolls) ? rolls : [{ sides, value: rolls[0] }];
+
     if (instance) {
       instance.show();
       try {
-        await instance.roll(`${rolls.length}d${sides}`);
+        await instance.roll(diceToRoll);
       } catch (e) {
         console.warn('[DiceStore] 3D animation error:', e);
       }
     }
-
-    processNextAlert();
 
     const rollId = generateId();
     pendingAlerts = [
