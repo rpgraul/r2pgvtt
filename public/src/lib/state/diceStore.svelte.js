@@ -143,15 +143,10 @@ function createDiceStore() {
 
     if (instance) {
       instance.show();
-      const forcedArray = rolls.map((val) => ({
-        sides,
-        value: parseInt(val, 10),
-        themeColor: color,
-      }));
       try {
-        await instance.roll(forcedArray);
+        await instance.roll(`${rolls.length}d${sides}`);
       } catch (e) {
-        console.warn('[DiceStore] Force roll error, showing anyway:', e);
+        console.warn('[DiceStore] 3D animation error:', e);
       }
     }
 
