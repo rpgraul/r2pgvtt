@@ -79,6 +79,7 @@ public/
         diceStore.svelte.js
         game.svelte.js
         music.svelte.js
+        ui.svelte.js
       stores/
         toast.js
       tiptap/
@@ -898,64 +899,51 @@ function createDiceStore() {
       const parsedData = parseFormula(formula);
       if (!parsedData) throw new Error('Invalid formula');
 
-      const result = fallbackRoll(parsedData);
+      const rawRolls = [];
+      for (let i = 0; i < parsedData.count; i++) {
+        rawRolls.push(getSecureRandomInt(parsedData.sides));
+      }
+      const result = evaluateRolls(parsedData, rawRolls);
       result.formula = formula;
 
-      const sides = parseInt(parsedData.sides);
-      const forcedArray = result.details.map((d) => ({
-        qty: 1,
-        sides,
-        value: parseInt(d.value),
-        themeColor: currentDiceColor,
-      }));
-
       const text = `🎲 Rolou ${formula}: ${result.textual}`;
+      const sidesNum = parseInt(parsedData.sides, 10);
+
       gameState.broadcastDiceAction(formula, result.total, result, currentDiceColor, text);
 
-      isDiceVisible = true;
-      await ensureInitialized(null);
-      const instance = diceBoxInstance.getInstance();
-
-      if (instance) {
-        instance.show();
-        await instance.roll(forcedArray);
-      }
-
-      const rollId = generateId();
-      pendingAlerts = [
-        ...pendingAlerts,
-        {
-          id: rollId,
-          userName: getUserName(),
-          formula,
-          result: result.total,
-          successes: result.successes,
-          textual: result.textual,
-          rolls: result.details.map((d) => d.value),
-          diceType: `d${sides}`,
-          color: currentDiceColor,
-          timestamp: Date.now(),
-        },
-      ];
-      processNextAlert();
+      await forceDisplayRoll({
+        formula,
+        result: result.total,
+        details: result,
+        userName: getUserName(),
+        textual: text,
+        sides: sidesNum,
+        color: currentDiceColor,
+        isRemote: false,
+      });
 
       gameState.addMessageToChatLocal(text, 'user', getUserName());
       return result;
     } catch (error) {
-      console.error('[DiceStore] Roll error', error);
+      console.error('[DiceStore] Local Roll Error:', error);
       throw error;
     }
   }
 
-  async function execute3DAnimation(payload) {
-    const { formula, result, details, color, userName, textual } = payload;
-    const sides = details.parsedData.sides;
-    const forcedArray = details.details.map((d) => ({
-      qty: 1,
-      sides,
-      value: parseInt(d.value),
-      themeColor: color || '#0000ff',
-    }));
+  async function forceDisplayRoll(rollData) {
+    const {
+      formula,
+      result,
+      details,
+      color = currentDiceColor,
+      userName: userName,
+      textual,
+      sides: sidesNum,
+      isRemote = false,
+    } = rollData;
+
+    const sides = parseInt(sidesNum || details?.parsedData?.sides || 20, 10);
+    const rolls = details?.details?.map((d) => d.value) || details?.rolls || [result];
 
     isDiceVisible = true;
     await ensureInitialized(null);
@@ -963,7 +951,11 @@ function createDiceStore() {
 
     if (instance) {
       instance.show();
-      await instance.roll(forcedArray);
+      try {
+        await instance.roll(`${rolls.length}d${sides}`);
+      } catch (e) {
+        console.warn('[DiceStore] 3D animation error:', e);
+      }
     }
 
     const rollId = generateId();
@@ -974,23 +966,16 @@ function createDiceStore() {
         userName,
         formula,
         result,
-        successes: details.successes,
+        successes: details?.successes,
         textual,
-        rolls: details.details.map((d) => d.value),
+        rolls,
         diceType: `d${sides}`,
         color,
+        isRemote,
         timestamp: Date.now(),
       },
     ];
     processNextAlert();
-  }
-
-  function fallbackRoll(parsedData) {
-    const rawRolls = [];
-    for (let i = 0; i < parsedData.count; i++) {
-      rawRolls.push(getSecureRandomInt(parsedData.sides));
-    }
-    return evaluateRolls(parsedData, rawRolls);
   }
 
   function completeDice(id, result) {
@@ -1075,46 +1060,26 @@ function createDiceStore() {
       const rawDetails = roll.details?.details || [];
       if (rawDetails.length === 0) return;
 
-      const sides = roll.details?.parsedData?.sides || 20;
-      const forcedArray = rawDetails.map((d) => ({
-        qty: 1,
-        sides,
-        value: parseInt(d.value),
-        themeColor: color,
-      }));
+      const sidesNum = parseInt(roll.details?.parsedData?.sides || 20, 10);
+      const result = roll.result;
+      const details = roll.details;
+      const formula = roll.formula;
+      const textual = roll.details?.textual || `🎲 Rolou ${formula}: ${details?.textual || result}`;
 
-      isDiceVisible = true;
-      await ensureInitialized(null);
+      await forceDisplayRoll({
+        formula,
+        result,
+        details,
+        color,
+        userName: roll.user_name,
+        textual,
+        sides: sidesNum,
+        isRemote: true,
+      });
 
-      const instance = diceBoxInstance.getInstance();
-      if (instance) {
-        instance.show();
-        await instance.roll(forcedArray).catch((e) => console.warn('Remote animation skipped', e));
-      }
-
-      const rollId = generateId();
-      pendingAlerts = [
-        ...pendingAlerts,
-        {
-          id: rollId,
-          userName: roll.user_name,
-          formula: roll.formula,
-          result: roll.result,
-          successes: roll.details?.successes,
-          textual: roll.details?.textual,
-          rolls: rawDetails.map((d) => d.value),
-          diceType: `d${sides}`,
-          color,
-          isRemote: true,
-          timestamp: Date.now(),
-        },
-      ];
-      processNextAlert();
-
-      const text = `🎲 Rolou ${roll.formula}: ${roll.details?.textual}`;
-      gameState.addMessageToChatLocal(text, 'user', roll.user_name);
+      gameState.addMessageToChatLocal(textual, 'user', roll.user_name);
     } catch (err) {
-      console.error('[DiceStore] playRemoteRoll error', err);
+      console.error('[DiceStore] playRemoteRoll error:', err);
     }
   }
 
@@ -1142,7 +1107,7 @@ function createDiceStore() {
     },
 
     rollDice,
-    execute3DAnimation,
+    forceDisplayRoll,
     playRemoteRoll,
     dismissAlert,
     dismissAll,
@@ -1945,6 +1910,31 @@ function createMusicState() {
 }
 
 export const musicState = createMusicState();
+</file>
+
+<file path="public/src/lib/state/ui.svelte.js">
+export function createUIState() {
+	let isSidebarOpen = $state(false);
+	let activeTab = $state('chat');
+	let isHelpOpen = $state(false);
+
+	return {
+		get isSidebarOpen() {
+			return isSidebarOpen;
+		},
+		get activeTab() {
+			return activeTab;
+		},
+		get isHelpOpen() {
+			return isHelpOpen;
+		},
+		toggleSidebar: () => (isSidebarOpen = !isSidebarOpen),
+		setTab: (tab) => (activeTab = tab),
+		toggleHelp: () => (isHelpOpen = !isHelpOpen),
+	};
+}
+
+export const uiState = createUIState();
 </file>
 
 <file path="public/src/lib/stores/toast.js">

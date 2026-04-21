@@ -6,7 +6,6 @@ import { page } from '$app/stores';
 import YouTubeAudioPlayer from '$components/audio/YouTubeAudioPlayer.svelte';
 import YouTubeEmbed from '$components/player/YouTubeEmbed.svelte';
 import DiceLayer from '$components/dice/DiceLayer.svelte';
-import FAB from '$components/FAB.svelte';
 import Header from '$components/Header.svelte';
 import { Toaster } from '$lib/components/ui/sonner/index.js';
 import { audioStore } from '$lib/state/audio.svelte.ts';
@@ -14,6 +13,10 @@ import { authState } from '$lib/state/auth.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { musicState } from '$lib/state/music.svelte.js';
+import { uiState } from '$lib/state/ui.svelte.js';
+import Sidebar from '$lib/components/layout/Sidebar.svelte';
+import ControlButtons from '$lib/components/ui/ControlButtons.svelte';
+import HelpModal from '$lib/components/layout/HelpModal.svelte';
 import '../app.css';
 
 let { children } = $props();
@@ -29,10 +32,6 @@ const isGamesPage = $derived(currentPath.startsWith('/games'));
 const showHeaderOnPublicPages = $derived(
   currentPath === '/' || currentPath === '' || currentPath === '/converter',
 );
-
-// Ocultar FAB em rotas específicas
-const hideFabRoutes = ['/auth/login', '/games', '/join'];
-const showFab = $derived(!hideFabRoutes.some((route) => currentPath.startsWith(route)));
 
 // Loading durante auth check
 const showAuthLoading = $derived(authState.isLoading);
@@ -129,11 +128,18 @@ $effect(() => {
     <Header minimal={currentPath === '/auth/login' || isGamesPage} />
   {/if}
 
-  <main>
-    {@render children()}
-  </main>
+  <div class="flex h-screen w-screen overflow-hidden bg-background">
+    <main class="relative flex-1 overflow-auto transition-all duration-300">
+      {@render children()}
+      <ControlButtons />
+    </main>
 
-  {#if showFab}
-    <FAB {currentPath} />
-  {/if}
+    {#if uiState.isSidebarOpen}
+      <div class="h-full w-80 border-l bg-card transition-all duration-300 animate-slide-in-right">
+        <Sidebar />
+      </div>
+    {/if}
+  </div>
+
+  <HelpModal />
 {/if}
