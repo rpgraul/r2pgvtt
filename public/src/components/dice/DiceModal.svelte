@@ -1,6 +1,7 @@
 <script>
 import { cn } from '$lib/utils/cn.js';
 import { X, Dices } from 'lucide-svelte';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
 
 let { open = $bindable(false), onRollComplete = () => {} } = $props();
 
@@ -13,55 +14,27 @@ const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
 async function roll(dice) {
   isRolling = true;
   formula = `1${dice}`;
-
-  const rollResult = Math.floor(Math.random() * parseInt(dice.slice(1))) + 1;
-  result = {
-    formula,
-    total: rollResult,
-    rolls: [rollResult],
-    diceType: dice,
-  };
-
-  onRollComplete(result);
-
-  setTimeout(() => {
-    isRolling = false;
-    open = false;
-  }, 1500);
+  try {
+    result = await diceStore.rollDice(formula);
+    onRollComplete(result);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setTimeout(() => { isRolling = false; open = false; }, 1500);
+  }
 }
 
 async function rollCustom() {
   if (!formula.trim()) return;
-
   isRolling = true;
-
-  const match = formula.match(/(\d+)d(\d+)/i);
-  if (match) {
-    const count = parseInt(match[1]);
-    const sides = parseInt(match[2]);
-    let total = 0;
-    const rolls = [];
-
-    for (let i = 0; i < count; i++) {
-      const r = Math.floor(Math.random() * sides) + 1;
-      rolls.push(r);
-      total += r;
-    }
-
-    result = {
-      formula,
-      total,
-      rolls,
-      diceType: `d${sides}`,
-    };
-
+  try {
+    result = await diceStore.rollDice(formula);
     onRollComplete(result);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setTimeout(() => { isRolling = false; open = false; }, 1500);
   }
-
-  setTimeout(() => {
-    isRolling = false;
-    open = false;
-  }, 1500);
 }
 </script>
 

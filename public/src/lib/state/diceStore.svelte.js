@@ -1,7 +1,7 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
 import { authState } from './auth.svelte.ts';
 import { gameState } from './gameState.svelte.ts';
-import { parseFormula, evaluateRolls } from '../utils/diceLogic.js';
+import { parseFormula, evaluateRolls, getSecureRandomInt } from '../utils/diceLogic.js';
 
 function createDiceStore() {
   let activeDice = $state([]);
@@ -179,7 +179,7 @@ function createDiceStore() {
   function fallbackRoll(parsedData) {
     const rawRolls = [];
     for (let i = 0; i < parsedData.count; i++) {
-      rawRolls.push(Math.floor(Math.random() * parsedData.sides) + 1);
+      rawRolls.push(getSecureRandomInt(parsedData.sides));
     }
     return evaluateRolls(parsedData, rawRolls);
   }

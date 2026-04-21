@@ -101,7 +101,7 @@ export function evaluateRolls(parsedData, rawRolls) {
       const nextCheck = [];
       for (const val of toCheck) {
         if (val === parsedData.sides) {
-          const newRoll = Math.floor(Math.random() * parsedData.sides) + 1;
+          const newRoll = getSecureRandomInt(parsedData.sides);
           finalRolls.push(newRoll);
           nextCheck.push(newRoll);
           explodedIndices.push(finalRolls.length - 1);
@@ -213,4 +213,18 @@ export function evaluateRolls(parsedData, rawRolls) {
     textual: rollStr,
     parsedData,
   };
+}
+
+export function getSecureRandomInt(sides) {
+  const randomBuffer = new Uint32Array(1);
+  const maxUint = 0xffffffff;
+  const limit = maxUint - (maxUint % sides);
+
+  let rnd;
+  do {
+    window.crypto.getRandomValues(randomBuffer);
+    rnd = randomBuffer[0];
+  } while (rnd >= limit);
+
+  return (rnd % sides) + 1;
 }
