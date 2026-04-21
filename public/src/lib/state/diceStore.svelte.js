@@ -91,19 +91,22 @@ function createDiceStore() {
       const parsedData = parseFormula(formula);
       if (!parsedData) throw new Error('Invalid formula');
 
-      const result = fallbackRoll(parsedData);
+      const rawRolls = [];
+      for (let i = 0; i < parsedData.count; i++) {
+        rawRolls.push(getSecureRandomInt(parsedData.sides));
+      }
+      const result = evaluateRolls(parsedData, rawRolls);
       result.formula = formula;
-
-      const sides = parseInt(parsedData.sides);
-      const forcedArray = result.details.map((d) => ({
-        qty: 1,
-        sides,
-        value: parseInt(d.value),
-        themeColor: currentDiceColor,
-      }));
 
       const text = `🎲 Rolou ${formula}: ${result.textual}`;
       gameState.broadcastDiceAction(formula, result.total, result, currentDiceColor, text);
+
+      const sidesNum = parseInt(parsedData.sides, 10);
+      const forcedArray = result.details.map((d) => ({
+        sides: sidesNum,
+        value: parseInt(d.value, 10),
+        themeColor: currentDiceColor,
+      }));
 
       isDiceVisible = true;
       await ensureInitialized(null);
@@ -125,7 +128,7 @@ function createDiceStore() {
           successes: result.successes,
           textual: result.textual,
           rolls: result.details.map((d) => d.value),
-          diceType: `d${sides}`,
+          diceType: `d${sidesNum}`,
           color: currentDiceColor,
           timestamp: Date.now(),
         },
@@ -135,7 +138,7 @@ function createDiceStore() {
       gameState.addMessageToChatLocal(text, 'user', getUserName());
       return result;
     } catch (error) {
-      console.error('[DiceStore] Roll error', error);
+      console.error('[DiceStore] Local Roll Error:', error);
       throw error;
     }
   }
@@ -176,14 +179,6 @@ function createDiceStore() {
       },
     ];
     processNextAlert();
-  }
-
-  function fallbackRoll(parsedData) {
-    const rawRolls = [];
-    for (let i = 0; i < parsedData.count; i++) {
-      rawRolls.push(getSecureRandomInt(parsedData.sides));
-    }
-    return evaluateRolls(parsedData, rawRolls);
   }
 
   function completeDice(id, result) {
@@ -268,11 +263,10 @@ function createDiceStore() {
       const rawDetails = roll.details?.details || [];
       if (rawDetails.length === 0) return;
 
-      const sides = roll.details?.parsedData?.sides || 20;
+      const sidesNum = parseInt(roll.details?.parsedData?.sides || 20, 10);
       const forcedArray = rawDetails.map((d) => ({
-        qty: 1,
-        sides,
-        value: parseInt(d.value),
+        sides: sidesNum,
+        value: parseInt(d.value, 10),
         themeColor: color,
       }));
 
@@ -296,7 +290,7 @@ function createDiceStore() {
           successes: roll.details?.successes,
           textual: roll.details?.textual,
           rolls: rawDetails.map((d) => d.value),
-          diceType: `d${sides}`,
+          diceType: `d${sidesNum}`,
           color,
           isRemote: true,
           timestamp: Date.now(),
@@ -307,7 +301,7 @@ function createDiceStore() {
       const text = `🎲 Rolou ${roll.formula}: ${roll.details?.textual}`;
       gameState.addMessageToChatLocal(text, 'user', roll.user_name);
     } catch (err) {
-      console.error('[DiceStore] playRemoteRoll error', err);
+      console.error('[DiceStore] playRemoteRoll error:', err);
     }
   }
 
