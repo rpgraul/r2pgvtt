@@ -157,7 +157,7 @@ function createDiceStore() {
     if (instance) {
       instance.show();
       try {
-        if (dicePayload && Array.isArray(dicePayload)) {
+        if (dicePayload && Array.isArray(dicePayload) && dicePayload.length > 0) {
           await instance.roll(dicePayload);
         } else {
           await instance.roll(`${rolls.length}d${sides}`);
