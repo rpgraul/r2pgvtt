@@ -61,7 +61,13 @@ function createDiceStore() {
   }
 
   let diceInitializing = null;
-  const rollCompleteListener = () => processNextAlert();
+  const rollCompleteListener = () => {
+    processNextAlert();
+    const lastAlert = displayedAlerts[displayedAlerts.length - 1];
+    if (lastAlert?.textual) {
+      gameState.addMessageToChatLocal(lastAlert.textual, 'user', lastAlert.userName);
+    }
+  };
 
   if (typeof window !== 'undefined') {
     window.addEventListener('dice:3d:finished', rollCompleteListener);
@@ -133,7 +139,6 @@ function createDiceStore() {
         isRemote: false,
       });
 
-      gameState.addMessageToChatLocal(text, 'user', getUserName());
       return result;
     } catch (error) {
       console.error('[DiceStore] Local Roll Error:', error);
