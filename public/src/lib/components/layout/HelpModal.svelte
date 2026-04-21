@@ -1,8 +1,8 @@
 <script>
-	import Dialog from '$components/ui/Dialog.svelte';
-	import DialogContent from '$components/ui/DialogContent.svelte';
-	import DialogTitle from '$components/ui/DialogTitle.svelte';
-	import { uiState } from '$lib/state/ui.svelte.js';
+import Dialog from '$components/ui/Dialog.svelte';
+import DialogContent from '$components/ui/DialogContent.svelte';
+import DialogTitle from '$components/ui/DialogTitle.svelte';
+import { uiState } from '$lib/state/ui.svelte.js';
 </script>
 
 <Dialog open={uiState.isHelpOpen} onOpenChange={(v) => (uiState.isHelpOpen = v)}>

@@ -36,7 +36,7 @@ export function createDiceBoxManager(container, options = {}) {
           theme,
           themeColor,
           onRollComplete: (results) => {
-            window.dispatchEvent(new CustomEvent('dice:3d:finished', { detail: results }));
+            window.dispatchEvent(new CustomEvent('dice:3d:finished', { detail: { results } }));
           },
         });
         await diceBoxInstance.init();
@@ -69,7 +69,15 @@ export function createDiceBoxManager(container, options = {}) {
 
   init();
 
-  return { clear, show, hide, isInitialized, updateConfig, init, getInstance: () => diceBoxInstance };
+  return {
+    clear,
+    show,
+    hide,
+    isInitialized,
+    updateConfig,
+    init,
+    getInstance: () => diceBoxInstance,
+  };
 }
 
 export function useDiceBox(node, options = {}) {

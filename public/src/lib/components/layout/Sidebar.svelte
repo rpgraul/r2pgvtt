@@ -1,16 +1,16 @@
 <script>
-	import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
-	import { uiState } from '$lib/state/ui.svelte.js';
-	import { X, MessageCircle, Music } from 'lucide-svelte';
-	import ChatPanel from '$components/chat/ChatSidebar.svelte';
-	import MusicPlayer from '$components/player/MusicPlayer.svelte';
-	import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
+import { uiState } from '$lib/state/ui.svelte.js';
+import { X, MessageCircle, Music } from 'lucide-svelte';
+import ChatPanel from '$components/chat/ChatSidebar.svelte';
+import MusicPlayer from '$components/player/MusicPlayer.svelte';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
 
-	const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
 
-	function handleRoll(formula) {
-		diceStore.rollDice(formula).catch((err) => console.error('[Sidebar] Dice error:', err));
-	}
+function handleRoll(formula) {
+  diceStore.rollDice(formula).catch((err) => console.error('[Sidebar] Dice error:', err));
+}
 </script>
 
 <div class="flex h-full flex-col">

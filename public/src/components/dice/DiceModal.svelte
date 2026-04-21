@@ -20,7 +20,10 @@ async function roll(dice) {
   } catch (err) {
     console.error(err);
   } finally {
-    setTimeout(() => { isRolling = false; open = false; }, 1500);
+    setTimeout(() => {
+      isRolling = false;
+      open = false;
+    }, 1500);
   }
 }
 
@@ -33,7 +36,10 @@ async function rollCustom() {
   } catch (err) {
     console.error(err);
   } finally {
-    setTimeout(() => { isRolling = false; open = false; }, 1500);
+    setTimeout(() => {
+      isRolling = false;
+      open = false;
+    }, 1500);
   }
 }
 </script>

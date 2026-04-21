@@ -1,6 +1,6 @@
 <script>
-	import { uiState } from '$lib/state/ui.svelte.js';
-	import { MessageSquare, HelpCircle } from 'lucide-svelte';
+import { uiState } from '$lib/state/ui.svelte.js';
+import { MessageSquare, HelpCircle } from 'lucide-svelte';
 </script>
 
 <div 

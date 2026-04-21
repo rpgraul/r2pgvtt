@@ -231,11 +231,10 @@ class GameState {
           }
         }
       })
-      .on('broadcast', { event: 'dice_action' }, ({ payload }) => {
+      .on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
         if (payload.userId !== authState.user?.id) {
-          this.rolls = [payload.roll, ...this.rolls];
           import('./diceStore.svelte.js').then((m) => {
-            m.diceStore.playRemoteRoll(payload.roll);
+            m.diceStore.processRollSinal(payload.payload);
           });
         }
       })
@@ -384,38 +383,37 @@ class GameState {
     db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
   }
 
-  broadcastDiceAction(formula: string, result: number, details: any, color: string, textual: string) {
+  broadcastDiceAction(payload: any) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-
-    const rollData = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      user_name: authState.displayName,
-      formula,
-      result,
-      details,
-      color,
-      game_id: this.currentGameId,
-      created_at: new Date().toISOString(),
-    };
 
     if (this.roomChannel) {
       this.roomChannel.send({
         type: 'broadcast',
-        event: 'dice_action',
-        payload: { roll: rollData, userId: authState.user?.id },
+        event: 'dice_roll',
+        payload: { payload, userId: authState.user?.id },
       });
     }
 
+    // Persistência de histórico silenciada para evitar bloqueios de UI (RLS)
     db.addRoll({
-      userName: authState.displayName,
-      formula,
-      result,
-      details,
-      color,
+      userName: payload.metadata.userName,
+      formula: payload.metadata.formula,
+      result: payload.metadata.total,
+      details: payload.deterministicDice,
+      color: payload.metadata.color,
       gameId: this.currentGameId,
-    }).catch(console.error);
+    })
+      .then(({ error }) => {
+        if (error) console.info('Broadcast OK. Persistência de histórico bloqueada (RLS).');
+      })
+      .catch(() => {});
 
-    db.addChatMessage(textual, 'user', authState.displayName, this.currentGameId).catch(console.error);
+    db.addChatMessage(
+      payload.metadata.textual,
+      'user',
+      payload.metadata.userName,
+      this.currentGameId,
+    ).catch(() => {});
   }
 
   addMessageToChatLocal(text: string, type: string, sender: string) {

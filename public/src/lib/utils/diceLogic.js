@@ -216,15 +216,13 @@ export function evaluateRolls(parsedData, rawRolls) {
 }
 
 export function getSecureRandomInt(sides) {
-  const randomBuffer = new Uint32Array(1);
-  const maxUint = 0xffffffff;
-  const limit = maxUint - (maxUint % sides);
-
-  let rnd;
+  const array = new Uint32Array(1);
+  const maxUint32 = 0xffffffff;
+  const threshold = maxUint32 - (maxUint32 % sides);
+  let val;
   do {
-    window.crypto.getRandomValues(randomBuffer);
-    rnd = randomBuffer[0];
-  } while (rnd >= limit);
-
-  return (rnd % sides) + 1;
+    window.crypto.getRandomValues(array);
+    val = array[0];
+  } while (val >= threshold);
+  return (val % sides) + 1;
 }

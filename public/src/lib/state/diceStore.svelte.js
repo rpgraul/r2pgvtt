@@ -10,6 +10,7 @@ function createDiceStore() {
   let hasUserDismissed = $state(false);
   let isDiceVisible = $state(false);
   let alertTimeoutId = null;
+  let rollMetadataQueue = $state(new Map());
   let diceBoxInstance = null;
 
   const defaultColor = '#0000ff';
@@ -29,23 +30,6 @@ function createDiceStore() {
     }
   }
 
-  function addRemoteAlert(alertData) {
-    const alertId = `remote-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const newAlert = {
-      id: alertId,
-      formula: alertData.formula,
-      total: alertData.result,
-      userName: alertData.userName,
-      rolls: alertData.details?.rolls || [],
-      diceType: alertData.details?.diceType || alertData.formula,
-      color: alertData.color || '#0000ff',
-      isRemote: true,
-      timestamp: Date.now(),
-    };
-    pendingAlerts = [...pendingAlerts, newAlert];
-    processNextAlert();
-  }
-
   const canDismiss = $derived(pendingAlerts.length === 0 && !hasActiveRolls());
 
   function hasActiveRolls() {
@@ -62,10 +46,31 @@ function createDiceStore() {
 
   let diceInitializing = null;
   const rollCompleteListener = () => {
-    processNextAlert();
-    const lastAlert = displayedAlerts[displayedAlerts.length - 1];
-    if (lastAlert?.textual) {
-      gameState.addMessageToChatLocal(lastAlert.textual, 'user', lastAlert.userName);
+    const firstId = rollMetadataQueue.keys().next().value;
+    if (!firstId) return;
+
+    const metadata = rollMetadataQueue.get(firstId);
+    if (metadata) {
+      // 1. Adiciona ao Chat Local
+      gameState.addMessageToChatLocal(metadata.textual, 'user', metadata.userName);
+
+      // 2. Prepara Alerta de UI
+      const newAlert = {
+        id: firstId,
+        userName: metadata.userName,
+        formula: metadata.formula,
+        result: metadata.total,
+        rolls: metadata.rolls || [],
+        diceType: `d${metadata.sides || 20}`,
+        color: metadata.color,
+        timestamp: Date.now(),
+      };
+
+      pendingAlerts = [...pendingAlerts, newAlert];
+      processNextAlert();
+
+      // 3. Limpa da fila
+      rollMetadataQueue.delete(firstId);
     }
   };
 
@@ -102,43 +107,31 @@ function createDiceStore() {
       const parsedData = parseFormula(formula);
       if (!parsedData) throw new Error('Invalid formula');
 
-      const rawRolls = [];
-      for (let i = 0; i < parsedData.count; i++) {
-        rawRolls.push(getSecureRandomInt(parsedData.sides));
-      }
+      const rawRolls = Array.from({ length: parsedData.count }, () =>
+        getSecureRandomInt(parsedData.sides),
+      );
       const result = evaluateRolls(parsedData, rawRolls);
-      result.formula = formula;
+      const rollId = crypto.randomUUID();
 
-      const dicePayload = result.details
-        .filter((d) => d.isKept)
-        .map((d) => ({
+      const payload = {
+        rollId,
+        deterministicDice: result.details.map((d) => ({
           sides: parsedData.sides,
           value: d.value,
-        }));
+          themeColor: currentDiceColor,
+        })),
+        metadata: {
+          userName: authState.displayName,
+          formula,
+          total: result.total,
+          textual: `🎲 Rolou ${formula}: ${result.textual}`,
+          color: currentDiceColor,
+          sides: parsedData.sides,
+        },
+      };
 
-      const text = `🎲 Rolou ${formula}: ${result.textual}`;
-      const sidesNum = parseInt(parsedData.sides, 10);
-
-      gameState.broadcastDiceAction(
-        formula,
-        result.total,
-        { ...result, dicePayload },
-        currentDiceColor,
-        text,
-      );
-
-      await forceDisplayRoll({
-        formula,
-        result: result.total,
-        details: result,
-        dicePayload,
-        userName: getUserName(),
-        textual: text,
-        sides: sidesNum,
-        color: currentDiceColor,
-        isRemote: false,
-      });
-
+      // DISPARA O BROADCAST (O Roller também vai processar isso no receptor)
+      gameState.broadcastDiceAction(payload);
       return result;
     } catch (error) {
       console.error('[DiceStore] Local Roll Error:', error);
@@ -146,77 +139,25 @@ function createDiceStore() {
     }
   }
 
-  async function forceDisplayRoll(rollData) {
-    const {
-      formula,
-      result,
-      details,
-      dicePayload,
-      color = currentDiceColor,
-      userName,
-      textual,
-      sides: sidesNum,
-      isRemote = false,
-    } = rollData;
+  async function processRollSinal(payload) {
+    const { rollId, deterministicDice, metadata } = payload;
 
-    const sides = parseInt(sidesNum || details?.parsedData?.sides || 20, 10);
-    const rolls = dicePayload ||
-      details?.details?.map((d) => d.value) ||
-      details?.rolls || [result];
+    // Armazena na fila para mostrar o texto depois
+    rollMetadataQueue.set(rollId, metadata);
 
     isDiceVisible = true;
     await ensureInitialized(null);
     const instance = diceBoxInstance.getInstance();
-
-    const diceToRoll = Array.isArray(rolls) ? rolls : [{ sides, value: rolls[0] }];
-
     if (instance) {
       instance.show();
       try {
-        await instance.roll(diceToRoll);
+        await instance.roll(deterministicDice);
       } catch (e) {
         console.warn('[DiceStore] 3D animation error:', e);
+        // Fallback: Se falhar a animação, libera o alerta manualmente
+        rollCompleteListener();
       }
     }
-
-    const rollId = generateId();
-    pendingAlerts = [
-      ...pendingAlerts,
-      {
-        id: rollId,
-        userName,
-        formula,
-        result,
-        successes: details?.successes,
-        textual,
-        rolls: rolls.map ? rolls.map((d) => (typeof d === 'object' ? d.value : d)) : rolls,
-        diceType: `d${sides}`,
-        color,
-        isRemote,
-        timestamp: Date.now(),
-      },
-    ];
-  }
-
-  function completeDice(id, result) {
-    activeDice = activeDice.map((d) => (d.id === id ? { ...d, rolling: false, result } : d));
-
-    pendingAlerts = [
-      ...pendingAlerts,
-      {
-        id,
-        userName: getUserName(),
-        formula: result.parsedData?.original || result.formula,
-        result: result.total,
-        successes: result.successes,
-        textual: result.textual,
-        rolls: result.details ? result.details.map((d) => d.value) : result.rolls,
-        diceType: result.parsedData ? `d${result.parsedData.sides}` : result.diceType,
-        timestamp: Date.now(),
-      },
-    ];
-
-    processNextAlert();
   }
 
   function processNextAlert() {
@@ -272,39 +213,6 @@ function createDiceStore() {
     return diceBoxInstance;
   }
 
-  async function playRemoteRoll(roll) {
-    if (!gameState.gameId) return;
-
-    try {
-      const color = roll.color || roll.details?.color || '#0000ff';
-      const rawDetails = roll.details?.details || [];
-      if (rawDetails.length === 0) return;
-
-      const sidesNum = parseInt(roll.details?.parsedData?.sides || 20, 10);
-      const result = roll.result;
-      const details = roll.details;
-      const formula = roll.formula;
-      const textual = roll.details?.textual || `🎲 Rolou ${formula}: ${details?.textual || result}`;
-      const dicePayload = roll.details?.dicePayload;
-
-      await forceDisplayRoll({
-        formula,
-        result,
-        details,
-        dicePayload,
-        color,
-        userName: roll.user_name,
-        textual,
-        sides: sidesNum,
-        isRemote: true,
-      });
-
-      gameState.addMessageToChatLocal(textual, 'user', roll.user_name);
-    } catch (err) {
-      console.error('[DiceStore] playRemoteRoll error:', err);
-    }
-  }
-
   return {
     get activeDice() {
       return activeDice;
@@ -329,8 +237,7 @@ function createDiceStore() {
     },
 
     rollDice,
-    forceDisplayRoll,
-    playRemoteRoll,
+    processRollSinal,
     dismissAlert,
     dismissAll,
     clearDice,
