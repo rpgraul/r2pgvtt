@@ -128,10 +128,9 @@ $effect(() => {
     <Header minimal={currentPath === '/auth/login' || isGamesPage} />
   {/if}
 
-  <div class="flex h-screen w-screen overflow-hidden bg-background">
+  <div class="relative flex h-screen w-screen overflow-hidden bg-background">
     <main class="relative flex-1 overflow-auto transition-all duration-300">
       {@render children()}
-      <ControlButtons />
     </main>
 
     {#if uiState.isSidebarOpen}
@@ -139,6 +138,8 @@ $effect(() => {
         <Sidebar />
       </div>
     {/if}
+
+    <ControlButtons />
   </div>
 
   <HelpModal />

@@ -3,7 +3,7 @@
 	import { MessageSquare, HelpCircle } from 'lucide-svelte';
 </script>
 
-<div class="fixed bottom-6 right-6 z-50 flex gap-3">
+<div class="absolute bottom-6 z-50 flex gap-3 transition-all duration-300 {uiState.isSidebarOpen ? 'right-[340px]' : 'right-6'}">
 	<button
 		onclick={() => uiState.toggleHelp()}
 		class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-lg transition-transform hover:scale-110 hover:bg-muted/80"
