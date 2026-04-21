@@ -96,7 +96,8 @@ function createDiceStore() {
 
       const sides = parseInt(parsedData.sides);
       const forcedArray = result.details.map((d) => ({
-        type: `d${sides}`,
+        qty: 1,
+        sides,
         value: parseInt(d.value),
         themeColor: currentDiceColor,
       }));
@@ -143,7 +144,8 @@ function createDiceStore() {
     const { formula, result, details, color, userName, textual } = payload;
     const sides = details.parsedData.sides;
     const forcedArray = details.details.map((d) => ({
-      type: `d${sides}`,
+      qty: 1,
+      sides,
       value: parseInt(d.value),
       themeColor: color || '#0000ff',
     }));
@@ -268,7 +270,8 @@ function createDiceStore() {
 
       const sides = roll.details?.parsedData?.sides || 20;
       const forcedArray = rawDetails.map((d) => ({
-        type: `d${sides}`,
+        qty: 1,
+        sides,
         value: parseInt(d.value),
         themeColor: color,
       }));
@@ -333,6 +336,7 @@ function createDiceStore() {
 
     rollDice,
     execute3DAnimation,
+    playRemoteRoll,
     dismissAlert,
     dismissAll,
     clearDice,

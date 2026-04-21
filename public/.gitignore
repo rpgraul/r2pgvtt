@@ -1,0 +1,15 @@
+# Build output (generated)
+dist/
+
+# SvelteKit cache
+.svelte-kit/
+
+# Environment
+.env
+
+# Repomix
+contexto.txt
+bits.txt
+shadcn-svelte.txt
+referencias-tecnicas.txt
+repomix-output.xml
