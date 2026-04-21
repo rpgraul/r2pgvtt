@@ -12,6 +12,12 @@ function createDiceStore() {
   let alertTimeoutId = null;
   let diceBoxInstance = null;
 
+  if (typeof window !== 'undefined') {
+    window.addEventListener('dice:3d:finished', () => {
+      processNextAlert();
+    });
+  }
+
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
     typeof window !== 'undefined'
@@ -98,15 +104,21 @@ function createDiceStore() {
       const result = evaluateRolls(parsedData, rawRolls);
       result.formula = formula;
 
+      const dicePayload = result.details.filter((d) => d.isKept).map((d) => ({
+        sides: parsedData.sides,
+        value: d.value,
+      }));
+
       const text = `🎲 Rolou ${formula}: ${result.textual}`;
       const sidesNum = parseInt(parsedData.sides, 10);
 
-      gameState.broadcastDiceAction(formula, result.total, result, currentDiceColor, text);
+      gameState.broadcastDiceAction(formula, result.total, { ...result, dicePayload }, currentDiceColor, text);
 
       await forceDisplayRoll({
         formula,
         result: result.total,
         details: result,
+        dicePayload,
         userName: getUserName(),
         textual: text,
         sides: sidesNum,
@@ -127,6 +139,7 @@ function createDiceStore() {
       formula,
       result,
       details,
+      dicePayload,
       color = currentDiceColor,
       userName: userName,
       textual,
@@ -135,7 +148,7 @@ function createDiceStore() {
     } = rollData;
 
     const sides = parseInt(sidesNum || details?.parsedData?.sides || 20, 10);
-    const rolls = details?.details?.map((d) => d.value) || details?.rolls || [result];
+    const rolls = dicePayload || details?.details?.map((d) => d.value) || details?.rolls || [result];
 
     isDiceVisible = true;
     await ensureInitialized(null);
@@ -144,7 +157,11 @@ function createDiceStore() {
     if (instance) {
       instance.show();
       try {
-        await instance.roll(`${rolls.length}d${sides}`);
+        if (dicePayload && Array.isArray(dicePayload)) {
+          await instance.roll(dicePayload);
+        } else {
+          await instance.roll(`${rolls.length}d${sides}`);
+        }
       } catch (e) {
         console.warn('[DiceStore] 3D animation error:', e);
       }
@@ -160,14 +177,13 @@ function createDiceStore() {
         result,
         successes: details?.successes,
         textual,
-        rolls,
+        rolls: rolls.map ? rolls.map((d) => (typeof d === 'object' ? d.value : d)) : rolls,
         diceType: `d${sides}`,
         color,
         isRemote,
         timestamp: Date.now(),
       },
     ];
-    processNextAlert();
   }
 
   function completeDice(id, result) {
@@ -257,11 +273,13 @@ function createDiceStore() {
       const details = roll.details;
       const formula = roll.formula;
       const textual = roll.details?.textual || `🎲 Rolou ${formula}: ${details?.textual || result}`;
+      const dicePayload = roll.details?.dicePayload;
 
       await forceDisplayRoll({
         formula,
         result,
         details,
+        dicePayload,
         color,
         userName: roll.user_name,
         textual,

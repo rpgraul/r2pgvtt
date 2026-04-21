@@ -2,7 +2,7 @@
 	import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
 	import { uiState } from '$lib/state/ui.svelte.js';
 	import { X, MessageCircle, Music, Dices } from 'lucide-svelte';
-	import ChatPanel from '$components/chat/ChatSidebar.svelte' let open = $bindable(true);
+	import ChatPanel from '$components/chat/ChatSidebar.svelte';
 	import MusicPlayer from '$components/player/MusicPlayer.svelte';
 	import { diceStore } from '$lib/state/diceStore.svelte.js';
 

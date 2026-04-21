@@ -1,13 +1,11 @@
-- [ ] **Task 1: Criar utilitário de aleatoriedade Web Crypto**
-  - Criar função que evita o bias do operador módulo.
+- [ ] **Task 1: Refinar Aleatoriedade Criptográfica**
+  - Atualizar `getSecureRandomInt` em `src/lib/utils/diceLogic.js` para garantir ausência de Modulo Bias e melhor performance.
   ```javascript
-  // src/lib/utils/crypto.js
-  export function getSecureRoll(sides) {
+  export function getSecureRandomInt(sides) {
     const array = new Uint32Array(1);
     const maxUint32 = 0xFFFFFFFF;
     const range = sides;
-    const remainder = maxUint32 % range;
-    const threshold = maxUint32 - remainder;
+    const threshold = maxUint32 - (maxUint32 % range);
     let val;
     do {
       window.crypto.getRandomValues(array);
@@ -17,90 +15,71 @@
   }
   ```
 
-- [ ] **Task 2: Criar o Dice Store (Svelte 5)**
-  - Gerenciar a instância do Dice-Box e o canal do Supabase.
+- [ ] **Task 2: Atualizar o Gerenciador de Instância (useDiceBox.js)**
+  - Configurar o callback `onRollComplete` dentro do `createDiceBoxManager` para despachar um evento customizado que o store possa ouvir.
   ```javascript
-  // src/lib/stores/diceStore.svelte.js
-  import { getSecureRoll } from '$lib/utils/crypto';
+  // src/lib/actions/useDiceBox.js
+  // Dentro do init():
+  diceBoxInstance.onRollComplete = (results) => {
+    window.dispatchEvent(new CustomEvent('dice:3d:finished', { detail: results }));
+  };
+  ```
 
-  export const diceStore = $state({
-    instance: null,
-    isReady: false,
+- [ ] **Task 3: Reformular lógica de rolagem no DiceStore**
+  - Alterar `rollDice` para gerar os valores brutos antes de qualquer ação.
+  - Alterar `forceDisplayRoll` para passar o array de objetos ao Dice-Box.
+  ```javascript
+  // src/lib/state/diceStore.svelte.js
+  
+  async function rollDice(formula) {
+    const parsedData = parseFormula(formula);
+    // 1. Gera valores DETERMINÍSTICOS
+    const rawRolls = Array.from({ length: parsedData.count }, () => getSecureRandomInt(parsedData.sides));
     
-    async triggerRoll(sides, channel, user) {
-      const value = getSecureRoll(sides);
-      const payload = {
-        user_id: user.id,
-        username: user.name,
-        dice: [{ sides, value }],
-        themeColor: '#ff4500'
-      };
-      // Broadcast para todos (incluindo eu)
-      channel.send({
-        type: 'broadcast',
-        event: 'dice_roll',
-        payload
-      });
-    }
-  });
-  ```
+    // 2. Avalia (Explosões, etc) - gera o resultado final lógico
+    const result = evaluateRolls(parsedData, rawRolls);
+    
+    // 3. Prepara o payload para o Dice-Box ([{sides, value}, ...])
+    const dicePayload = result.details.filter(d => d.isKept).map(d => ({
+      sides: parsedData.sides,
+      value: d.value
+    }));
 
-- [ ] **Task 3: Implementar o Componente DiceScene**
-  - Inicializar o Dice-Box e escutar o Broadcast.
-  ```svelte
-  <!-- src/components/Dice/DiceScene.svelte -->
-  <script>
-    import DiceBox from '@3d-dice/dice-box';
-    import { onMount } from 'svelte';
-    import { diceStore } from '$lib/stores/diceStore.svelte';
-
-    let { channel } = $props();
-    let container = $state();
-
-    onMount(async () => {
-      diceStore.instance = new DiceBox(container, {
-        assetPath: '/dice-assets/', // Caminho dos assets no public
-        origin: window.location.origin,
-        offscreen: true
-      });
-      
-      await diceStore.instance.init();
-      diceStore.isReady = true;
-
-      // Escuta ordens de rolagem do servidor
-      channel.on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
-        diceStore.instance.roll(payload.dice);
-      });
-
-      diceStore.instance.onRollComplete = (results) => {
-        // Disparar alerta ou log no chat
-        const total = results.reduce((acc, d) => acc + d.value, 0);
-        window.dispatchEvent(new CustomEvent('dice:finished', { detail: { total } }));
-      };
+    // 4. Broadcast com os valores exatos
+    gameState.broadcastDiceAction(formula, result.total, { ...result, dicePayload }, currentDiceColor);
+    
+    // 5. Exibe localmente
+    await forceDisplayRoll({
+      dicePayload,
+      result: result.total,
+      // ... outros dados
     });
-  </script>
-
-  <div bind:this={container} class="fixed inset-0 pointer-events-none"></div>
+  }
   ```
 
-- [ ] **Task 4: Criar o Disparador e Alerta**
-  - Interface simples para testar a rolagem.
-  ```svelte
-  <!-- src/components/Dice/RollTrigger.svelte -->
-  <script>
-    import { diceStore } from '$lib/stores/diceStore.svelte';
-    let { channel, user } = $props();
+- [ ] **Task 4: Implementar forçamento de resultado no forceDisplayRoll**
+  - Modificar a chamada ao `instance.roll` para usar o array determinístico.
+  ```javascript
+  // src/lib/state/diceStore.svelte.js -> forceDisplayRoll
+  if (instance) {
+    instance.show();
+    // Em vez de passar a string '2d20', passamos o array de objetos com 'value'
+    // Isso faz o DiceBox rolar exatamente para aqueles números
+    await instance.roll(dicePayload); 
+  }
+  ```
 
-    window.addEventListener('dice:finished', (e) => {
-      alert(`Resultado do Dado: ${e.detail.total}`);
+- [ ] **Task 5: Sincronizar Alerta com o Fim da Animação**
+  - Remover a chamada imediata de `processNextAlert()` dentro de `forceDisplayRoll`.
+  - Adicionar um listener de janela para o evento `dice:3d:finished` criado na Task 2 para processar o alerta somente quando os dados pararem de cair.
+  ```javascript
+  // No createDiceStore inicial:
+  if (typeof window !== 'undefined') {
+    window.addEventListener('dice:3d:finished', () => {
+      processNextAlert();
     });
-  </script>
-
-  <button 
-    onclick={() => diceStore.triggerRoll(20, channel, user)}
-    disabled={!diceStore.isReady}
-    class="bg-indigo-600 p-2 text-white"
-  >
-    Rolar D20
-  </button>
+  }
   ```
+
+- [ ] **Task 6: Ajustar playRemoteRoll**
+  - Garantir que ao receber uma rolagem de outro jogador, o `dicePayload` recebido via broadcast seja injetado no `forceDisplayRoll` do cliente local.

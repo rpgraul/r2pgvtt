@@ -13,6 +13,9 @@ export function createUIState() {
 		get isHelpOpen() {
 			return isHelpOpen;
 		},
+		set isHelpOpen(v) {
+			isHelpOpen = v;
+		},
 		toggleSidebar: () => (isSidebarOpen = !isSidebarOpen),
 		setTab: (tab) => (activeTab = tab),
 		toggleHelp: () => (isHelpOpen = !isHelpOpen),

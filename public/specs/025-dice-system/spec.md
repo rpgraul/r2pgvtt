@@ -1,15 +1,25 @@
 ## 1. Arquivos Afetados
-- `src/lib/utils/crypto.js`: Utilitário de aleatoriedade.
-- `src/lib/stores/diceStore.svelte.js`: Estado global e lógica de comunicação dos dados (Svelte 5).
-- `src/components/Dice/DiceScene.svelte`: Componente que hospeda o canvas do Dice-Box.
-- `src/components/Dice/RollTrigger.svelte`: Botão de interface para rolar.
+- `src/lib/utils/diceLogic.js`: Ajuste na função de aleatoriedade para maior precisão e exportação de tipos.
+- `src/lib/state/diceStore.svelte.js`: Reestruturação do `rollDice` e `forceDisplayRoll`.
+- `src/lib/actions/useDiceBox.js`: Configuração de callbacks de conclusão.
+- `src/lib/state/game.svelte.js`: (Referência) Garantir que o broadcast suporte o novo payload.
 
-## 2. Tabelas e Dados (Supabase)
-- Não requer alterações no Schema (uso de **Broadcast** para tráfego efêmero).
-- Evento de Broadcast: `dice_roll`
-  - Payload: `{ user_id: string, username: string, dice: [{ sides: number, value: number }], themeColor: string }`
+## 2. Contrato de Dados (Payload Broadcast)
+```json
+{
+  "event": "dice_roll",
+  "payload": {
+    "formula": "2d20",
+    "results": [{"sides": 20, "value": 15}, {"sides": 20, "value": 3}],
+    "total": 18,
+    "userName": "Jogador",
+    "color": "#ff0000",
+    "details": { ...AST do diceLogic }
+  }
+}
+```
 
 ## 3. Mudanças Estruturais
-- Implementação de um `diceStore` utilizando Runes ($state) para gerenciar o estado do Dice-Box (inicializado ou não).
-- Uso de `window.dispatchEvent` para comunicar o fim da rolagem entre o canvas 3D e a UI de alertas/chat.
-- Garantia de que apenas o "Roller" gera o número; os outros apenas consomem o valor via WebSocket.
+- O `diceStore` passará a ser o orquestrador de eventos.
+- `forceDisplayRoll` deixará de receber apenas o `result` (total) e passará a exigir o array `rolls` detalhado.
+- Implementação de um sistema de "Queue" visual para evitar que rolagens rápidas sobreponham o canvas.

@@ -35,6 +35,9 @@ export function createDiceBoxManager(container, options = {}) {
           settleTimeout,
           theme,
           themeColor,
+          onRollComplete: (results) => {
+            window.dispatchEvent(new CustomEvent('dice:3d:finished', { detail: results }));
+          },
         });
         await diceBoxInstance.init();
         initialized = true;
