@@ -15,7 +15,7 @@ import { diceStore } from "../../chunks/diceStore.svelte.js";
 import { I as Icon } from "../../chunks/Icon.js";
 import { c as cn } from "../../chunks/cn.js";
 import { a as authState } from "../../chunks/auth.svelte.js";
-import { gameState } from "../../chunks/gameState.svelte.js";
+import { g as gameState } from "../../chunks/gameState.svelte.js";
 import { B as Button } from "../../chunks/Button.js";
 import { U as User } from "../../chunks/user.js";
 function html(value) {

@@ -32,7 +32,7 @@
     "name": "CardDialog",
     "imports": [
       "_index2.js",
-      "src/lib/state/gameState.svelte.ts",
+      "_gameState.svelte.js",
       "_toast.js",
       "_DialogTitle.js",
       "_Button.js",
@@ -123,6 +123,17 @@
   "_false.js": {
     "file": "chunks/false.js",
     "name": "false"
+  },
+  "_gameState.svelte.js": {
+    "file": "chunks/gameState.svelte.js",
+    "name": "gameState.svelte",
+    "imports": [
+      "_client.js",
+      "_auth.svelte.js"
+    ],
+    "dynamicImports": [
+      "src/lib/state/diceStore.svelte.js"
+    ]
   },
   "_index.js": {
     "file": "chunks/index.js",
@@ -262,23 +273,8 @@
     "isDynamicEntry": true,
     "imports": [
       "_index2.js",
-      "_auth.svelte.js"
-    ],
-    "dynamicImports": [
-      "src/lib/state/gameState.svelte.ts"
-    ]
-  },
-  "src/lib/state/gameState.svelte.ts": {
-    "file": "chunks/gameState.svelte.js",
-    "name": "gameState.svelte",
-    "src": "src/lib/state/gameState.svelte.ts",
-    "isDynamicEntry": true,
-    "imports": [
-      "_client.js",
-      "_auth.svelte.js"
-    ],
-    "dynamicImports": [
-      "src/lib/state/diceStore.svelte.js"
+      "_auth.svelte.js",
+      "_gameState.svelte.js"
     ]
   },
   "src/routes/+layout.js": {
@@ -306,7 +302,7 @@
       "_Icon.js",
       "_cn.js",
       "_auth.svelte.js",
-      "src/lib/state/gameState.svelte.ts",
+      "_gameState.svelte.js",
       "_Button.js",
       "_user.js"
     ],
@@ -326,7 +322,7 @@
       "_state.svelte.js",
       "_index2.js",
       "_cn.js",
-      "src/lib/state/gameState.svelte.ts",
+      "_gameState.svelte.js",
       "_toast.js",
       "_DialogTitle.js",
       "_CardDialog.js",
@@ -466,7 +462,7 @@
     "isEntry": true,
     "imports": [
       "_index2.js",
-      "src/lib/state/gameState.svelte.ts",
+      "_gameState.svelte.js",
       "_client.js",
       "_Badge.js",
       "_RichTextEditor.svelte_svelte_type_style_lang.js",
@@ -481,7 +477,7 @@
     "isEntry": true,
     "imports": [
       "_index2.js",
-      "src/lib/state/gameState.svelte.ts",
+      "_gameState.svelte.js",
       "_Button.js",
       "_Badge.js",
       "_ScrollArea.js",

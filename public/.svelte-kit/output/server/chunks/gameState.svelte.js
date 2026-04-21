@@ -572,27 +572,12 @@ class GameState {
           this.chatMessages = [...this.chatMessages, payload.message];
         }
       }
-    }).on("broadcast", { event: "dice_roll" }, ({ payload }) => {
-      console.log("[Broadcast] Roll received:", payload);
+    }).on("broadcast", { event: "dice_action" }, ({ payload }) => {
       if (payload.userId !== authState.user?.id) {
-        const { roll, chatMsg } = payload;
-        if (chatMsg && !this.chatMessages.find((m) => m.id === chatMsg.id)) {
-          this.chatMessages = [...this.chatMessages, chatMsg];
-        }
-        if (roll && !this.rolls.find((r) => r.id === roll.id)) {
-          this.rolls = [roll, ...this.rolls];
-          import("./diceStore.svelte.js").then((m) => {
-            m.diceStore.execute3DAnimation({
-              rollId: roll.id,
-              formula: roll.formula,
-              result: roll.result,
-              details: roll.details,
-              color: payload.color,
-              userName: roll.user_name,
-              textual: chatMsg.text
-            });
-          });
-        }
+        this.rolls = [payload.roll, ...this.rolls];
+        import("./diceStore.svelte.js").then((m) => {
+          m.diceStore.playRemoteRoll(payload.roll);
+        });
       }
     }).subscribe((status) => console.log("[Broadcast] Room channel status:", status));
     this.unsubRoom = () => {
@@ -711,54 +696,45 @@ class GameState {
     }
     db.addChatMessage(text, "system", "Sistema", this.currentGameId);
   }
-  broadcastRoll(payload) {
+  broadcastDiceAction(formula, result, details, color, textual) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    const chatMsg = {
-      id: payload.chatMsg?.id || crypto.randomUUID(),
-      text: payload.textual,
-      type: "user",
-      sender: payload.userName,
-      game_id: this.currentGameId,
-      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
-    };
     const rollData = {
-      id: payload.rollId,
-      user_name: payload.userName,
-      formula: payload.formula,
-      result: payload.result,
-      details: payload.details,
-      color: payload.color,
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      user_name: authState.displayName,
+      formula,
+      result,
+      details,
+      color,
       game_id: this.currentGameId,
       created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
-    if (!this.chatMessages.find((m) => m.id === chatMsg.id)) {
-      this.chatMessages = [...this.chatMessages, chatMsg];
-    }
-    if (!this.rolls.find((r) => r.id === rollData.id)) {
-      this.rolls = [rollData, ...this.rolls];
-    }
     if (this.roomChannel) {
       this.roomChannel.send({
         type: "broadcast",
-        event: "dice_roll",
-        payload: {
-          roll: rollData,
-          chatMsg,
-          color: payload.color,
-          userId: authState.user?.id
-        }
+        event: "dice_action",
+        payload: { roll: rollData, userId: authState.user?.id }
       });
     }
     db.addRoll({
-      userName: payload.userName,
-      formula: payload.formula,
-      result: payload.result,
-      details: payload.details,
-      color: payload.color,
-      gameId: this.currentGameId,
-      id: rollData.id
+      userName: authState.displayName,
+      formula,
+      result,
+      details,
+      color,
+      gameId: this.currentGameId
     }).catch(console.error);
-    db.addChatMessage(payload.textual, "user", payload.userName, this.currentGameId, chatMsg.id).catch(console.error);
+    db.addChatMessage(textual, "user", authState.displayName, this.currentGameId).catch(console.error);
+  }
+  addMessageToChatLocal(text, type, sender) {
+    const chatMsg = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      text,
+      type,
+      sender,
+      game_id: this.currentGameId,
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.chatMessages = [...this.chatMessages, chatMsg];
   }
   async getGameById(gameId) {
     const { data, error } = await supabase.from("games").select("*").eq("id", gameId).single();
@@ -808,5 +784,5 @@ class GameState {
 }
 const gameState = new GameState();
 export {
-  gameState
+  gameState as g
 };
