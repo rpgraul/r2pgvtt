@@ -55,3 +55,6 @@ dataconnect/
 
 # Cloudflare
 .wrangler/
+
+# Specs (local development)
+public/specs/
