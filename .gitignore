@@ -1,28 +1,57 @@
+# Dependencies
 node_modules/
-dist/
-build/
-.DS_Store
-*.log
-*.env
-.env.local
-.env.*.local
+public/node_modules/
 
+# Build outputs
+dist/
+public/dist/
+.svelte-kit/
+public/.svelte-kit/
+public/.opencode/
+
+# Cache
 .vite/
 .cache/
-.svelte-kit/
 
+# Logs
+*.log
 firebase-debug.log
 firebase-debug*.log
 ui-debug.log
 
-.netlify/
-.netlify.toml
+# Environment
+*.env
+.env.local
+.env.*.local
+public/.env
 
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (generated)
+docs/
+
+# Backup/Misc
 backup.zip
-dataconnect/
-
-.turbo/
-.vercel/
-
 *.tsbuildinfo
 .firebaserc
+public/repomix-output.xml
+public/contexto.txt
+public/bits.txt
+public/shadcn-svelte.txt
+public/referencias-tecnicas.txt
+repomix-output.xml
+dataconnect/
+.gemini/
+
+# Turso/LibSQL
+*.db
+*.db-journal
+
+# Cloudflare
+.wrangler/
