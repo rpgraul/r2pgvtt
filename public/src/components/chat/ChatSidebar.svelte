@@ -144,54 +144,56 @@ $effect(() => {
 });
 </script>
 
-<!-- Messages -->
-<div 
-  bind:this={messagesContainer}
-  class="h-[calc(100vh-200px)] overflow-y-auto p-3 space-y-2 scrollbar-thin"
->
-  {#each messages as msg (msg.id)}
-    <div class={`message ${msg.type === 'system' ? 'bg-muted/50 rounded-lg p-2' : ''}`}>
-      <div class="flex items-baseline gap-2">
-        <span class="font-medium text-sm">
-          {msg.sender || 'Anônimo'}
-        </span>
-        {#if msg.created_at || msg.createdAt}
-          <span class="text-xs text-muted-foreground">
-            {formatTime(msg.created_at || msg.createdAt)}
+<div class="flex h-full flex-col">
+  <!-- Messages -->
+  <div 
+    bind:this={messagesContainer}
+    class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin"
+  >
+    {#each messages as msg (msg.id)}
+      <div class={`message ${msg.type === 'system' ? 'bg-muted/50 rounded-lg p-2' : ''}`}>
+        <div class="flex items-baseline gap-2">
+          <span class="font-medium text-sm">
+            {msg.sender || 'Anônimo'}
           </span>
-        {/if}
+          {#if msg.created_at || msg.createdAt}
+            <span class="text-xs text-muted-foreground">
+              {formatTime(msg.created_at || msg.createdAt)}
+            </span>
+          {/if}
+        </div>
+        <p class="text-sm mt-1">{@html parseMessage(msg)}</p>
       </div>
-      <p class="text-sm mt-1">{@html parseMessage(msg)}</p>
-    </div>
-  {/each}
-  
-  {#if messages.length === 0}
-    <p class="text-center text-muted-foreground text-sm py-8">
-      Nenhuma mensagem ainda
-    </p>
-  {/if}
-</div>
-
-<!-- Input -->
-<form onsubmit={handleSubmit} class="p-3 border-t">
-  <div class="flex gap-2">
-    <input
-      bind:this={inputElement}
-      bind:value={inputValue}
-      onkeydown={handleKeydown}
-      type="text"
-      placeholder="Digite uma mensagem..."
-      class="flex-1 h-9 px-3 rounded-md border bg-background text-sm"
-    />
-    <button
-      type="submit"
-      disabled={!inputValue.trim()}
-      class="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-    >
-      <Send class="w-4 h-4" />
-    </button>
+    {/each}
+    
+    {#if messages.length === 0}
+      <p class="text-center text-muted-foreground text-sm py-8">
+        Nenhuma mensagem ainda
+      </p>
+    {/if}
   </div>
-  <p class="text-xs text-muted-foreground mt-2">
-    Use /r ou /roll para rolar dados (ex: /r 1d20)
-  </p>
-</form>
+
+  <!-- Input -->
+  <form onsubmit={handleSubmit} class="p-3 border-t">
+    <div class="flex gap-2">
+      <input
+        bind:this={inputElement}
+        bind:value={inputValue}
+        onkeydown={handleKeydown}
+        type="text"
+        placeholder="Digite uma mensagem..."
+        class="flex-1 h-9 px-3 rounded-md border bg-background text-sm"
+      />
+      <button
+        type="submit"
+        disabled={!inputValue.trim()}
+        class="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        <Send class="w-4 h-4" />
+      </button>
+    </div>
+    <p class="text-xs text-muted-foreground mt-2">
+      Use /r ou /roll para rolar dados (ex: /r 1d20)
+    </p>
+  </form>
+</div>
