@@ -1,37 +1,37 @@
-# Spec: Layout Redesign
-
 ## 1. Arquivos Afetados
-- `src/lib/state/game.svelte.js`: Adição de estados de UI.
-- `src/routes/+layout.svelte`: (Ou o componente raiz de jogo) Reestruturação do grid/flex layout.
-- `src/components/layout/Sidebar.svelte`: (Novo) Barra lateral direita.
-- `src/components/ui/FAB.svelte`: (Novo/Refatorado) Botões de controle.
-- `src/components/ui/HelpModal.svelte`: (Novo) Modal de ajuda.
+- `src/lib/state/ui.svelte.js` (Novo: Estado de visibilidade)
+- `src/routes/+layout.svelte` (Modificado: Estrutura principal de flexbox)
+- `src/lib/components/layout/Sidebar.svelte` (Novo)
+- `src/lib/components/layout/HelpModal.svelte` (Novo)
+- `src/lib/components/ui/ControlButtons.svelte` (Novo: Substitui o FAB antigo)
 
-## 2. Mudanças Estruturais
+## 2. Tabelas e Dados (Supabase)
+*Nenhuma alteração de banco de dados necessária para esta funcionalidade de UI.*
 
-### GameState (`game.svelte.js`)
-Adicionar as seguintes propriedades reativas:
-- `isSidebarOpen`: boolean (default: false).
-- `activeSidebarTab`: 'chat' | 'music' | 'dice' (default: 'chat').
-- Função `toggleSidebar()`: Inverte o valor de `isSidebarOpen`.
-- Função `openHelp()`: Controla o estado do modal de ajuda.
+## 3. Mudanças Estruturais
 
-### Estrutura de Layout (DOM)
-```html
-<div class="flex h-screen w-screen overflow-hidden bg-background">
-  <!-- Conteúdo Principal (Cartas/Mesa) -->
-  <main class="relative flex-1 h-full transition-all duration-300 ease-in-out">
-    <slot />
-    <!-- FABs dentro do main para se moverem com ele -->
-    <FAB />
-  </main>
+### uiState (Svelte 5 Rune)
+```javascript
+// src/lib/state/ui.svelte.js
+export function createUIState() {
+  let isSidebarOpen = $state(false);
+  let activeTab = $state('chat'); // 'chat' | 'music' | 'dice'
+  let isHelpOpen = $state(false);
 
-  <!-- Barra Lateral -->
-  <aside class="h-full border-l bg-card transition-all duration-300 ease-in-out"
-         class:w-0={!gameState.isSidebarOpen}
-         class:w-80={gameState.isSidebarOpen}>
-    {#if gameState.isSidebarOpen}
-      <Sidebar />
-    {/if}
-  </aside>
-</div>
+  return {
+    get isSidebarOpen() { return isSidebarOpen; },
+    get activeTab() { return activeTab; },
+    get isHelpOpen() { return isHelpOpen; },
+    toggleSidebar: () => isSidebarOpen = !isSidebarOpen,
+    setTab: (tab) => activeTab = tab,
+    toggleHelp: () => isHelpOpen = !isHelpOpen
+  };
+}
+export const uiState = createUIState();
+```
+
+### Layout Flex
+O container principal terá a seguinte lógica CSS:
+- `display: flex; width: 100vw; height: 100vh; overflow: hidden;`
+- `MainContent`: `flex: 1; transition: all 0.3s;`
+- `Sidebar`: `width: 350px; transition: margin-right 0.3s;` (Quando fechado, `margin-right: -350px`)
