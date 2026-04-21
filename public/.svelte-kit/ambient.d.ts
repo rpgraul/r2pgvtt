@@ -55,12 +55,15 @@ declare module '$env/static/private' {
 	export const USER: string;
 	export const LC_TIME: string;
 	export const npm_config_user_agent: string;
+	export const AGENT: string;
 	export const XDG_SESSION_TYPE: string;
 	export const GIT_ASKPASS: string;
+	export const OPENCODE_CALLER: string;
 	export const npm_node_execpath: string;
 	export const CLUTTER_DISABLE_MIPMAPPED_TEXT: string;
 	export const SHLVL: string;
 	export const npm_config_noproxy: string;
+	export const OPENCODE_PROCESS_ROLE: string;
 	export const ANTIGRAVITY_CLI_ALIAS: string;
 	export const HOME: string;
 	export const CHROME_DESKTOP: string;
@@ -83,6 +86,7 @@ declare module '$env/static/private' {
 	export const npm_config_userconfig: string;
 	export const npm_config_local_prefix: string;
 	export const SYSTEMD_EXEC_PID: string;
+	export const OPENCODE_RUN_ID: string;
 	export const VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 	export const GSM_SKIP_SSH_AGENT_WORKAROUND: string;
 	export const DBUS_SESSION_BUS_ADDRESS: string;
@@ -107,6 +111,7 @@ declare module '$env/static/private' {
 	export const _CE_CONDA: string;
 	export const FC_FONTATIONS: string;
 	export const WINDOWPATH: string;
+	export const OPENCODE: string;
 	export const npm_config_node_gyp: string;
 	export const PATH: string;
 	export const SESSION_MANAGER: string;
@@ -120,6 +125,7 @@ declare module '$env/static/private' {
 	export const XDG_RUNTIME_DIR: string;
 	export const GDK_BACKEND: string;
 	export const DISPLAY: string;
+	export const OPENCODE_PID: string;
 	export const LANG: string;
 	export const XDG_CURRENT_DESKTOP: string;
 	export const DOTNET_BUNDLE_EXTRACT_BASE_DIR: string;
@@ -136,6 +142,7 @@ declare module '$env/static/private' {
 	export const CONDA_PYTHON_EXE: string;
 	export const SHELL: string;
 	export const LC_NAME: string;
+	export const _EXTENSION_OPENCODE_PORT: string;
 	export const npm_package_version: string;
 	export const npm_lifecycle_event: string;
 	export const QT_ACCESSIBILITY: string;
@@ -274,12 +281,15 @@ declare module '$env/dynamic/private' {
 		USER: string;
 		LC_TIME: string;
 		npm_config_user_agent: string;
+		AGENT: string;
 		XDG_SESSION_TYPE: string;
 		GIT_ASKPASS: string;
+		OPENCODE_CALLER: string;
 		npm_node_execpath: string;
 		CLUTTER_DISABLE_MIPMAPPED_TEXT: string;
 		SHLVL: string;
 		npm_config_noproxy: string;
+		OPENCODE_PROCESS_ROLE: string;
 		ANTIGRAVITY_CLI_ALIAS: string;
 		HOME: string;
 		CHROME_DESKTOP: string;
@@ -302,6 +312,7 @@ declare module '$env/dynamic/private' {
 		npm_config_userconfig: string;
 		npm_config_local_prefix: string;
 		SYSTEMD_EXEC_PID: string;
+		OPENCODE_RUN_ID: string;
 		VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 		GSM_SKIP_SSH_AGENT_WORKAROUND: string;
 		DBUS_SESSION_BUS_ADDRESS: string;
@@ -326,6 +337,7 @@ declare module '$env/dynamic/private' {
 		_CE_CONDA: string;
 		FC_FONTATIONS: string;
 		WINDOWPATH: string;
+		OPENCODE: string;
 		npm_config_node_gyp: string;
 		PATH: string;
 		SESSION_MANAGER: string;
@@ -339,6 +351,7 @@ declare module '$env/dynamic/private' {
 		XDG_RUNTIME_DIR: string;
 		GDK_BACKEND: string;
 		DISPLAY: string;
+		OPENCODE_PID: string;
 		LANG: string;
 		XDG_CURRENT_DESKTOP: string;
 		DOTNET_BUNDLE_EXTRACT_BASE_DIR: string;
@@ -355,6 +368,7 @@ declare module '$env/dynamic/private' {
 		CONDA_PYTHON_EXE: string;
 		SHELL: string;
 		LC_NAME: string;
+		_EXTENSION_OPENCODE_PORT: string;
 		npm_package_version: string;
 		npm_lifecycle_event: string;
 		QT_ACCESSIBILITY: string;

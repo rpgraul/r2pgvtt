@@ -284,7 +284,12 @@ const db = {
       if (!gameId || !onInsert) return;
       const channel = supabase.channel(`chat:${gameId}`).on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `game_id=eq.${gameId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `game_id=eq.${gameId}`
+        },
         (payload) => onInsert(payload.new)
       ).subscribe();
       return () => supabase.removeChannel(channel);
@@ -292,13 +297,15 @@ const db = {
     return () => {
     };
   },
-  async addChatMessage(text, type = "user", sender, gameId) {
-    const { data, error } = await supabase.from("chat_messages").insert({
+  async addChatMessage(text, type = "user", sender, gameId, id) {
+    const payload = {
       text,
       type,
       sender: sender || authState.displayName || "Anonymous",
       game_id: gameId
-    }).select().single();
+    };
+    if (id) payload.id = id;
+    const { data, error } = await supabase.from("chat_messages").insert(payload).select().single();
     if (error) throw error;
     return data;
   },
@@ -319,7 +326,12 @@ const db = {
       if (!gameId || !onInsert) return;
       const channel = supabase.channel(`rolls:${gameId}`).on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "dice_rolls", filter: `game_id=eq.${gameId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "dice_rolls",
+          filter: `game_id=eq.${gameId}`
+        },
         (payload) => onInsert(payload.new)
       ).subscribe();
       return () => supabase.removeChannel(channel);
@@ -328,18 +340,20 @@ const db = {
     };
   },
   async addRoll(rollData) {
-    const { data, error } = await supabase.from("dice_rolls").insert({
+    const payload = {
       user_name: rollData.userName,
       formula: rollData.formula,
       result: rollData.result,
       details: { ...rollData.details, color: rollData.color },
       game_id: rollData.gameId
-    }).select().single();
+    };
+    if (rollData.id) payload.id = rollData.id;
+    const { data, error } = await supabase.from("dice_rolls").insert(payload).select().single();
     if (error) throw error;
     return data;
   },
   async getAudioState(gameId) {
-    const { data, error } = await supabase.from("audio_state").select("*").eq("game_id", gameId).single();
+    const { data, error } = await supabase.from("audio_state").select("*").eq("game_id", gameId).maybeSingle();
     if (error && error.code !== "PGRST116") throw error;
     if (data) {
       return {
@@ -368,7 +382,7 @@ const db = {
     return data;
   },
   async getSettings(key = "main") {
-    const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).single();
+    const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
     if (error && error.code !== "PGRST116") throw error;
     return data?.value || {};
   },
@@ -416,7 +430,9 @@ class GameState {
     this.filters = { search: "", category: "all", tags: [], visibility: "all" };
     this.viewMode = "grid";
     this.itemChannel = null;
+    this.roomChannel = null;
     this.unsubItems = null;
+    this.unsubRoom = null;
     this.getUserName = () => authState.displayName;
     this.setUserName = (name) => authState.updateProfile({ display_name: name });
     this.setNarrator = () => authState.updateProfile({ role: "narrador" });
@@ -489,9 +505,6 @@ class GameState {
     this.currentGameId = gameId;
     this.currentGameRole = null;
     authState.init();
-    if (gameId) {
-      this.loadGameRole(gameId);
-    }
     this.cleanupRealtimeChannels();
     this.unsubItems = db.subscribeToItems(gameId, (cards) => {
       this.items = fromCardDBArray(cards);
@@ -517,12 +530,10 @@ class GameState {
         (newRoll) => {
           if (!this.rolls.find((r) => r.id === newRoll.id)) {
             this.rolls = [newRoll, ...this.rolls];
-            if (newRoll.user_name !== this.userName) {
-              import("./diceStore.svelte.js").then((m) => m.diceStore.playRemoteRoll(newRoll));
-            }
           }
         }
       );
+      this.setupRoomChannel();
     }
   }
   setGameId(gameId) {
@@ -535,9 +546,9 @@ class GameState {
   }
   async loadGameRole(gameId) {
     if (!authState.user) return;
-    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", authState.user.id).single();
+    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", authState.user.id).maybeSingle();
     this.currentGameRole = data?.role || null;
-    const { data: gameData } = await supabase.from("games").select("nome").eq("id", gameId).single();
+    const { data: gameData } = await supabase.from("games").select("nome").eq("id", gameId).maybeSingle();
     this.currentGameName = gameData?.nome || null;
   }
   cleanupRealtimeChannels() {
@@ -545,6 +556,51 @@ class GameState {
       supabase.removeChannel(this.itemChannel);
       this.itemChannel = null;
     }
+    if (this.roomChannel) {
+      supabase.removeChannel(this.roomChannel);
+      this.roomChannel = null;
+    }
+  }
+  setupRoomChannel() {
+    if (!this.currentGameId || this.roomChannel) return;
+    const channelName = `room:${this.currentGameId}`;
+    this.roomChannel = supabase.channel(channelName, { config: { broadcast: { ack: false } } });
+    this.roomChannel.on("broadcast", { event: "chat_message" }, ({ payload }) => {
+      console.log("[Broadcast] Chat received:", payload);
+      if (payload.userId !== authState.user?.id) {
+        if (!this.chatMessages.find((m) => m.id === payload.message.id)) {
+          this.chatMessages = [...this.chatMessages, payload.message];
+        }
+      }
+    }).on("broadcast", { event: "dice_roll" }, ({ payload }) => {
+      console.log("[Broadcast] Roll received:", payload);
+      if (payload.userId !== authState.user?.id) {
+        const { roll, chatMsg } = payload;
+        if (chatMsg && !this.chatMessages.find((m) => m.id === chatMsg.id)) {
+          this.chatMessages = [...this.chatMessages, chatMsg];
+        }
+        if (roll && !this.rolls.find((r) => r.id === roll.id)) {
+          this.rolls = [roll, ...this.rolls];
+          import("./diceStore.svelte.js").then((m) => {
+            m.diceStore.execute3DAnimation({
+              rollId: roll.id,
+              formula: roll.formula,
+              result: roll.result,
+              details: roll.details,
+              color: payload.color,
+              userName: roll.user_name,
+              textual: chatMsg.text
+            });
+          });
+        }
+      }
+    }).subscribe((status) => console.log("[Broadcast] Room channel status:", status));
+    this.unsubRoom = () => {
+      if (this.roomChannel) {
+        supabase.removeChannel(this.roomChannel);
+        this.roomChannel = null;
+      }
+    };
   }
   setSearch(search) {
     this.filters.search = search;
@@ -617,8 +673,9 @@ class GameState {
   }
   async sendMessage(text) {
     if (!authState.isAuthenticated || !authState.displayName) return;
+    const msgId = crypto.randomUUID();
     const message = {
-      id: crypto.randomUUID(),
+      id: msgId,
       text,
       type: "user",
       sender: authState.displayName,
@@ -629,7 +686,14 @@ class GameState {
     if (!this.chatMessages.find((m) => m.id === message.id)) {
       this.chatMessages = [...this.chatMessages, message];
     }
-    db.addChatMessage(text, "user", authState.displayName, this.currentGameId);
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: "broadcast",
+        event: "chat_message",
+        payload: { message, userId: authState.user?.id }
+      });
+    }
+    db.addChatMessage(text, "user", authState.displayName, this.currentGameId, msgId);
   }
   async sendSystemMessage(text) {
     if (!authState.isAuthenticated) return;
@@ -647,30 +711,54 @@ class GameState {
     }
     db.addChatMessage(text, "system", "Sistema", this.currentGameId);
   }
-  async sendRoll(formula, result, details, color) {
+  broadcastRoll(payload) {
     if (!authState.isAuthenticated || !authState.displayName) return;
-    const rollData = {
-      id: crypto.randomUUID(),
-      user_name: authState.displayName,
-      userId: authState.user?.id,
-      formula,
-      result,
-      details,
-      color,
+    const chatMsg = {
+      id: payload.chatMsg?.id || crypto.randomUUID(),
+      text: payload.textual,
+      type: "user",
+      sender: payload.userName,
       game_id: this.currentGameId,
       created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
     };
+    const rollData = {
+      id: payload.rollId,
+      user_name: payload.userName,
+      formula: payload.formula,
+      result: payload.result,
+      details: payload.details,
+      color: payload.color,
+      game_id: this.currentGameId,
+      created_at: /* @__PURE__ */ (/* @__PURE__ */ new Date()).toISOString()
+    };
+    if (!this.chatMessages.find((m) => m.id === chatMsg.id)) {
+      this.chatMessages = [...this.chatMessages, chatMsg];
+    }
     if (!this.rolls.find((r) => r.id === rollData.id)) {
       this.rolls = [rollData, ...this.rolls];
     }
+    if (this.roomChannel) {
+      this.roomChannel.send({
+        type: "broadcast",
+        event: "dice_roll",
+        payload: {
+          roll: rollData,
+          chatMsg,
+          color: payload.color,
+          userId: authState.user?.id
+        }
+      });
+    }
     db.addRoll({
-      userName: authState.displayName,
-      formula,
-      result,
-      details,
-      color,
-      gameId: this.currentGameId
-    });
+      userName: payload.userName,
+      formula: payload.formula,
+      result: payload.result,
+      details: payload.details,
+      color: payload.color,
+      gameId: this.currentGameId,
+      id: rollData.id
+    }).catch(console.error);
+    db.addChatMessage(payload.textual, "user", payload.userName, this.currentGameId, chatMsg.id).catch(console.error);
   }
   async getGameById(gameId) {
     const { data, error } = await supabase.from("games").select("*").eq("id", gameId).single();
@@ -695,7 +783,7 @@ class GameState {
   async checkUserGameMembership(gameId) {
     const userId = authState.user?.id;
     if (!userId) return null;
-    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", userId).single();
+    const { data } = await supabase.from("game_members").select("role").eq("game_id", gameId).eq("user_id", userId).maybeSingle();
     return data?.role || null;
   }
   async leaveGame(gameId) {
@@ -713,6 +801,8 @@ class GameState {
   destroy() {
     if (this.unsubItems) this.unsubItems();
     this.unsubItems = null;
+    if (this.unsubRoom) this.unsubRoom();
+    this.unsubRoom = null;
     this.cleanupRealtimeChannels();
   }
 }

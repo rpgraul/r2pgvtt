@@ -397,10 +397,7 @@ export const db = {
     onInsert?: (newMessage: any) => void,
   ) {
     const loadMessages = async () => {
-      let q = supabase
-        .from('chat_messages')
-        .select('*')
-        .order('created_at', { ascending: true });
+      let q = supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
       if (gameId) {
         q = q.eq('game_id', gameId);
       }
@@ -419,7 +416,12 @@ export const db = {
         .channel(`chat:${gameId}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `game_id=eq.${gameId}`,
+          },
           (payload) => onInsert(payload.new),
         )
         .subscribe();
@@ -430,8 +432,19 @@ export const db = {
     return () => {};
   },
 
-  async addChatMessage(text: string, type: string = 'user', sender?: string, gameId?: string, id?: string) {
-    const payload: any = { text, type, sender: sender || authState.displayName || 'Anonymous', game_id: gameId };
+  async addChatMessage(
+    text: string,
+    type: string = 'user',
+    sender?: string,
+    gameId?: string,
+    id?: string,
+  ) {
+    const payload: any = {
+      text,
+      type,
+      sender: sender || authState.displayName || 'Anonymous',
+      game_id: gameId,
+    };
     if (id) payload.id = id;
     const { data, error } = await supabase.from('chat_messages').insert(payload).select().single();
     if (error) throw error;
@@ -469,7 +482,12 @@ export const db = {
         .channel(`rolls:${gameId}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'dice_rolls', filter: `game_id=eq.${gameId}` },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'dice_rolls',
+            filter: `game_id=eq.${gameId}`,
+          },
           (payload) => onInsert(payload.new),
         )
         .subscribe();
@@ -489,7 +507,13 @@ export const db = {
     gameId?: string;
     id?: string;
   }) {
-    const payload: any = { user_name: rollData.userName, formula: rollData.formula, result: rollData.result, details: { ...rollData.details, color: rollData.color }, game_id: rollData.gameId };
+    const payload: any = {
+      user_name: rollData.userName,
+      formula: rollData.formula,
+      result: rollData.result,
+      details: { ...rollData.details, color: rollData.color },
+      game_id: rollData.gameId,
+    };
     if (rollData.id) payload.id = rollData.id;
     const { data, error } = await supabase.from('dice_rolls').insert(payload).select().single();
     if (error) throw error;
@@ -501,7 +525,7 @@ export const db = {
       .from('audio_state')
       .select('*')
       .eq('game_id', gameId)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') throw error;
 
@@ -545,7 +569,7 @@ export const db = {
       .from('site_settings')
       .select('value')
       .eq('key', key)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') throw error;
     return data?.value || {};

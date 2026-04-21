@@ -56,7 +56,7 @@ function createDiceStore() {
   }
 
   function generateId() {
-    return Math.random().toString(36).substr(2, 9);
+    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9);
   }
 
   let diceInitializing = null;
@@ -85,54 +85,70 @@ function createDiceStore() {
     }
   }
 
-  function rollDice(formula) {
-    return new Promise(async (resolve, reject) => {
+  async function rollDice(formula) {
+    const parsedData = parseFormula(formula);
+    if (!parsedData) throw new Error('Invalid formula');
+
+    const result = fallbackRoll(parsedData);
+    result.formula = formula;
+
+    const payload = {
+      rollId: generateId(),
+      formula,
+      result: result.total,
+      details: result,
+      color: currentDiceColor,
+      userName: getUserName(),
+      textual: `🎲 Rolou ${formula}: ${result.textual}`,
+    };
+
+    const { gameState } = await import('./gameState.svelte.ts');
+    gameState.broadcastRoll(payload);
+    execute3DAnimation(payload);
+
+    return result;
+  }
+
+  async function execute3DAnimation(payload) {
+    const { rollId, formula, result, details, color, userName, textual } = payload;
+    const sides = details.parsedData.sides;
+    const forcedArray = details.details.map((d) => ({
+      qty: 1,
+      sides,
+      value: d.value,
+      themeColor: color || '#0000ff',
+    }));
+
+    isDiceVisible = true;
+
+    pendingAlerts = [
+      ...pendingAlerts,
+      {
+        id: rollId,
+        userName,
+        formula,
+        result,
+        successes: details.successes,
+        textual,
+        rolls: details.details.map((d) => d.value),
+        diceType: `d${sides}`,
+        color,
+        timestamp: Date.now(),
+      },
+    ];
+    processNextAlert();
+
+    await ensureInitialized(null);
+    if (diceBoxInstance && diceBoxInstance.isInitialized()) {
       try {
-        const parsedData = parseFormula(formula);
-        if (!parsedData) throw new Error('Invalid formula');
-
-        isDiceVisible = true;
-        await ensureInitialized(null);
-
-        const physicsResult = await diceBoxInstance.roll(parsedData.baseFormula);
-
-        const evaluated = evaluateRolls(parsedData, physicsResult.rolls);
-        evaluated.formula = formula;
-
-        const textual = `🎲 Rolou ${formula}: ${evaluated.textual}`;
-        window.dispatchEvent(
-          new CustomEvent('outgoing_local_roll', {
-            detail: {
-              formula,
-              result: evaluated.total,
-              details: evaluated,
-              color: currentDiceColor,
-              text: textual,
-            },
-          }),
-        );
-
-        const rollId = generateId();
-        pendingAlerts = [
-          ...pendingAlerts,
-          {
-            id: rollId,
-            userName: getUserName(),
-            formula,
-            result: evaluated.total,
-            successes: evaluated.successes,
-            textual: evaluated.textual,
-            rolls: evaluated.details ? evaluated.details.map((d) => d.value) : evaluated.rolls,
-            diceType: `d${parsedData.sides}`,
-            timestamp: Date.now(),
-          },
-        ];
-        processNextAlert();
-        resolve(evaluated);
-      } catch (error) {
-        reject(error);
+        const instance = diceBoxInstance.getInstance
+          ? diceBoxInstance.getInstance()
+          : diceBoxInstance;
+        await instance.roll(forcedArray);
+      } catch (e) {
+        console.warn('Animation skipped', e);
       }
-    });
+    }
   }
 
   function fallbackRoll(parsedData) {
@@ -297,7 +313,7 @@ function createDiceStore() {
     },
 
     rollDice,
-    playRemoteRoll,
+    execute3DAnimation,
     dismissAlert,
     dismissAll,
     clearDice,
@@ -307,14 +323,7 @@ function createDiceStore() {
     processNextAlert,
     hasActiveRolls,
     setDiceColor,
-    addRemoteAlert,
   };
 }
 
 export const diceStore = createDiceStore();
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('incoming_remote_roll', (e) => {
-    diceStore.playRemoteRoll(e.detail);
-  });
-}

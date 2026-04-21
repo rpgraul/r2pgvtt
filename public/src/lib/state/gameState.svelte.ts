@@ -139,10 +139,6 @@ class GameState {
     this.currentGameRole = null;
     authState.init();
 
-    if (gameId) {
-      this.loadGameRole(gameId);
-    }
-
     this.cleanupRealtimeChannels();
 
     this.unsubItems = db.subscribeToItems(gameId, (cards) => {
@@ -171,21 +167,11 @@ class GameState {
         (newRoll) => {
           if (!this.rolls.find((r) => r.id === newRoll.id)) {
             this.rolls = [newRoll, ...this.rolls];
-            if (newRoll.user_name !== this.userName) {
-              window.dispatchEvent(new CustomEvent('incoming_remote_roll', { detail: newRoll }));
-            }
           }
         },
       );
 
       this.setupRoomChannel();
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('outgoing_local_roll', ((e: CustomEvent) => {
-        const { formula, result, details, color, text } = e.detail;
-        this.sendRoll(formula, result, details, color, text);
-      }) as EventListener);
     }
   }
 
@@ -248,13 +234,23 @@ class GameState {
       .on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
         console.log('[Broadcast] Roll received:', payload);
         if (payload.userId !== authState.user?.id) {
-          const { roll, chatMsg } = payload.payload || {};
+          const { roll, chatMsg } = payload;
           if (chatMsg && !this.chatMessages.find((m) => m.id === chatMsg.id)) {
             this.chatMessages = [...this.chatMessages, chatMsg];
           }
           if (roll && !this.rolls.find((r) => r.id === roll.id)) {
             this.rolls = [roll, ...this.rolls];
-            window.dispatchEvent(new CustomEvent('incoming_remote_roll', { detail: roll }));
+            import('./diceStore.svelte.js').then((m) => {
+              m.diceStore.execute3DAnimation({
+                rollId: roll.id,
+                formula: roll.formula,
+                result: roll.result,
+                details: roll.details,
+                color: payload.color,
+                userName: roll.user_name,
+                textual: chatMsg.text,
+              });
+            });
           }
         }
       })
@@ -403,58 +399,63 @@ class GameState {
     db.addChatMessage(text, 'system', 'Sistema', this.currentGameId);
   }
 
-  async sendRoll(formula: string, result: number, details: any, color: string, textual: string) {
+  broadcastRoll(payload: any) {
     if (!authState.isAuthenticated || !authState.displayName) return;
 
-    const rollData = {
-      id: crypto.randomUUID(),
-      user_name: authState.displayName,
-      userId: authState.user?.id,
-      formula,
-      result,
-      details,
-      color,
-      game_id: this.currentGameId,
-      created_at: new Date().toISOString(),
-    };
-
     const chatMsg = {
-      id: crypto.randomUUID(),
-      text: textual,
+      id: payload.chatMsg?.id || crypto.randomUUID(),
+      text: payload.textual,
       type: 'user',
-      sender: authState.displayName,
-      senderId: authState.user?.id,
+      sender: payload.userName,
       game_id: this.currentGameId,
       created_at: new Date().toISOString(),
     };
 
-    if (!this.rolls.find((r) => r.id === rollData.id)) {
-      this.rolls = [rollData, ...this.rolls];
-    }
+    const rollData = {
+      id: payload.rollId,
+      user_name: payload.userName,
+      formula: payload.formula,
+      result: payload.result,
+      details: payload.details,
+      color: payload.color,
+      game_id: this.currentGameId,
+      created_at: new Date().toISOString(),
+    };
 
     if (!this.chatMessages.find((m) => m.id === chatMsg.id)) {
       this.chatMessages = [...this.chatMessages, chatMsg];
+    }
+
+    if (!this.rolls.find((r) => r.id === rollData.id)) {
+      this.rolls = [rollData, ...this.rolls];
     }
 
     if (this.roomChannel) {
       this.roomChannel.send({
         type: 'broadcast',
         event: 'dice_roll',
-        payload: { roll: rollData, chatMsg, color },
+        payload: {
+          roll: rollData,
+          chatMsg,
+          color: payload.color,
+          userId: authState.user?.id,
+        },
       });
     }
 
     db.addRoll({
-      userName: authState.displayName,
-      formula,
-      result,
-      details,
-      color,
+      userName: payload.userName,
+      formula: payload.formula,
+      result: payload.result,
+      details: payload.details,
+      color: payload.color,
       gameId: this.currentGameId,
       id: rollData.id,
-    });
+    }).catch(console.error);
 
-    db.addChatMessage(textual, 'user', authState.displayName, this.currentGameId, chatMsg.id);
+    db.addChatMessage(payload.textual, 'user', payload.userName, this.currentGameId, chatMsg.id).catch(
+      console.error,
+    );
   }
 
   async getGameById(gameId: string) {

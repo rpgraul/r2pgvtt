@@ -128,7 +128,7 @@ function createMusicState() {
       .from('player_state')
       .select('*')
       .eq('game_id', gameId)
-      .single();
+      .maybeSingle();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
       console.error('[Music] Error loading player state:', fetchError);

@@ -520,7 +520,7 @@ function createMusicState() {
     playlist = tracks || [];
   }
   async function loadPlayerState(gameId) {
-    const { data: state, error: fetchError } = await supabase.from("player_state").select("*").eq("game_id", gameId).single();
+    const { data: state, error: fetchError } = await supabase.from("player_state").select("*").eq("game_id", gameId).maybeSingle();
     if (fetchError && fetchError.code !== "PGRST116") {
       console.error("[Music] Error loading player state:", fetchError);
       return;
@@ -1566,9 +1566,9 @@ function ChatSidebar($$renderer, $$props) {
     for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
       let msg = each_array[$$index];
       $$renderer2.push(`<div${attr_class(`message ${msg.type === "system" ? "bg-muted/50 rounded-lg p-2" : ""}`)}><div class="flex items-baseline gap-2"><span class="font-medium text-sm">${escape_html(msg.sender || "Anônimo")}</span> `);
-      if (msg.createdAt) {
+      if (msg.created_at || msg.createdAt) {
         $$renderer2.push("<!--[0-->");
-        $$renderer2.push(`<span class="text-xs text-muted-foreground">${escape_html(formatTime(msg.createdAt))}</span>`);
+        $$renderer2.push(`<span class="text-xs text-muted-foreground">${escape_html(formatTime(msg.created_at || msg.createdAt))}</span>`);
       } else {
         $$renderer2.push("<!--[-1-->");
       }
