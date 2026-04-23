@@ -13,7 +13,8 @@ export const nodes = [
 	() => import('./nodes/9'),
 	() => import('./nodes/10'),
 	() => import('./nodes/11'),
-	() => import('./nodes/12')
+	() => import('./nodes/12'),
+	() => import('./nodes/13')
 ];
 
 export const server_loads = [];
@@ -22,14 +23,15 @@ export const dictionary = {
 		"/": [2],
 		"/auth/callback": [3],
 		"/auth/login": [4],
-		"/converter": [5],
-		"/drawing-mode": [6],
-		"/games": [7],
-		"/games/[id]": [8],
-		"/games/[id]/settings": [9],
-		"/join/[invite_code]": [10],
-		"/sheet-mode": [11],
-		"/text-mode": [12]
+		"/auth/superuser": [5],
+		"/converter": [6],
+		"/drawing-mode": [7],
+		"/games": [8],
+		"/games/[id]": [9],
+		"/games/[id]/settings": [10],
+		"/join/[invite_code]": [11],
+		"/sheet-mode": [12],
+		"/text-mode": [13]
 	};
 
 export const hooks = {

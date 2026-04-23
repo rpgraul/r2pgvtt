@@ -29,7 +29,7 @@ declare module "$app/types" {
 	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
 
 	export interface AppTypes {
-		RouteId(): "/" | "/auth" | "/auth/callback" | "/auth/login" | "/converter" | "/drawing-mode" | "/games" | "/games/[id]" | "/games/[id]/settings" | "/join" | "/join/[invite_code]" | "/sheet-mode" | "/text-mode";
+		RouteId(): "/" | "/auth" | "/auth/callback" | "/auth/login" | "/auth/superuser" | "/converter" | "/drawing-mode" | "/games" | "/games/[id]" | "/games/[id]/settings" | "/join" | "/join/[invite_code]" | "/sheet-mode" | "/text-mode";
 		RouteParams(): {
 			"/games/[id]": { id: string };
 			"/games/[id]/settings": { id: string };
@@ -40,6 +40,7 @@ declare module "$app/types" {
 			"/auth": Record<string, never>;
 			"/auth/callback": Record<string, never>;
 			"/auth/login": Record<string, never>;
+			"/auth/superuser": Record<string, never>;
 			"/converter": Record<string, never>;
 			"/drawing-mode": Record<string, never>;
 			"/games": { id?: string };
@@ -50,7 +51,7 @@ declare module "$app/types" {
 			"/sheet-mode": Record<string, never>;
 			"/text-mode": Record<string, never>
 		};
-		Pathname(): "/" | "/auth/callback" | "/auth/login" | "/converter" | "/drawing-mode" | "/games" | `/games/${string}` & {} | `/games/${string}/settings` & {} | `/join/${string}` & {} | "/sheet-mode" | "/text-mode";
+		Pathname(): "/" | "/auth/callback" | "/auth/login" | "/auth/superuser" | "/converter" | "/drawing-mode" | "/games" | `/games/${string}` & {} | `/games/${string}/settings` & {} | `/join/${string}` & {} | "/sheet-mode" | "/text-mode";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/assets/dice-box/ammo/ammo.wasm.wasm" | "/assets/dice-box/themes/default/default.json" | "/assets/dice-box/themes/default/diffuse-dark.png" | "/assets/dice-box/themes/default/diffuse-light.png" | "/assets/dice-box/themes/default/normal.png" | "/assets/dice-box/themes/default/specular.jpg" | "/assets/dice-box/themes/default/theme.config.json" | string & {};
 	}
