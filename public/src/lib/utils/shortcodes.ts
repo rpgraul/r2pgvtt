@@ -134,6 +134,28 @@ export interface ParsedShortcodes {
   details: string;
 }
 
+// ─── Helper: compute D&D-style ability modifier ──────────────────────────────
+function calcMod(value: number): number {
+  return Math.floor((value - 10) / 2);
+}
+
+function modSign(mod: number): string {
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+}
+
+// ─── Helper: checkbox-theme rendering for [count] ────────────────────────────
+function renderCheckboxes(current: number, max: number): string {
+  let html = '<span class="count-checkboxes">';
+  for (let i = 0; i < max; i++) {
+    html += `<span class="count-box ${i < current ? 'is-filled' : 'is-empty'}">`;
+    html += i < current ? '●' : '○';
+    html += '</span>';
+  }
+  html += '</span>';
+  return html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export function parseAllShortcodes(
   item: { id: string; conteudo?: string },
   options: { isPlayerSheet?: boolean; defaultCurrency?: string } = {},
@@ -182,6 +204,7 @@ export function parseAllShortcodes(
     .map((sc) => {
       const args = parseArguments(sc.inner);
       const commandRaw = args[0] || '';
+      const isOverlay = commandRaw.startsWith('*');
       const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
       if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) return null;
@@ -202,6 +225,7 @@ export function parseAllShortcodes(
         args: finalArgs,
         originalShortcode: sc.full,
         isHidden: isHashHidden || isArgHidden || isInsideHideBlock,
+        isOverlay,
         order: commandOrder[command] || commandOrder.default,
       };
     })
@@ -229,19 +253,56 @@ export function parseAllShortcodes(
     else if (sc.args.includes('bottom')) position = 'bottom';
 
     const finalArgs = options.isPlayerSheet ? [...sc.args, 'isPlayerSheet'] : sc.args;
+    const encSC = encodeURIComponent(sc.originalShortcode);
 
     switch (sc.command) {
+      // ── [stat "Nome" "Valor"] ──────────────────────────────────────────
       case 'stat': {
-        const statLabel = sc.args.length > 1 ? sc.args.slice(0, -1).join(' ') : '';
-        const statValue = sc.args[sc.args.length - 1] || '';
-        const htmlStat = `<div class="shortcode-stat is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
-          ${statLabel ? `<strong>${statLabel}:</strong> ` : ''}
-          <span class="stat-value-display">${statValue}</span>
+        const params = parseKeyValueArgs(finalArgs);
+
+        // Tenta extrair label e value dos args posicionais OU kv-args
+        let statLabel = params.label || params.name || '';
+        let statValueStr = params.value || '';
+
+        if (!statLabel || !statValueStr) {
+          // Arg posicional: [stat "Força" "18"] ou [stat "Força" "+3"]
+          const positional = finalArgs.filter(
+            (a: string) => !a.includes('=') && !['left', 'right', 'bottom', 'isPlayerSheet', '#'].includes(a.toLowerCase()),
+          );
+          if (!statLabel && positional.length >= 1) statLabel = positional[0];
+          if (!statValueStr && positional.length >= 2) statValueStr = positional[1];
+          else if (!statValueStr && positional.length === 1 && /^[+-]?\d+$/.test(positional[0])) {
+            statValueStr = positional[0];
+            statLabel = '';
+          }
+        }
+
+        const statNumeric = parseFloat(statValueStr);
+        let modStr = '';
+        let modTitle = '';
+
+        if (!isNaN(statNumeric)) {
+          // Se o valor é um score D&D (ex: 18), calcula o modificador
+          if (statNumeric >= 1 && statNumeric <= 30 && !statValueStr.startsWith('+') && !statValueStr.startsWith('-')) {
+            const mod = calcMod(statNumeric);
+            modStr = modSign(mod);
+            modTitle = `Modificador: ${modSign(mod)}`;
+          } else {
+            // É um modificador direto (ex: +5)
+            modStr = statValueStr.startsWith('+') || statValueStr.startsWith('-') ? statValueStr : '';
+          }
+        }
+
+        const htmlStat = `<div class="shortcode-stat is-interactive" data-shortcode="${encSC}" title="${modTitle}">
+          ${statLabel ? `<strong class="stat-label">${statLabel}</strong>` : ''}
+          <span class="stat-value-display">${statValueStr || '—'}</span>
+          ${modStr ? `<span class="stat-mod">(${modStr})</span>` : ''}
         </div>`;
         processShortcode(sc, htmlStat, position || 'left');
         break;
       }
 
+      // ── [hp max=X current=Y] ──────────────────────────────────────────
       case 'hp': {
         const params = parseKeyValueArgs(finalArgs);
         const maxHp = parseInt(params.max, 10) || 100;
@@ -255,33 +316,34 @@ export function parseAllShortcodes(
         else if (percent < 30) colorClass = 'is-low';
         else if (percent < 60) colorClass = 'is-medium';
 
-        const htmlHp = `<div class="shortcode-hp is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}" data-max-hp="${maxHp}">
-          <div class="hp-display-mode">
-            <div class="hp-header">
-              <strong class="hp-label">PV</strong>
-              <span class="hp-text">${finalCurrentHp} / ${maxHp}</span>
-            </div>
-            <div class="hp-bar-container">
-              <div class="hp-bar-fill ${colorClass}" style="width: ${percent}%"></div>
-            </div>
+        const unconscious = finalCurrentHp <= 0 ? 'is-unconscious' : '';
+
+        const htmlHp = `<div class="shortcode-hp is-interactive ${unconscious}" data-shortcode="${encSC}" data-item-id="${item.id}" data-max-hp="${maxHp}">
+          <div class="hp-header">
+            <strong class="hp-label">❤️ PV</strong>
+            <span class="hp-text">${finalCurrentHp} / ${maxHp}</span>
+          </div>
+          <div class="hp-bar-container">
+            <div class="hp-bar-fill ${colorClass}" style="width: ${percent}%"></div>
           </div>
         </div>`;
         processShortcode(sc, htmlHp, position || 'bottom');
         break;
       }
 
+      // ── [money current=X currency=PO] ─────────────────────────────────
       case 'money': {
         const moneyParams = parseKeyValueArgs(finalArgs);
         const currentRaw = (moneyParams.current || '').replace(/[^\d.-]/g, '');
         const currentValue = parseFloat(currentRaw) || 0;
         const currency =
           moneyParams.currency ||
-          finalArgs.find((arg: string) => !arg.includes('=')) ||
+          finalArgs.find((arg: string) => !arg.includes('=') && !['left', 'right', 'bottom', '#'].includes(arg.toLowerCase())) ||
           options.defaultCurrency ||
-          '';
+          'PO';
 
-        const htmlMoney = `<div class="shortcode-money is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
-          <i class="fas fa-coins"></i>
+        const htmlMoney = `<div class="shortcode-money is-interactive" data-shortcode="${encSC}" data-item-id="${item.id}">
+          <span class="money-icon">💰</span>
           <span class="money-value-display">${formatNumber(currentValue)}</span>
           <span class="money-currency">${currency}</span>
         </div>`;
@@ -289,36 +351,56 @@ export function parseAllShortcodes(
         break;
       }
 
+      // ── [count "Nome" max=X current=Y theme=number|checkbox] ──────────
       case 'count': {
         const countParams = parseKeyValueArgs(finalArgs);
-        const name = sc.args.find((arg: string) => !arg.includes('=')) || '';
-        const max = parseInt(countParams.max, 10) || 0;
-        const current = Math.max(0, Math.min(parseInt(countParams.current, 10) || max, max));
+        const name =
+          countParams.label ||
+          finalArgs.find((arg: string) => !arg.includes('=') && !['left', 'right', 'bottom', '#', 'checkbox', 'number'].includes(arg.toLowerCase())) ||
+          '';
+        const max = parseInt(countParams.max, 10) || 10;
+        const current = Math.max(0, Math.min(parseInt(countParams.current, 10) || 0, max));
+        const theme = countParams.theme || (finalArgs.includes('checkbox') ? 'checkbox' : 'number');
+        const icon = countParams.icon || '';
 
-        const isResource = sc.originalShortcode.includes('[*count');
+        const isResource = sc.originalShortcode.startsWith('[*');
 
-        const htmlCount = `<div class="shortcode-count is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
-          ${name ? `<strong class="count-name">${name}:</strong> ` : ''}
-          <span class="count-current-value">${current}</span>/<span class="count-max-value">${max}</span>
+        const iconHtml = icon ? `<span class="count-icon">${icon}</span> ` : '';
+        const valueHtml =
+          theme === 'checkbox'
+            ? renderCheckboxes(current, max)
+            : `<span class="count-current-value">${current}</span><span class="count-sep">/</span><span class="count-max-value">${max}</span>`;
+
+        const htmlCount = `<div class="shortcode-count is-interactive ${theme === 'checkbox' ? 'is-checkbox-theme' : ''}" data-shortcode="${encSC}" data-item-id="${item.id}">
+          ${name ? `<strong class="count-name">${iconHtml}${name}</strong>` : ''}
+          <div class="count-representation">${valueHtml}</div>
         </div>`;
 
         if (isResource) {
           processShortcode(sc, htmlCount, position || 'right');
         } else if (position) {
           result[position].push(wrapIfHidden(htmlCount, sc.isHidden));
+          result.all.push({ type: sc.command, html: htmlCount });
         } else {
           result.details.push(wrapIfHidden(htmlCount, sc.isHidden));
+          result.all.push({ type: sc.command, html: htmlCount });
         }
         break;
       }
 
+      // ── [xp current=X] ────────────────────────────────────────────────
       case 'xp': {
         const xpParams = parseKeyValueArgs(finalArgs);
+        const xpLabel =
+          xpParams.label ||
+          finalArgs.find((arg: string) => !arg.includes('=') && !['left', 'right', 'bottom', '#'].includes(arg.toLowerCase())) ||
+          'XP';
         const xpValue = parseInt((xpParams.current || '0').replace(/[^\d.-]/g, ''), 10) || 0;
 
-        const htmlXp = `<div class="shortcode-xp is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
-          <i class="fas fa-star"></i>
-          <span class="xp-value-display">${xpValue} XP</span>
+        const htmlXp = `<div class="shortcode-xp is-interactive" data-shortcode="${encSC}" data-item-id="${item.id}">
+          <span class="xp-icon">⭐</span>
+          <span class="xp-value-display">${formatNumber(xpValue)}</span>
+          <span class="xp-label">${xpLabel}</span>
         </div>`;
         processShortcode(sc, htmlXp, position || 'left');
         break;
@@ -335,27 +417,34 @@ export function parseAllShortcodes(
   };
 }
 
+// ─── parseMainContent ─────────────────────────────────────────────────────────
 export function parseMainContent(content: string): string {
   if (!content) return '';
   let t = content;
+
+  // [nota titulo="X"] ... [/nota]
   t = t.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, '$1');
   t = t.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, '$1');
   t = t.replace(
     /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi,
     (_, title, hash, inner) =>
       `<div class="shortcode-nota ${hash ? 'is-hidden-from-players' : ''}">
-        <div class="nota-header">
-          <span class="nota-title">${title}</span>
-        </div>
+        <div class="nota-header"><span class="nota-title">📋 ${title}</span></div>
         <div class="nota-content">${inner.trim()}</div>
       </div>`,
   );
+
+  // [hide] ... [/hide]  or  [#] ... [/#]
   t = t.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (full, open, inner, close) =>
     open.toLowerCase() !== close.toLowerCase()
       ? full
       : `<div class="is-hidden-from-players">${inner}</div>`,
   );
+
+  // Remove inline shortcodes from prose view (they live in the sidebar)
   t = t.replace(/\[(\*?)(stat|hp|count|money|xp)\s.*?\]/gi, '');
+
+  // Clean empty paragraphs
   t = t.replace(/<p>\s*<\/p>/gi, '');
   return t.trim();
 }

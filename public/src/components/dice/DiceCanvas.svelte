@@ -44,7 +44,7 @@ onMount(() => {
 {#if diceStore.isDiceVisible}
   <button
     class="fixed inset-0 z-[9999] bg-transparent cursor-pointer"
-    onclick={() => diceStore.canDismiss && diceStore.clearDice()}
+    onclick={() => diceStore.tryDismissOnClick()}
     aria-label="Fechar dados"
   ></button>
 {/if}

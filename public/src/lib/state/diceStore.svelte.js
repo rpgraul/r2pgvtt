@@ -1,18 +1,21 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
-import { evaluateRolls, getSecureRandomInt, parseFormula } from '../utils/diceLogic.js';
+import { evaluateRolls, parseFormula } from '../utils/diceLogic.js';
 import { authState } from './auth.svelte.ts';
 import { gameState } from './gameState.svelte.ts';
 
 function createDiceStore() {
-  let activeDice = $state([]);
-  let pendingAlerts = $state([]);
+  // ── UI state ──────────────────────────────────────────────────
   let displayedAlerts = $state([]);
-  let hasUserDismissed = $state(false);
   let isDiceVisible = $state(false);
-  let alertTimeoutId = null;
-  const rollMetadataQueue = $state(new Map());
-  let diceBoxInstance = null;
+  let hasVisibleDice = $state(false);
+  let canClearAfterCountdown = $state(false);
 
+  let alertTimeoutId = null;
+  let countdownTimeoutId = null;
+  let diceBoxInstance = null;
+  let diceInitializing = null;
+
+  // ── Color ─────────────────────────────────────────────────────
   const defaultColor = '#0000ff';
   let currentDiceColor = $state(
     typeof window !== 'undefined'
@@ -22,233 +25,268 @@ function createDiceStore() {
 
   function setDiceColor(color) {
     currentDiceColor = color;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('rpgboard_dice_color', color);
+    if (typeof window !== 'undefined') localStorage.setItem('rpgboard_dice_color', color);
+    if (diceBoxInstance?.updateConfig) diceBoxInstance.updateConfig({ themeColor: color });
+  }
+
+  // ── Local roll queue ──────────────────────────────────────────
+  // Each entry = one pending local rollDice() call waiting for dice:3d:finished
+  // FIFO; keyed by insertion order (Map preserves order)
+  const localRollQueue = new Map(); // rollId → { parsedData, formula, color, resolve, reject }
+
+  // ── onRollComplete handler ────────────────────────────────────
+  // Fires for every roll() or add() that completes.
+  // For LOCAL rolls: the queue has an entry → use the actual 3D values.
+  // For REMOTE rolls: queue is empty → nothing to do (notification already shown by processRollSinal).
+  const rollCompleteListener = (event) => {
+    const firstId = localRollQueue.keys().next().value;
+    if (!firstId) {
+      // Remote roll completed – just start countdown
+      startCountdown();
+      return;
     }
-    if (diceBoxInstance && diceBoxInstance.updateConfig) {
-      diceBoxInstance.updateConfig({ themeColor: color });
+
+    const entry = localRollQueue.get(firstId);
+    localRollQueue.delete(firstId);
+
+    const { parsedData, formula, color, resolve } = entry;
+    const userName = authState.displayName;
+
+    // ── Extract actual values from the 3D dice box ──
+    const diceResults = event?.detail?.results ?? [];
+    // diceResults is an array of roll-collections; each has .rolls = [{value, sides, ...}]
+    let rawValues = diceResults.flatMap((col) =>
+      (col.rolls ?? []).map((d) => d.value),
+    );
+
+    // Safety fallback (if dice-box returned empty / unexpected format)
+    if (rawValues.length < parsedData.count) {
+      rawValues = Array.from(
+        { length: parsedData.count },
+        () => Math.floor(Math.random() * parsedData.sides) + 1,
+      );
     }
-  }
 
-  const canDismiss = $derived(pendingAlerts.length === 0 && !hasActiveRolls());
+    // Keep only the expected number of dice (the latest add/roll)
+    rawValues = rawValues.slice(-parsedData.count);
 
-  function hasActiveRolls() {
-    return activeDice.some((d) => d.rolling);
-  }
+    // ── Compute total (applies formula modifiers like +5) ──
+    const result = evaluateRolls(parsedData, rawValues);
 
-  function getUserName() {
-    return authState.displayName;
-  }
+    // ── Broadcast deterministic payload to other players ──
+    const deterministicDice = rawValues.map((v) => ({
+      sides: parsedData.sides,
+      value: v,
+      themeColor: color,
+    }));
 
-  function generateId() {
-    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9);
-  }
+    gameState.broadcastDiceAction({
+      rollId: firstId,
+      deterministicDice,
+      metadata: {
+        userName,
+        formula,
+        total: result.total,
+        textual: `🎲 Rolou ${formula}: ${result.textual}`,
+        color,
+        sides: parsedData.sides,
+        rolls: rawValues,
+      },
+    });
 
-  let diceInitializing = null;
-  const rollCompleteListener = () => {
-    const firstId = rollMetadataQueue.keys().next().value;
-    if (!firstId) return;
+    // ── Chat message ──
+    gameState.addMessageToChatLocal(
+      `🎲 Rolou ${formula}: ${result.textual}`,
+      'user',
+      userName,
+    );
 
-    const metadata = rollMetadataQueue.get(firstId);
-    if (metadata) {
-      // 1. Adiciona ao Chat Local
-      gameState.addMessageToChatLocal(metadata.textual, 'user', metadata.userName);
+    // ── Notification alert ──
+    showAlert({
+      id: firstId,
+      userName,
+      formula,
+      result: result.total,
+      successes: result.successes,
+      rolls: rawValues,
+      diceType: `d${parsedData.sides}`,
+      color,
+    });
 
-      // 2. Prepara Alerta de UI
-      const newAlert = {
-        id: firstId,
-        userName: metadata.userName,
-        formula: metadata.formula,
-        result: metadata.total,
-        rolls: metadata.rolls || [],
-        diceType: `d${metadata.sides || 20}`,
-        color: metadata.color,
-        timestamp: Date.now(),
-      };
+    // ── Countdown to allow click-to-clear ──
+    startCountdown();
 
-      pendingAlerts = [...pendingAlerts, newAlert];
-      processNextAlert();
-
-      // 3. Limpa da fila
-      rollMetadataQueue.delete(firstId);
-    }
+    // ── Resolve the promise returned by rollDice() ──
+    resolve?.(result);
   };
 
   if (typeof window !== 'undefined') {
     window.addEventListener('dice:3d:finished', rollCompleteListener);
   }
 
+  // ── DiceBox init ──────────────────────────────────────────────
   function initDiceBox(container = null) {
     if (diceBoxInstance) return Promise.resolve(diceBoxInstance);
     if (diceInitializing) return diceInitializing;
 
-    diceBoxInstance = createDiceBoxManager(container, {
-      themeColor: currentDiceColor,
-    });
-
-    diceInitializing = diceBoxInstance.init().then(() => {
-      diceInitializing = null;
-    });
-
+    diceBoxInstance = createDiceBoxManager(container, { themeColor: currentDiceColor });
+    diceInitializing = diceBoxInstance.init().then(() => { diceInitializing = null; });
     return diceInitializing;
   }
 
-  async function ensureInitialized(container) {
-    if (diceInitializing) {
-      await diceInitializing;
-    }
-    if (!diceBoxInstance) {
-      await initDiceBox(container);
-    }
+  async function ensureInitialized() {
+    if (diceInitializing) await diceInitializing;
+    if (!diceBoxInstance) await initDiceBox(null);
   }
 
+  // ── LOCAL ROLL ────────────────────────────────────────────────
+  // Let the dice-box roll freely; read the actual result in rollCompleteListener.
+  // Returns a Promise<result> that resolves when the animation finishes.
   async function rollDice(formula) {
-    try {
-      const parsedData = parseFormula(formula);
-      if (!parsedData) throw new Error('Invalid formula');
+    const parsedData = parseFormula(formula);
+    if (!parsedData) throw new Error(`Invalid formula: ${formula}`);
 
-      const rawRolls = Array.from({ length: parsedData.count }, () =>
-        getSecureRandomInt(parsedData.sides),
-      );
-      const result = evaluateRolls(parsedData, rawRolls);
-      const rollId = crypto.randomUUID();
+    const rollId = crypto.randomUUID();
+    const color = currentDiceColor;
 
-      const payload = {
-        rollId,
-        deterministicDice: result.details.map((d) => ({
-          sides: parsedData.sides,
-          value: d.value,
-          themeColor: currentDiceColor,
-        })),
-        metadata: {
-          userName: authState.displayName,
-          formula,
-          total: result.total,
-          textual: `🎲 Rolou ${formula}: ${result.textual}`,
-          color: currentDiceColor,
-          sides: parsedData.sides,
-        },
-      };
-
-      // DISPARA O BROADCAST (O Roller também vai processar isso no receptor)
-      gameState.broadcastDiceAction(payload);
-
-      // Processar localmente para rodar a animação 3D e atualizar o chat do próprio jogador
-      await processRollSinal(payload);
-
-      return result;
-    } catch (error) {
-      console.error('[DiceStore] Local Roll Error:', error);
-      throw error;
-    }
-  }
-
-  async function processRollSinal(payload) {
-    const { rollId, deterministicDice, metadata } = payload;
-
-    // Armazena na fila para mostrar o texto depois
-    rollMetadataQueue.set(rollId, metadata);
-
+    // Cancel countdown – a new roll is starting
+    if (countdownTimeoutId) { clearTimeout(countdownTimeoutId); countdownTimeoutId = null; }
+    canClearAfterCountdown = false;
     isDiceVisible = true;
-    await ensureInitialized(null);
+
+    // Notation for dice-box (NO value → random)
+    const notation = [{ qty: parsedData.count, sides: parsedData.sides, themeColor: color }];
+
+    // Promise that resolves when dice:3d:finished fires for this roll
+    const rollPromise = new Promise((resolve, reject) => {
+      localRollQueue.set(rollId, { parsedData, formula, color, resolve, reject });
+    });
+
+    await ensureInitialized();
     const instance = diceBoxInstance.getInstance();
     if (instance) {
       instance.show();
       try {
-        await instance.roll(deterministicDice);
+        if (hasVisibleDice) {
+          await instance.add(notation);
+        } else {
+          hasVisibleDice = true;
+          await instance.roll(notation);
+        }
       } catch (e) {
-        console.warn('[DiceStore] 3D animation error:', e);
-        // Fallback: Se falhar a animação, libera o alerta manualmente
-        rollCompleteListener();
+        console.warn('[DiceStore] roll error:', e);
+        // Manually fire listener so the promise resolves even on animation failure
+        rollCompleteListener(null);
       }
     }
+
+    return rollPromise;
   }
 
-  function processNextAlert() {
-    if (alertTimeoutId) return;
+  // ── REMOTE ROLL ───────────────────────────────────────────────
+  // Received via Supabase broadcast from another player.
+  // Animate with their deterministic values; show their pre-computed result in notification.
+  async function processRollSinal(payload) {
+    const { rollId, deterministicDice, metadata } = payload;
 
-    if (pendingAlerts.length > 0) {
-      const next = pendingAlerts[0];
-      pendingAlerts = pendingAlerts.slice(1);
+    if (countdownTimeoutId) { clearTimeout(countdownTimeoutId); countdownTimeoutId = null; }
+    canClearAfterCountdown = false;
+    isDiceVisible = true;
 
-      displayedAlerts = [...displayedAlerts, next];
-
-      alertTimeoutId = setTimeout(() => {
-        dismissAlert(next.id);
-        alertTimeoutId = null;
-        processNextAlert();
-      }, 3000);
+    await ensureInitialized();
+    const instance = diceBoxInstance.getInstance();
+    if (instance) {
+      instance.show();
+      try {
+        if (hasVisibleDice) {
+          await instance.add(deterministicDice);
+        } else {
+          hasVisibleDice = true;
+          await instance.roll(deterministicDice);
+        }
+      } catch (e) {
+        console.warn('[DiceStore] remote roll error:', e);
+      }
     }
+
+    // Chat
+    gameState.addMessageToChatLocal(metadata.textual, 'user', metadata.userName);
+
+    // Notification with broadcaster's already-correct total
+    showAlert({
+      id: rollId,
+      userName: metadata.userName,
+      formula: metadata.formula,
+      result: metadata.total,
+      rolls: metadata.rolls || [],
+      diceType: `d${metadata.sides || 20}`,
+      color: metadata.color,
+    });
+
+    startCountdown();
+  }
+
+  // ── Alert helpers ─────────────────────────────────────────────
+  function showAlert(alert) {
+    displayedAlerts = [...displayedAlerts, { ...alert, timestamp: Date.now() }];
+
+    // Auto-dismiss after 4s
+    if (alertTimeoutId) clearTimeout(alertTimeoutId);
+    alertTimeoutId = setTimeout(() => {
+      dismissAlert(alert.id);
+      alertTimeoutId = null;
+    }, 4000);
   }
 
   function dismissAlert(id) {
     displayedAlerts = displayedAlerts.filter((a) => a.id !== id);
   }
 
-  function dismissAll() {
-    if (!canDismiss) {
-      hasUserDismissed = true;
-    }
+  function startCountdown() {
+    if (countdownTimeoutId) clearTimeout(countdownTimeoutId);
+    canClearAfterCountdown = false;
+    countdownTimeoutId = setTimeout(() => {
+      canClearAfterCountdown = true;
+      countdownTimeoutId = null;
+    }, 1000);
   }
 
+  function hasActiveRolls() {
+    return localRollQueue.size > 0;
+  }
+
+  // ── Clear ─────────────────────────────────────────────────────
   function clearDice() {
-    activeDice = [];
-    pendingAlerts = [];
     displayedAlerts = [];
-    hasUserDismissed = false;
     isDiceVisible = false;
-    if (alertTimeoutId) {
-      clearTimeout(alertTimeoutId);
-      alertTimeoutId = null;
-    }
-    if (diceBoxInstance) {
-      diceBoxInstance.clear();
-    }
+    hasVisibleDice = false;
+    canClearAfterCountdown = false;
+    if (alertTimeoutId) { clearTimeout(alertTimeoutId); alertTimeoutId = null; }
+    if (countdownTimeoutId) { clearTimeout(countdownTimeoutId); countdownTimeoutId = null; }
+    diceBoxInstance?.clear?.();
   }
 
-  function clear3DDice() {
-    if (diceBoxInstance && isDiceVisible && !hasActiveRolls()) {
-      diceBoxInstance.clear();
-      isDiceVisible = false;
-    }
+  function tryDismissOnClick() {
+    if (!isDiceVisible) return;
+    if (hasActiveRolls()) return;
+    if (!canClearAfterCountdown) return;
+    clearDice();
   }
 
-  function getDiceBox() {
-    return diceBoxInstance;
-  }
-
+  // ── Public API ─────────────────────────────────────────────────
   return {
-    get activeDice() {
-      return activeDice;
-    },
-    get pendingAlerts() {
-      return pendingAlerts;
-    },
-    get displayedAlerts() {
-      return displayedAlerts;
-    },
-    get canDismiss() {
-      return canDismiss;
-    },
-    get hasUserDismissed() {
-      return hasUserDismissed;
-    },
-    get isDiceVisible() {
-      return isDiceVisible;
-    },
-    get currentDiceColor() {
-      return currentDiceColor;
-    },
+    get displayedAlerts() { return displayedAlerts; },
+    get isDiceVisible() { return isDiceVisible; },
+    get currentDiceColor() { return currentDiceColor; },
+    get canClearAfterCountdown() { return canClearAfterCountdown; },
 
     rollDice,
     processRollSinal,
     dismissAlert,
-    dismissAll,
     clearDice,
-    clear3DDice,
+    tryDismissOnClick,
     initDiceBox,
-    getDiceBox,
-    processNextAlert,
+    getDiceBox: () => diceBoxInstance,
     hasActiveRolls,
     setDiceColor,
   };
