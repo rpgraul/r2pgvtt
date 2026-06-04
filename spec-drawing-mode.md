@@ -1,359 +1,308 @@
-# SPEC — Drawing Mode (Quadro Interativo)
+# SPEC — RPGBoard: Drawing Mode (Quadro Interativo)
 
 **Projeto:** RPGBoard  
 **Stack:** SvelteKit + Supabase (Realtime Broadcast + Postgres) + Fabric.js  
-**Versão:** 1.0  
-**Status:** Proposta  
+**Versão:** 2.1  
+**Status:** Referência Atualizada
 
 ---
 
 ## 1. Visão Geral
 
-O **Drawing Mode** é um quadro colaborativo em tempo real integrado ao RPGBoard. É a ferramenta de cartografia, planejamento e narração visual da sessão. Funciona como um Excalidraw especializado para RPG de mesa: suporta múltiplos boards por jogo, permissões diferenciadas entre Narrador e Jogadores, tokens de personagem, fog of war, grid (quadrado/hexagonal) com snap magnético, rastreio de cursores, gaveta de assets e sincronização total via Supabase Realtime.
+O **Drawing Mode** é um quadro colaborativo em tempo real integrado ao RPGBoard. Funciona como um whiteboard/gerenciador de mapas e tokens profissional para RPG de mesa. Suporta múltiplos boards por jogo, permissões diferenciadas entre Narrador e Jogadores, tokens de personagem, fog of war por camada, grid quadrado/hexagonal com snap magnético, rastreio de cursores, gaveta de assets e sincronização total via Supabase Realtime.
 
 ### 1.1 Princípios de Design
 
-- **Narrador controla, Jogadores navegam** — o mestre cria e gerencia; os jogadores podem apenas visualizar e anotar (com permissão).
+- **Layout minimalista, flutuante e sem scroll** — toolbar vertical à esquerda, painel de propriedades à direita, tudo dentro do canvas. A página nunca tem scroll externo.
+- **Fundo branco** — canvas com `backgroundColor: #ffffff` sempre. O fog é preto.
+- **Narrador controla, Jogadores navegam** — o mestre cria e gerencia; jogadores podem apenas visualizar e anotar (com permissão).
 - **Tempo real sem atrito** — mudanças aparecem instantaneamente para todos no mesmo board.
-- **Atalhos como cidadão de primeira classe** — toda ação tem atalho de teclado.
-- **Performance primeiro** — o canvas usa Fabric.js com renderização via `requestAnimationFrame`; operações broadcast são debounced.
+- **Atalhos como cidadão de primeira classe** — toda ação tem atalho de teclado; scroll e modificadores ajustam propriedades da ferramenta ativa.
+- **Preview sempre visível** — lápis e borracha exibem preview de tamanho e cor em tempo real sob o cursor.
 
 ---
 
-## 2. Modelo de Dados (Supabase)
+## 2. Layout
 
-### 2.1 Tabelas
+```
+┌────────────────────────────────────────────────────────────┐
+│  [↩ Undo] [↪ Redo]  [100%]  [Fit]           ← topbar dir  │
+│                                                             │
+│ ┌──────┐                              ┌─────────────────┐  │
+│ │Select│                              │  Props Panel    │  │
+│ │ Pan  │        CANVAS (branco)       │  (flutuante,    │  │
+│ │──────│                              │   direita)      │  │
+│ │Lápis │                              │                 │  │
+│ │Borra.│                              └─────────────────┘  │
+│ │──────│                                                    │
+│ │Formas│                                                    │
+│ │Linha │                                                    │
+│ │Texto │                                                    │
+│ │──────│                                                    │
+│ │Imagem│                                                    │
+│ │Token │                                                    │
+│ │ Fog  │                                                    │
+│ │ Grid │                                                    │
+│ └──────┘                                                    │
+│                                                             │
+│        [Ferramenta ativa | info seleção]  ← statusbar      │
+└────────────────────────────────────────────────────────────┘
+```
+
+- **Toolbar:** painel vertical flutuante, esquerda, centralizado verticalmente, border-radius, sem scroll
+- **Props Panel:** painel flutuante, direita, aparece ao selecionar ferramenta ou objeto
+- **Topbar:** canto superior direito — Undo, Redo, zoom %, Fit
+- **Statusbar:** barra central inferior — nome da ferramenta ativa + info de seleção
+- **Zero scroll externo** — `overflow: hidden` em html, body, #app
+
+---
+
+## 3. Modelo de Dados (Supabase)
+
+### 3.1 Tabelas
 
 ```sql
--- Boards de um jogo
 CREATE TABLE boards (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id     UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
   name        TEXT NOT NULL DEFAULT 'Novo Board',
-  is_visible  BOOLEAN NOT NULL DEFAULT false,   -- visível para jogadores?
+  is_visible  BOOLEAN NOT NULL DEFAULT false,
   order_index INT NOT NULL DEFAULT 0,
   grid_type   TEXT CHECK (grid_type IN ('none','square','hex')) DEFAULT 'none',
-  grid_size   INT DEFAULT 60,                   -- px por célula (base 60)
-  grid_color  TEXT DEFAULT '#ffffff22',
-  bg_color    TEXT DEFAULT '#1a1a2e',
-  bg_image    TEXT,                             -- URL opcional
+  grid_size   INT DEFAULT 60,
+  grid_color  TEXT DEFAULT '#94a3b8',
+  bg_color    TEXT DEFAULT '#ffffff',
+  bg_image    TEXT,
+  fog_enabled BOOLEAN NOT NULL DEFAULT false,   -- fog ativo no board?
   created_by  UUID REFERENCES auth.users(id),
   created_at  TIMESTAMPTZ DEFAULT now(),
   updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Elementos persistidos de cada board
 CREATE TABLE board_elements (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   board_id    UUID NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
   game_id     UUID NOT NULL,
-  fabric_json JSONB NOT NULL,                   -- snapshot do objeto Fabric.js
+  fabric_json JSONB NOT NULL,
   z_index     INT DEFAULT 0,
-  group_id    UUID,                             -- para agrupamentos
+  group_id    UUID,
   created_by  UUID REFERENCES auth.users(id),
   created_at  TIMESTAMPTZ DEFAULT now(),
   updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Estado do "board ativo" (qual o mestre está exibindo)
+-- Fog é armazenado separadamente: lista de polígonos/retângulos revelados
+-- O fog base cobre tudo; revelações são buracos nessa camada
+CREATE TABLE board_fog (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  board_id    UUID NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  revealed    JSONB NOT NULL DEFAULT '[]',  -- array de {x, y, w, h} ou polígonos
+  updated_at  TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE board_session (
   game_id         UUID PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
   active_board_id UUID REFERENCES boards(id) ON DELETE SET NULL,
-  called_at       TIMESTAMPTZ                   -- última vez que o mestre chamou atenção
+  called_at       TIMESTAMPTZ
 );
 ```
 
-### 2.2 Canais Supabase Realtime (Broadcast)
+### 3.2 Canais Supabase Realtime (Broadcast)
 
 | Canal | Evento | Payload |
 |---|---|---|
 | `board:{boardId}` | `element:add` | `{ element: FabricJSON }` |
 | `board:{boardId}` | `element:update` | `{ id, changes: FabricJSON }` |
 | `board:{boardId}` | `element:delete` | `{ id }` |
-| `board:{boardId}` | `element:batch` | `{ ops: Op[] }` — undo/redo em lote |
+| `board:{boardId}` | `element:batch` | `{ ops: Op[] }` |
 | `board:{boardId}` | `cursor` | `{ userId, name, color, x, y }` — throttled 50ms |
-| `board:{boardId}` | `fog:update` | `{ regions: FogRegion[] }` |
-| `game:{gameId}` | `board:call` | `{ boardId, boardName }` — mestre chama todos |
-| `game:{gameId}` | `board:active` | `{ boardId }` — troca silenciosa de board ativo |
+| `board:{boardId}` | `fog:toggle` | `{ enabled: boolean }` |
+| `board:{boardId}` | `fog:update` | `{ revealed: Region[] }` |
+| `game:{gameId}` | `board:call` | `{ boardId, boardName }` |
+| `game:{gameId}` | `board:active` | `{ boardId }` |
 
 ---
 
-## 3. Arquitetura de Estado (SvelteKit / Svelte 5)
+## 4. Ferramentas
 
-### 3.1 `boardState.svelte.ts`
+### 4.1 Catálogo
 
-```
-src/lib/state/boardState.svelte.ts
-```
+| ID | Nome | Atalho | Descrição |
+|---|---|---|---|
+| `select` | Selecionar / Mover | `V` ou `Esc` | Seleciona, move, redimensiona, rotaciona |
+| `pan` | Mover Canvas | `M` ou segurar `M` ou Scroll-click | Pan no canvas sem selecionar nada |
+| `pencil` | Lápis Livre | `P` | Brush livre com preview |
+| `eraser` | Borracha | `E` | Apaga partes de paths com preview |
+| `shapes` | Formas | `S` | Abre opções de forma no painel |
+| `line` | Linha / Seta | `L` | Linha reta simples ou com ponta de seta |
+| `text` | Texto | `T` | Texto editável inline (clique no canvas) |
+| `image` | Inserir Imagem | `I` | Upload via clique ou drag & drop |
+| `token` | Inserir Token | `K` | Insere token ou card de personagem |
+| `fog` | Fog of War | `F` | Liga/desliga fog e ferramentas de revelar/ocultar |
+| `grid` | Grid | `G` | Abre configurações de grid no painel |
 
-Responsabilidades:
-- Lista de boards do jogo
-- Board selecionado localmente (pode diferir do ativo do narrador)
-- Board ativo oficial (ditado pelo narrador)
-- Flag `hasAlert` — exibe banner para jogadores fora do board chamado
-- Canvas Fabric.js instanciado aqui via ref
-- Stack de undo/redo
-- Cursores remotos mapeados por `userId`
+### 4.2 Modificadores durante desenho de formas
 
-```ts
-interface BoardState {
-  boards: Board[]
-  localBoardId: string | null        // o que EU estou vendo
-  activeBoardId: string | null       // o que o MESTRE está exibindo
-  alertBoardId: string | null        // mestre "chamou" — mostrar alerta
-  cursors: Map<string, RemoteCursor>
-  undoStack: CanvasSnapshot[]        // máx 50
-  redoStack: CanvasSnapshot[]
-  selectedTool: Tool
-  selectedColor: string
-  strokeWidth: number
-  fontSize: number
-  fontFamily: string
-  opacity: number
-  isSnapEnabled: boolean
-  fogEnabled: boolean
+| Modificador | Efeito |
+|---|---|
+| `Alt` | Proporção 1:1 (círculo perfeito, quadrado perfeito) |
+| `Shift` (ao mover) | Restringe a eixo X ou Y |
+| `Shift` (ao rotacionar) | Snap de 15° em 15° |
+| `Ctrl+Scroll` | Zoom centrado no cursor |
+| `Scroll` | Zoom |
+
+### 4.3 Atalhos de ajuste por ferramenta
+
+| Ferramenta ativa | Scroll | Alt+Scroll |
+|---|---|---|
+| `pencil` | Tamanho do brush | Opacidade |
+| `eraser` | Tamanho da borracha | — |
+| qualquer outra | Zoom | — |
+
+---
+
+## 5. Preview de Ferramentas
+
+Um círculo flutuante segue o cursor do mouse em tempo real ao usar lápis ou borracha:
+- **Tamanho exato** em pixels (escalonado pelo zoom atual)
+- **Cor e opacidade** do lápis; tom neutro para a borracha
+- `pointer-events: none` — não interfere em cliques
+- Desaparece ao trocar para outra ferramenta
+
+```css
+#brush-preview {
+  position: fixed;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,.3);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 ```
 
-### 3.2 Separação de permissões
+---
 
-```ts
-const canEdit = $derived(
-  authState.role === 'narrador' ||
-  boards.find(b => b.id === localBoardId)?.players_can_edit === true
-)
-```
+## 6. Configurações por Ferramenta (Props Panel)
+
+### 6.1 Lápis (`pencil`)
+
+| Propriedade | Controle | Atalho |
+|---|---|---|
+| Cor | Color picker | — |
+| Tamanho | Slider + input numérico (1–60px) | Scroll |
+| Opacidade | Slider (0.05–1) | Alt+Scroll |
+| Traço | Select: Sólido / Tracejado / Pontilhado | — |
+
+### 6.2 Borracha (`eraser`)
+
+| Propriedade | Controle |
+|---|---|
+| Tamanho | Slider + input numérico (5–120px) |
+
+### 6.3 Formas (`shapes`)
+
+| Propriedade | Controle |
+|---|---|
+| Tipo | Select: Retângulo, Elipse, Triângulo, Polígono, Estrela |
+| Preenchido | Checkbox |
+| Cor de fundo | Color picker |
+| Cor da borda | Color picker |
+| Largura da borda | Slider (0–20px) |
+| Opacidade | Slider (0.05–1) |
+| Raio da borda | Slider (0–50px) |
+| Traço | Select: Sólido / Tracejado / Pontilhado |
+
+**Criar:** clicar e arrastar. `Alt` mantém proporção 1:1.
+
+### 6.4 Linha / Seta (`line`)
+
+| Propriedade | Controle |
+|---|---|
+| Cor | Color picker |
+| Espessura | Slider (1–20px) |
+| Opacidade | Slider (0.05–1) |
+| Seta | Checkbox |
+| Traço | Select: Sólido / Tracejado / Pontilhado |
+
+### 6.5 Texto (`text`)
+
+| Propriedade | Controle |
+|---|---|
+| Cor | Color picker |
+| Tamanho | Slider (8–144px) |
+| Fonte | Select: 5 fontes (ver seção 7) |
+| Negrito | Checkbox |
+| Itálico | Checkbox |
+| Opacidade | Slider (0.05–1) |
+
+### 6.6 Token (`token`)
+
+| Propriedade | Controle |
+|---|---|
+| Modo de exibição | Select: Token (circular) / Card (retangular) |
+| Cor da borda | Color picker |
+| Mostrar nome | Checkbox |
+
+### 6.7 Fog of War (`fog`)
+
+| Propriedade | Controle |
+|---|---|
+| Fog ativo | Toggle (liga/desliga a camada inteira) |
+| Modo de pincel | Select: Revelar / Ocultar |
+| Tamanho do pincel | Slider |
+| Remover todo fog | Botão (desfaz revelações, volta ao total) |
+| Desligar fog | Botão (remove a camada por completo) |
+
+### 6.8 Grid (`grid`)
+
+| Propriedade | Controle |
+|---|---|
+| Tipo | Select: Nenhum / Quadrado / Hexagonal |
+| Tamanho | Slider (20–200px) |
+| Snap magnético | Checkbox |
 
 ---
 
-## 4. Componentes
+## 7. Tipografia
 
-```
-src/lib/components/board/
-  BoardMode.svelte          ← container principal (rota /game/[id]/board)
-  BoardCanvas.svelte        ← <canvas> wrapping Fabric.js
-  BoardToolbar.svelte       ← barra de ferramentas lateral esquerda
-  BoardTopbar.svelte        ← barra superior (boards, visibilidade, call)
-  BoardPropertiesPanel.svelte ← painel direito (quando elemento selecionado)
-  BoardFogOverlay.svelte    ← overlay SVG de fog of war
-  BoardCursors.svelte       ← cursores remotos renderizados via SVG overlay
-  BoardAlert.svelte         ← banner "O mestre está chamando para um board"
-  BoardGrid.svelte          ← renderiza grid no bg (canvas extra / CSS)
-  AssetDrawer.svelte        ← gaveta lateral direita de assets
-  BoardMinimap.svelte       ← miniatura de navegação (canto inf. dir.)
-  TokenPicker.svelte        ← modal para inserir card como token
-  BoardContextMenu.svelte   ← menu de contexto (click direito)
-```
-
----
-
-## 5. Ferramentas (Tools)
-
-### 5.1 Catálogo de Ferramentas
-
-| ID | Nome | Atalho | Cursor | Descrição |
-|---|---|---|---|---|
-| `select` | Selecionar / Mover | `V` ou `Esc` | default | Seleciona, move, redimensiona, rotaciona |
-| `pan` | Mover Canvas | `H` ou `Space` (hold) | grab | Pan no canvas sem selecionar nada |
-| `pencil` | Lápis Livre | `P` | crosshair | Brush livre, pressão simulada |
-| `brush_soft` | Brush Suave | `B` | custom | Traço com blur/opacidade nos bordos |
-| `brush_ink` | Brush de Tinta | `I` | custom | Traço com variação de espessura (simula caligrafia) |
-| `brush_marker` | Marcador | `M` | custom | Traço espesso translúcido (highlight) |
-| `brush_eraser` | Borracha | `E` | eraser | Apaga partes de paths |
-| `line` | Linha | `L` | crosshair | Linha reta simples |
-| `arrow` | Seta | `A` | crosshair | Linha com ponta de seta |
-| `connector` | Conector | `X` | crosshair | Linha que "gruda" em elementos (ligação) |
-| `rect` | Retângulo | `R` | crosshair | Com/sem preenchimento, bordas arredondadas |
-| `ellipse` | Elipse / Círculo | `O` | crosshair | Shift = círculo perfeito |
-| `polygon` | Polígono | `G` | crosshair | N lados configurável |
-| `text` | Texto | `T` | text | Texto editável inline |
-| `sticky` | Sticky Note | `N` | crosshair | Bloco colorido com texto |
-| `image` | Inserir Imagem | `Shift+I` | — | Upload ou URL |
-| `token` | Inserir Token | `K` | — | Abre TokenPicker (cards do jogo) |
-| `fog_add` | Fog: Adicionar | `F` | crosshair | Pinta área de neblina |
-| `fog_erase` | Fog: Revelar | `Shift+F` | eraser | Remove neblina de área |
-| `measure` | Medidor | `D` | crosshair | Mostra distância em células de grid |
-| `zoom_in` | Zoom + | `+` / scroll up | zoom-in | — |
-| `zoom_out` | Zoom - | `-` / scroll down | zoom-out | — |
-| `zoom_fit` | Fit Canvas | `Shift+0` | — | Centraliza e ajusta zoom |
-
-### 5.2 Tipos de Brush — Detalhamento Técnico
-
-Todos os brushes são implementados via `fabric.PencilBrush` com pós-processamento ou via `fabric.PatternBrush` customizado.
-
-#### `pencil` — Lápis Livre
-- Classe base: `fabric.PencilBrush`
-- `decimate`: 4 (simplificação de pontos)
-- Linha com `strokeLineCap: 'round'`, `strokeLineJoin: 'round'`
-- Largura fixa (controlada pelo slider)
-
-#### `brush_soft` — Brush Suave
-- Classe: `CustomSoftBrush extends fabric.PencilBrush`
-- No `onMouseUp`: aplicar `fabric.Shadow({ blur: 6, color: currentColor })` ao path resultante
-- Opacidade do brush: 0.7 por padrão
-- Produz traços com aparência de aquarela leve
-
-#### `brush_ink` — Brush de Tinta (Caligrafia)
-- Classe: `CustomInkBrush extends fabric.PencilBrush`
-- Varia a largura do traço baseado na velocidade do mouse:
-  - `velocidade = distância entre pontos consecutivos`
-  - `largura = baseWidth * (1 - velocidade / 500)` (clampado entre 0.3× e 1.5×)
-- Resulta em traços mais finos em movimentos rápidos, mais grossos em lentos
-
-#### `brush_marker` — Marcador
-- Classe base: `fabric.PencilBrush`
-- `globalCompositeOperation`: `'multiply'` (faz overlay de cores)
-- Opacidade fixa em 0.4
-- Largura sugerida: 20–40px
-
-#### `brush_eraser` — Borracha
-- Usa `fabric.EraserBrush` (disponível no fork `fabric-js/fabric.js` v5+)
-- Apaga pixels de objetos existentes no canvas
-- Fallback: se `EraserBrush` indisponível, seleciona objetos na área e os remove
-
----
-
-## 6. Texto e Tipografia
-
-### 6.1 Fontes Disponíveis
-
-Todas as fontes são carregadas via **Google Fonts API** com `<link rel="preconnect">` e `font-display: swap`. O carregamento é **lazy**: a fonte só é injetada no `<head>` quando o usuário seleciona a ferramenta de texto ou escolhe aquela fonte específica no seletor.
+### 7.1 Fontes Disponíveis
 
 | Nome Exibido | Google Fonts ID | Uso Sugerido |
 |---|---|---|
-| Sans Moderno | `Inter` | UI, mapas modernos |
-| Fantasia | `MedievalSharp` | Títulos de fantasy |
+| Mono | `JetBrains Mono` | Coordenadas, UI técnica |
+| Cinzel | `Cinzel` | Títulos épicos, fantasy |
 | Manuscrito | `Caveat` | Notas de aventureiro |
-| Serif Clássico | `Lora` | Pergaminhos, documentos |
-| Monoespaçado | `JetBrains Mono` | Coordenadas, código |
-| Gótico | `UnifrakturMaguntia` | Títulos épicos |
-| Rúnico | `Norse` (self-hosted) | Inscrições místicas |
+| Playfair | `Playfair Display` | Documentos formais |
+| Lora | `Lora` | Texto corrido |
 
-**Carregamento:**
-```js
-// fontLoader.js
-const loaded = new Set()
-export async function loadFont(family) {
-  if (loaded.has(family)) return
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`
-  document.head.appendChild(link)
-  await document.fonts.ready
-  loaded.add(family)
-}
-```
-
-A fonte `Norse` (rúnica) é self-hosted em `static/fonts/norse.woff2` por não estar no Google Fonts.
-
-### 6.2 Propriedades de Texto
-
-O objeto `fabric.IText` suporta edição inline ao dar duplo clique. Propriedades expostas no painel direito:
-- Família, tamanho (8–144px), cor, cor de fundo
-- Negrito, itálico, sublinhado, riscado
-- Alinhamento (esquerda, centro, direita, justificado)
-- Opacidade
-- Borda (stroke) opcional
+Carregamento lazy: a fonte só é injetada no `<head>` quando selecionada.
 
 ---
 
-## 7. Grid e Snap Magnético
+## 8. Grid e Snap Magnético
 
-### 7.1 Grid Quadrado
+### 8.1 Grid Quadrado
 
-- Renderizado como padrão CSS `background-image` no wrapper do canvas (não no Fabric canvas)
-- `background-size: ${gridSize}px ${gridSize}px`
-- Cor e opacidade configuráveis por board
-- Tamanho padrão: 60px (configurável de 20px a 200px)
+- SVG overlay (`position: absolute`, `pointer-events: none`, `z-index: 2`)
+- Recalculado a cada `after:render` do Fabric.js para acompanhar pan/zoom
+- Opacidade padrão: 0.35 | Cor padrão: `#94a3b8`
+- Tamanho padrão: 60px (configurável de 20 a 200px)
 
-### 7.2 Grid Hexagonal
+### 8.2 Grid Hexagonal
 
-- Renderizado via SVG `<pattern>` injetado no fundo
-- Suporte a orientação **flat-top** e **pointy-top** (configurável por board)
-- Fórmula de célula hexagonal implementada via `lib/hexGrid.ts`:
+- SVG `<path>` com hexágonos flat-top
+- Cálculo de offset para colunas pares/ímpares
+- Acompanha transformações do viewport
 
-```ts
-// Hexágono pointy-top
-function hexToPixel(q: number, r: number, size: number) {
-  const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r)
-  const y = size * (3/2 * r)
-  return { x, y }
-}
-```
-
-### 7.3 Snap Magnético
-
-Quando ativado (`isSnapEnabled = true`), todos os objetos ao serem movidos ou criados têm suas coordenadas arredondadas para o centro (ou vértice) da célula mais próxima.
+### 8.3 Snap Magnético
 
 ```ts
-function snapToGrid(x: number, y: number, gridSize: number, type: 'square' | 'hex'): Point {
+function snapToGrid(x, y, gridSize, type) {
   if (type === 'square') {
-    return {
-      x: Math.round(x / gridSize) * gridSize,
-      y: Math.round(y / gridSize) * gridSize,
-    }
+    return { x: Math.round(x/gridSize)*gridSize, y: Math.round(y/gridSize)*gridSize }
   }
-  // hex: converter pixel → hex coord → arredondar → pixel
-  const q = (Math.sqrt(3)/3 * x - 1/3 * y) / gridSize
-  const r = (2/3 * y) / gridSize
-  const { q: rq, r: rr } = hexRound(q, r)
-  return hexToPixel(rq, rr, gridSize)
+  // hex: pixel → axial → round → pixel
 }
 ```
-
-Atalho para toggle snap: **`Ctrl+Shift+G`**
-
----
-
-## 8. Tokens de Card
-
-### 8.1 O Que É Um Token
-
-Um token é um card do jogo representado no board como:
-- **Imagem circular** (1:1, crop centralizado) com bordas arredondadas suaves (`border-radius` aplicado via `clipPath` no Fabric.js)
-- **Nome do card** abaixo (opcional, togglable)
-- **Indicador de status** (barra de HP opcional, se o card tiver campo HP)
-
-### 8.2 Fluxo de Inserção
-
-1. Usuário seleciona ferramenta `token` (`K`)
-2. Modal `TokenPicker.svelte` abre mostrando todos os cards do jogo
-3. Cards filtrável por nome / categoria
-4. Ao selecionar, o token é colocado no centro do viewport atual
-5. Pode arrastar antes de confirmar (preview fantasma)
-
-### 8.3 Estrutura Fabric do Token
-
-```ts
-const tokenGroup = new fabric.Group([
-  new fabric.Circle({
-    radius: 40,
-    fill: new fabric.Pattern({ source: croppedImage }),
-    stroke: '#c8a96e',        // cor da borda (dourado por padrão)
-    strokeWidth: 3,
-    shadow: new fabric.Shadow({ blur: 8, color: 'rgba(0,0,0,0.5)' })
-  }),
-  new fabric.Text(card.titulo, {
-    fontSize: 12,
-    fill: '#ffffff',
-    textAlign: 'center',
-    top: 45,
-    originX: 'center'
-  })
-], {
-  data: { type: 'token', cardId: card.id },
-  lockUniScaling: true
-})
-```
-
-### 8.4 Borda do Token
-
-A borda usa a paleta de cores do sistema. O narrador pode personalizar cor da borda por token no painel de propriedades. Variações pré-definidas:
-- 🟡 Dourado (`#c8a96e`) — PC
-- 🔴 Vermelho (`#c84848`) — Inimigo
-- 🟢 Verde (`#48c87c`) — Aliado
-- ⚪ Prata (`#a0a0b8`) — NPC neutro
-- 🟣 Roxo (`#8848c8`) — Mágico / Especial
 
 ---
 
@@ -361,311 +310,280 @@ A borda usa a paleta de cores do sistema. O narrador pode personalizar cor da bo
 
 ### 9.1 Modelo
 
-- Layer separada no topo do canvas (SVG overlay)
-- Área de fog = conjunto de polígonos/retângulos armazenados em `board_elements` com `data.type = 'fog'`
-- **Modo narrador**: vê tudo; áreas de fog aparecem com 40% de opacidade e bordas tracejadas (editor mode)
-- **Modo jogador**: fog é opaco (100% opacidade, cor dark `#0a0a0f`)
+O fog é uma **camada única preta** que cobre todo o canvas por cima de todos os elementos do board. Não é um conjunto de retângulos: é uma máscara global com buracos nas áreas reveladas pelo narrador.
 
-### 9.2 Operações
+**Fundo do canvas:** sempre branco (`#ffffff`).  
+**Cor do fog:** sempre preto (`#000000`).
 
-| Operação | Narrador | Jogadores |
+### 9.2 Estados
+
+| Estado | Descrição |
+|---|---|
+| **Fog desligado** | A camada não existe. Todos veem tudo normalmente. |
+| **Fog ligado** | Camada preta cobre todo o board. Narrador vê com ~40% de opacidade. Jogadores veem opaco (100%). |
+
+### 9.3 Operações disponíveis para o Narrador
+
+| Operação | Ferramenta | Efeito |
 |---|---|---|
-| Adicionar fog | ✅ (ferramenta `fog_add`) | ❌ |
-| Revelar fog | ✅ (ferramenta `fog_erase`) | ❌ |
-| Ver através do fog | ✅ | ❌ |
+| **Ligar fog** | Botão toggle no painel | Cria a camada preta cobrindo tudo |
+| **Revelar área** | Pincel "Revelar" | "Apaga" a máscara naquela região — jogadores passam a ver |
+| **Ocultar área** | Pincel "Ocultar" | "Repinta" a máscara em área já revelada — jogadores perdem visão |
+| **Remover todo fog** | Botão no painel | Remove todas as revelações (volta ao total) mas mantém fog ligado |
+| **Desligar fog** | Botão toggle no painel | Remove a camada inteiramente — todos passam a ver tudo |
 
-### 9.3 Shapes de Fog
+### 9.4 Implementação Técnica
 
-- Retângulo livre (padrão)
-- Círculo / elipse
-- Polígono livre (clique a clique, duplo-clique para fechar)
+O fog é implementado com um elemento HTML/SVG overlay separado do canvas Fabric.js, usando SVG com `<mask>` ou `<clipPath>`:
 
-### 9.4 Sincronização
+```
+┌────────────── canvas stack ──────────────┐
+│  [SVG Fog Overlay]   z-index: 50         │  ← camada preta com buracos
+│  [Fabric Canvas]     z-index: 10         │  ← tudo (elementos, tokens, etc.)
+│  [Grid SVG]          z-index: 2          │
+│  [Canvas background] branco              │
+└──────────────────────────────────────────┘
+```
 
-As regiões de fog são transmitidas via `broadcast` no evento `fog:update`. São persistidas no banco como objetos `board_elements` com flag `is_fog: true`.
+**Estrutura do SVG de fog:**
+
+```svg
+<svg id="fog-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:50; pointer-events:none (jogador) / all (narrador no modo fog)">
+  <defs>
+    <mask id="fog-mask">
+      <!-- Fundo branco = visível para o fog (oculta o canvas) -->
+      <rect width="100%" height="100%" fill="white"/>
+      <!-- Buracos pretos = áreas reveladas (fog não aparece) -->
+      <rect x="200" y="150" width="300" height="200" fill="black"/>
+      <circle cx="500" cy="400" r="80" fill="black"/>
+      <!-- ... demais regiões reveladas ... -->
+    </mask>
+  </defs>
+  <!-- Camada preta com a máscara aplicada -->
+  <rect width="100%" height="100%" fill="black" mask="url(#fog-mask)"
+        opacity="1"     <!-- jogadores: 100% opaco -->
+        opacity="0.4"   <!-- narrador: 40% transparente -->
+  />
+</svg>
+```
+
+O narrador usa pincel sobre o SVG overlay para adicionar/remover `<rect>` ou `<path>` dentro do `<mask>`. As regiões reveladas são persistidas em `board_fog.revealed`.
+
+### 9.5 Sincronização
+
+- Ao ligar/desligar o fog: broadcast `fog:toggle { enabled }`
+- Ao revelar/ocultar área: broadcast `fog:update { revealed: Region[] }`
+- Persistido em `board_fog` com debounce de 300ms
+- Jogadores recebem o estado completo ao entrar no board
+
+### 9.6 Visibilidade por Papel
+
+| | Narrador | Jogador |
+|---|---|---|
+| **Fog desligado** | Vê tudo | Vê tudo |
+| **Fog ligado** | Vê tudo com fog 40% opaco (transparente) | Fog 100% opaco (cego) |
+| **Área revelada** | Vê a área normalmente | Vê a área normalmente |
+| **Área oculta** | Vê com 40% de sobreposição | Não vê nada |
+| **Ligar/desligar fog** | ✅ | ❌ |
+| **Revelar áreas** | ✅ | ❌ |
+| **Ocultar áreas** | ✅ | ❌ |
 
 ---
 
-## 10. Conectores e Ligações
+## 10. Tokens
 
-Conectores são linhas especiais que "grudam" em elementos:
-- Cada extremidade pode ser **livre** ou **ancorada** a um objeto
-- Se o objeto se mover, o conector acompanha
-- Suporte a etiqueta de texto na linha
-- Estilo: linha reta, curva (bezier), ou linha em ângulos retos (orthogonal)
+### 10.1 Propósito
 
-**Implementação:** `fabric.Line` + evento `object:moving` para recalcular pontos das extremidades ancoradas. Armazenados em `board_elements` com `data.type = 'connector'` e `data.anchors: { from: elementId | null, to: elementId | null }`.
+Tokens são representações visuais de personagens (PCs, NPCs, monstros, aliados) no mapa. Servem para o mestre e os jogadores marcarem posições no board. Não têm HP nem atributos — são puramente visuais e posicionais.
 
----
+### 10.2 Dois Modos de Exibição
 
-## 11. Agrupamento
+| Modo | Formato | Uso |
+|---|---|---|
+| **Token** | Circular, tamanho pequeno (~80px de diâmetro) | Marcar posição de personagem no mapa |
+| **Card** | Retangular, mantém proporção da imagem (~200px de largura) | Mostrar NPC/criatura com mais destaque, apresentar personagem |
 
-- **Agrupar:** selecionar múltiplos objetos → `Ctrl+G`
-- **Desagrupar:** selecionar grupo → `Ctrl+Shift+G` (conflito com snap? → usar `Ctrl+U`)
-- Grupos são transmitidos como um único `element` com `group_id` referenciando seus filhos
-- Grupos podem ser nomeados (rótulo visível apenas para narrador, ou para todos)
+O modo pode ser alternado a qualquer momento via **clique direito → "Modo: Token / Card"** sem perder a imagem ou reposicionamento.
 
----
+### 10.3 Estrutura Fabric.js
 
-## 12. Undo / Redo
-
-**Estratégia: Snapshot Diferencial por Elemento**
-
-Não é snapshot completo do canvas (custoso demais). Cada operação gera um `Op`:
-
+**Modo Token:**
 ```ts
-type Op =
-  | { type: 'add';    element: FabricJSON }
-  | { type: 'delete'; id: string; snapshot: FabricJSON }
-  | { type: 'update'; id: string; before: Partial<FabricJSON>; after: Partial<FabricJSON> }
-  | { type: 'batch';  ops: Op[] }
-```
-
-- Stack de undo: máximo 50 ops
-- `Ctrl+Z` → desfaz 1 op; broadcast `element:batch` com op invertida
-- `Ctrl+Y` ou `Ctrl+Shift+Z` → refaz
-
-**Importante:** undo/redo é **local por usuário** — não propaga para os outros. Apenas as mudanças resultantes são propagadas via broadcast.
-
----
-
-## 13. Múltiplos Boards
-
-### 13.1 Listagem
-
-- Painel superior (`BoardTopbar`) exibe lista horizontal de boards
-- Cada board tem: nome, ícone de visibilidade (👁/🔒), badge "ATIVO" quando for o board que o mestre está exibindo
-- Narrador pode criar, renomear, reordenar (drag), excluir e duplicar boards
-- Jogadores veem apenas boards com `is_visible = true`
-
-### 13.2 Board Ativo vs. Board Local
-
-```
-Narrador             Jogador A              Jogador B
-[Board 2 - ativo] ←──broadcast──→ [Board 2 - alerta!]   [Board 2 - alerta!]
-(trabalhando no     (estava no Board 1,     (já no Board 2,
- Board 3 em         recebe alerta)           sem alerta)
- silêncio)
-```
-
-**Fluxo de "Chamar para o Board":**
-1. Narrador clica em botão **"📢 Chamar todos para este board"** no BoardTopbar
-2. Broadcast `board:call` com `{ boardId, boardName }` via canal `game:{gameId}`
-3. Todos os jogadores que **não estão** neste board recebem `BoardAlert.svelte`:
-   - Banner fixo no topo: `"🗺️ O Mestre está no [Nome do Board] — Clique para ir"`
-   - Clicar no banner muda o `localBoardId` do jogador para o board chamado
-   - Alert desaparece automaticamente após a troca
-4. O board chamado fica marcado com badge especial na lista de boards
-
-**Fluxo de Troca Silenciosa:**
-1. Narrador troca de board normalmente (sem clicar em chamar)
-2. Broadcast `board:active` registra o board ativo apenas para o sistema
-3. Badge "ATIVO" atualiza para todos na lista
-4. **Nenhum alerta** é disparado para jogadores
-5. Jogadores continuam onde estão
-
----
-
-## 14. Rastreio de Cursores Remotos
-
-### 14.1 Broadcast
-
-Ao mover o mouse no canvas, broadcast debounced (50ms):
-```ts
-channel.send({
-  type: 'broadcast',
-  event: 'cursor',
-  payload: {
-    userId: authState.userId,
-    name: authState.displayName,
-    color: userCursorColor,    // cor atribuída ao entrar na sessão
-    x: canvasX,                // coordenadas do canvas (não da tela)
-    y: canvasY,
-  }
+const token = new fabric.Group([
+  new fabric.Circle({
+    radius: 40,
+    fill: new fabric.Pattern({ source: croppedImage }),
+    stroke: borderColor,   // cor da borda configurável
+    strokeWidth: 3,
+  }),
+  new fabric.Text(name, {   // nome abaixo (opcional)
+    fontSize: 11,
+    fill: '#222222',
+    textAlign: 'center',
+    top: 46,
+    originX: 'center',
+  })
+], {
+  data: { type: 'token', mode: 'token', name, imageUrl },
+  lockUniScaling: true,
 })
 ```
 
-### 14.2 Renderização
+**Modo Card:**
+```ts
+const card = new fabric.Group([
+  new fabric.Image(imgElement, {
+    scaleX: targetWidth / imgElement.width,
+    scaleY: (targetWidth / imgElement.width),  // mantém proporção
+  }),
+  new fabric.Text(name, {   // nome abaixo (opcional)
+    fontSize: 12,
+    fill: '#222222',
+    textAlign: 'center',
+    top: scaledHeight + 6,
+    originX: 'center',
+  })
+], {
+  data: { type: 'token', mode: 'card', name, imageUrl },
+})
+```
 
-`BoardCursors.svelte` é um `<div>` em posição absoluta, sobreposição ao canvas, com `pointer-events: none`. Cada cursor é um componente com:
-- Seta SVG na cor do usuário
-- Badge com nome abaixo da seta
-- Fade-out após 3s de inatividade
+### 10.4 Borda do Token
 
-### 14.3 Cores dos Cursores
+Configurável no painel de propriedades ao selecionar o token. Cores sugeridas pré-definidas:
 
-Atribuídas no momento em que o usuário entra na sessão do board, ciclando por uma paleta de 12 cores saturadas distintas, armazenadas no `boardState`.
+| Cor | Papel |
+|---|---|
+| 🟡 Dourado `#c8a96e` | PC (personagem jogável) |
+| 🔴 Vermelho `#c84848` | Inimigo |
+| 🟢 Verde `#48c87c` | Aliado |
+| ⚪ Prata `#a0a0b8` | NPC neutro |
+| 🟣 Roxo `#8848c8` | Especial / Mágico |
+
+### 10.5 Inserção
+
+1. Usuário seleciona ferramenta `token` (`K`)
+2. Clica no canvas ou arrasta uma imagem (do PC, de asset, ou upload)
+3. Token é inserido no modo padrão (Token circular) no ponto clicado
+4. Painel de propriedades abre com opções de modo, borda e nome
+
+### 10.6 Troca de Modo (Token ↔ Card)
+
+Via **clique direito → "Exibir como Card"** ou **"Exibir como Token"**:
+- A imagem e posição são preservadas
+- O objeto Fabric é reconstruído no novo formato
+- O `data.mode` é atualizado e propagado via broadcast
+
+### 10.7 Menu de Contexto do Token
+
+```
+┌────────────────────────────┐
+│ ✎  Renomear                │
+│ ○  Exibir como Token       │  ← (se estiver em modo Card)
+│ ▭  Exibir como Card        │  ← (se estiver em modo Token)
+│ ─────────────────────────  │
+│ ↑  Trazer à frente         │
+│ ↓  Enviar ao fundo         │
+│ ⧉  Duplicar                │
+│ ─────────────────────────  │
+│ ✕  Excluir                 │
+└────────────────────────────┘
+```
 
 ---
 
-## 15. Gaveta de Assets
+## 11. Menu de Contexto (Clique Direito)
 
-### 15.1 Estrutura
+### Em elemento comum:
 
-`AssetDrawer.svelte` é um painel deslizante (slide-over) ativado pelo atalho `Shift+A` ou pelo botão na toolbar.
+| Ação | Descrição |
+|---|---|
+| ↑ Trazer à frente | `bringForward()` |
+| ↓ Enviar ao fundo | `sendBackwards()` |
+| ⧉ Duplicar | Clona com offset de 20px |
+| ⊙ Bloquear | Toggle `lockMovement/Scaling/Rotation` |
+| ⊞ Agrupar | (se múltiplos selecionados) |
+| ⊟ Desagrupar | (se grupo) |
+| ✕ Excluir | Remove do canvas |
 
-### 15.2 Carregamento de Assets Locais
+### Em token:
 
-Os assets são carregados diretamente da pasta `static/assets/` e subpastas, via endpoint SvelteKit:
+Exibe menu específico de token (ver seção 10.7).
 
-```
-GET /api/assets
-```
+### Em área vazia:
 
-**`src/routes/api/assets/+server.ts`:**
-```ts
-import { readdir, stat } from 'fs/promises'
-import { join } from 'path'
-
-export async function GET() {
-  const root = 'static/assets'
-  const tree = await buildTree(root, root)
-  return Response.json(tree)
-}
-
-async function buildTree(basePath: string, rootPath: string) {
-  const entries = await readdir(basePath, { withFileTypes: true })
-  const result = { folders: [], files: [] }
-
-  for (const entry of entries) {
-    const fullPath = join(basePath, entry.name)
-    const relativePath = fullPath.replace(rootPath + '/', '')
-
-    if (entry.isDirectory()) {
-      result.folders.push({
-        name: entry.name,
-        path: relativePath,
-        children: await buildTree(fullPath, rootPath)
-      })
-    } else if (/\.(png|jpg|jpeg|webp|svg|gif)$/i.test(entry.name)) {
-      result.files.push({
-        name: entry.name,
-        path: '/' + fullPath,   // URL pública
-        relativePath
-      })
-    }
-  }
-
-  return result
-}
-```
-
-**Importante:** Em produção (build estático), este endpoint não funcionará. Nesse caso, gerar um arquivo `assets-manifest.json` em build time via script Vite plugin:
-
-```ts
-// vite-plugin-asset-manifest.ts
-export function assetManifestPlugin() {
-  return {
-    name: 'asset-manifest',
-    async buildStart() {
-      // gera static/assets-manifest.json
-    }
-  }
-}
-```
-
-### 15.3 Interface da Gaveta
-
-```
-┌─────────────────────────────┐
-│ 🖼️ Assets                [×]│
-│ ┌─────────────────────────┐ │
-│ │ 🔍 Buscar assets...     │ │
-│ └─────────────────────────┘ │
-│                             │
-│ 📁 maps/                    │
-│   📁 dungeons/              │
-│     🖼 dungeon-01.jpg       │
-│     🖼 dungeon-02.jpg       │
-│   📁 wilderness/            │
-│     🖼 forest.png           │
-│ 📁 tokens/                  │
-│   🖼 goblin.png             │
-│   🖼 dragon.png             │
-│ 📁 textures/                │
-│   🖼 stone.jpg              │
-│                             │
-│  [Vista: Grade] [Vista: Lista]│
-└─────────────────────────────┘
-```
-
-### 15.4 Inserção de Asset
-
-- **Drag & Drop** do painel para o canvas → insere como `fabric.Image` na posição solta
-- **Clique simples** → insere no centro do viewport
-- **Clique direito** → menu com opções: "Inserir como Fundo", "Inserir como Token", "Inserir Normal"
-
-### 15.5 Bancos de Imagens Linkados (Futuro / v2)
-
-Campo de configuração no painel de admin do jogo para adicionar URLs externas de CDN de imagens (ex: OpenGameArt, 2-Minute Tabletop CDN, assets do próprio projeto). Estes aparecem como pastas especiais `🌐` na gaveta, carregados via API paginada.
+| Ação | Descrição |
+|---|---|
+| ⊞ Selecionar tudo | Seleciona todos os objetos não-fog |
+| ⊡ Colar | Cola o clipboard |
+| ⊟ Limpar canvas | Confirma e limpa tudo |
 
 ---
 
-## 16. Painel de Propriedades (Objeto Selecionado)
+## 12. Painel de Propriedades — Objeto Selecionado
 
-Aparece no lado direito quando um ou mais objetos estão selecionados:
-
-### Seleção Única
+Ao selecionar qualquer elemento, o painel de propriedades exibe suas configurações:
 
 | Seção | Propriedades |
 |---|---|
 | **Posição** | X, Y (inputs numéricos) |
-| **Dimensões** | Largura, Altura, manter proporção |
-| **Transformação** | Rotação (slider -180° a +180°, input numérico), Escala X, Escala Y |
-| **Aparência** | Cor de preenchimento, Cor da borda, Espessura da borda, Opacidade |
-| **Texto** *(se texto)* | Fonte, Tamanho, Estilo, Alinhamento |
-| **Token** *(se token)* | Cor da borda, Exibir nome, Exibir HP |
-| **Ordem** | Trazer para frente (`]`), Enviar para trás (`[`), Para o topo, Para o fundo |
-| **Ações** | Duplicar (`Ctrl+D`), Excluir (`Delete`), Bloquear posição |
-
-### Seleção Múltipla
-
-- Alinhar (esquerda, centro, direita, cima, meio, baixo)
-- Distribuir horizontalmente / verticalmente
-- Agrupar / Desagrupar
-- Excluir todos
+| **Dimensões** | Largura, Altura |
+| **Transformação** | Rotação (slider -180° a +180°) |
+| **Aparência** | Opacidade, Preenchimento, Cor da borda, Espessura |
+| **Texto** *(se IText)* | Cor, Tamanho, Fonte, Negrito, Itálico |
+| **Token** *(se token)* | Modo (Token/Card), Cor da borda, Mostrar nome |
+| **Ordem** | Trazer à frente, Enviar ao fundo |
+| **Ações** | Excluir |
 
 ---
 
-## 17. Atalhos de Teclado Completos
+## 13. Imagens
 
-### Navegação / View
+- **Ferramenta `I`:** abre `<input type="file" accept="image/*">`
+- **Drag & Drop:** arrastar do sistema operacional para o canvas
+- Centralizada no viewport atual ao inserir
+- Redimensionamento automático se largura > 50% do canvas (mantém proporção)
 
-| Atalho | Ação |
-|---|---|
-| `Space` (hold) | Ativa pan temporário |
-| `Scroll` | Zoom in/out |
-| `Ctrl+Scroll` | Zoom in/out (alternativo) |
-| `+` / `-` | Zoom +/- |
-| `Shift+0` | Fit canvas ao viewport |
-| `1` | Zoom 100% |
-| `2` | Zoom 200% |
-| `Ctrl+←↑→↓` | Pan por 100px |
+---
+
+## 14. Undo / Redo
+
+Snapshot JSON completo do canvas (excluindo a camada de fog, que é gerenciada separadamente).
+
+- Stack de undo: máximo 50 snapshots
+- `Ctrl+Z` → restaura snapshot anterior
+- `Ctrl+Y` → refaz
+- Local por usuário — mudanças resultantes propagadas via broadcast
+- Botões de Undo e Redo visíveis no topbar
+
+---
+
+## 15. Atalhos de Teclado Completos
 
 ### Ferramentas
 
 | Atalho | Ferramenta |
 |---|---|
 | `V` ou `Esc` | Selecionar |
-| `H` | Pan |
-| `P` | Lápis livre |
-| `B` | Brush suave |
-| `I` | Brush de tinta |
-| `M` | Marcador |
+| `M` | Mover canvas |
+| `P` | Lápis |
 | `E` | Borracha |
-| `L` | Linha |
-| `A` | Seta |
-| `X` | Conector |
-| `R` | Retângulo |
-| `O` | Elipse |
-| `G` | Polígono |
+| `S` | Formas |
+| `L` | Linha / Seta |
 | `T` | Texto |
-| `N` | Sticky note |
-| `Shift+I` | Inserir imagem |
+| `I` | Inserir imagem |
 | `K` | Inserir token |
-| `F` | Fog: adicionar |
-| `Shift+F` | Fog: revelar |
-| `D` | Medidor de distância |
+| `F` | Fog of War |
+| `G` | Grid |
+
+### Navegação
+
+| Atalho | Ação |
+|---|---|
+| `Scroll` | Zoom in/out |
+| `Ctrl+Scroll` | Zoom alternativo |
+| `Space` + arrastar | Pan |
+| Scroll-click + arrastar | Pan |
 
 ### Edição
 
@@ -678,60 +596,78 @@ Aparece no lado direito quando um ou mais objetos estão selecionados:
 | `Ctrl+D` | Duplicar |
 | `Ctrl+A` | Selecionar tudo |
 | `Delete` / `Backspace` | Excluir seleção |
-| `Ctrl+G` | Agrupar seleção |
+| `Ctrl+G` | Agrupar |
 | `Ctrl+U` | Desagrupar |
 | `]` | Trazer para frente |
 | `[` | Enviar para trás |
-| `Shift+]` | Trazer para o topo |
-| `Shift+[` | Enviar para o fundo |
-| `←↑→↓` | Mover 1px (ou 1 célula se snap ativo) |
-| `Shift+←↑→↓` | Mover 10px |
 
-### Board / Sistema
+### Ajuste rápido (durante uso da ferramenta)
 
-| Atalho | Ação |
-|---|---|
-| `Shift+A` | Toggle gaveta de assets |
-| `Ctrl+Shift+G` | Toggle snap magnético |
-| `Ctrl+Shift+F` | Toggle fog of war |
-| `Ctrl+Shift+H` | Toggle grid |
-
-### Modificadores durante desenho
-
-| Modificador | Efeito |
-|---|---|
-| `Shift` (ao criar forma) | Proporção 1:1 (círculo perfeito, quadrado perfeito) |
-| `Alt` (ao criar forma) | Expande a partir do centro |
-| `Shift` (ao mover) | Restringe a eixo X ou Y |
-| `Shift` (ao rotacionar) | Snap de 15° em 15° |
+| Atalho | Lápis | Borracha |
+|---|---|---|
+| `Scroll` | Tamanho | Tamanho |
+| `Alt+Scroll` | Opacidade | — |
 
 ---
 
-## 18. Transformações
+## 16. Zoom e Pan
 
-Todos os objetos Fabric.js suportam as seguintes transformações:
-
-- **Mover:** drag direto ou inputs X/Y no painel
-- **Redimensionar:** handles de canto / lateral (com `Shift` para manter proporção)
-- **Rotacionar:** handle no topo + input de grau no painel + atalho `Shift` para snap
-- **Esticar:** redimensionar sem manter proporção (handles laterais)
-- **Espelhar:** botões no painel de propriedades (flip horizontal / vertical)
-- **Bloquear:** flag `lockMovementX/Y` e `lockScalingX/Y` e `lockRotation`
+- **Zoom:** `canvas.zoomToPoint()` centrado no cursor
+- **Pan:** `canvas.relativePan()` via `M` + drag ou scroll-click
+- **Limites:** 5% – 2000%
+- **Zoom display:** exibido em % no topbar
+- **Fit:** restaura zoom 100% e viewport à origem
 
 ---
 
-## 19. Zoom e Pan
+## 17. Múltiplos Boards
 
-- **Zoom:** `fabric.Canvas.zoomToPoint()` — zoom centrado no cursor do mouse
-- **Pan:** `fabric.Canvas.relativePan()` — move o viewport
-- **Limites:** zoom mínimo 5%, máximo 2000%
-- **Minimap** (`BoardMinimap.svelte`): canvas miniatura no canto inferior direito mostrando posição do viewport com retângulo vermelho. Clicável para navegar rapidamente.
+- Painel superior com lista horizontal de boards
+- Narrador: criar, renomear, reordenar, excluir, duplicar
+- Jogadores: veem apenas boards com `is_visible = true`
+- **"Chamar para board":** broadcast `board:call`, jogadores recebem alerta clicável no topo
+- **Troca silenciosa:** narrador troca sem notificar jogadores
 
 ---
 
-## 20. Performance e Sincronização
+## 18. Rastreio de Cursores Remotos
 
-### 20.1 Throttle/Debounce de Broadcasts
+- Broadcast throttled a cada 50ms com posição `{x, y}` em coordenadas do canvas
+- Overlay SVG com `pointer-events: none`
+- Cada cursor: seta SVG colorida + badge com nome + fade-out após 3s
+- 12 cores distintas atribuídas ao entrar na sessão
+
+---
+
+## 19. Gaveta de Assets
+
+Ativada por `Shift+A`. Painel slide-over listando assets de `static/assets/`.
+
+- Drag & Drop do painel para o canvas
+- Clique simples insere no centro do viewport
+- Clique direito: "Inserir como Fundo", "Inserir como Token", "Inserir Normal"
+- Busca por nome | Vista grade ou lista
+
+---
+
+## 20. Conectores
+
+- Linhas que "grudam" em elementos e os acompanham ao mover
+- Estilos: reta, curva bezier, ortogonal
+- Etiqueta de texto opcional
+- Armazenados com `data.type: 'connector'` e `data.anchors: {from, to}`
+
+---
+
+## 21. Agrupamento
+
+- `Ctrl+G` → agrupar seleção múltipla
+- `Ctrl+U` → desagrupar
+- Grupos transmitidos como um único elemento no broadcast
+
+---
+
+## 22. Performance e Sincronização
 
 | Evento | Estratégia | Delay |
 |---|---|---|
@@ -741,53 +677,27 @@ Todos os objetos Fabric.js suportam as seguintes transformações:
 | `brush stroke` | debounce | 200ms após `mouseup` |
 | `fog:update` | debounce | 300ms |
 
-### 20.2 Persistência vs. Broadcast
-
-Broadcasts são **efêmeros** (não persistidos pelo Supabase). A persistência real é feita via `UPDATE board_elements` no Supabase Postgres. Estratégia:
-
-1. Broadcast imediato → todos veem a mudança em ~50ms
-2. Upsert no banco via `supabase.from('board_elements').upsert(...)` — debounced em 500ms após a última mudança
-
-### 20.3 Carregamento Inicial do Board
-
-1. `SELECT * FROM board_elements WHERE board_id = $id ORDER BY z_index`
-2. Desserializar cada `fabric_json` via `canvas.loadFromJSON()`
-3. Subscrever canal Realtime do board
-4. Renderizar fog overlay
-
-### 20.4 Reconciliação de Conflitos
-
-Last-Write-Wins via `updated_at`. Se dois usuários editam o mesmo elemento simultaneamente, o último broadcast vence. Para o futuro: implementar CRDT-lite baseado em `updated_at` comparando antes de aplicar.
+**Persistência:** broadcast imediato → upsert no banco debounced em 500ms. Last-Write-Wins via `updated_at`.
 
 ---
 
-## 21. Segurança e Row Level Security (Supabase)
+## 23. Segurança (Supabase RLS)
 
 ```sql
--- Apenas narrador do jogo pode criar/editar boards
 CREATE POLICY "narrador_manage_boards" ON boards
-  USING (
-    EXISTS (
-      SELECT 1 FROM game_members
-      WHERE game_id = boards.game_id
-        AND user_id = auth.uid()
-        AND role = 'narrador'
-    )
-  );
+  USING (EXISTS (
+    SELECT 1 FROM game_members
+    WHERE game_id = boards.game_id AND user_id = auth.uid() AND role = 'narrador'
+  ));
 
--- Jogadores só veem boards visíveis
 CREATE POLICY "player_view_visible_boards" ON boards
   FOR SELECT USING (
-    is_visible = true
-    OR EXISTS (
+    is_visible = true OR EXISTS (
       SELECT 1 FROM game_members
-      WHERE game_id = boards.game_id
-        AND user_id = auth.uid()
-        AND role = 'narrador'
+      WHERE game_id = boards.game_id AND user_id = auth.uid() AND role = 'narrador'
     )
   );
 
--- Elementos: narrador pode tudo; jogadores lêem se board visível
 CREATE POLICY "elements_select" ON board_elements
   FOR SELECT USING (
     EXISTS (
@@ -798,29 +708,37 @@ CREATE POLICY "elements_select" ON board_elements
         AND (b.is_visible = true OR gm.role = 'narrador')
     )
   );
+
+-- Fog: narrador gerencia, jogadores lêem
+CREATE POLICY "fog_select" ON board_fog
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM boards b
+      JOIN game_members gm ON gm.game_id = b.game_id
+      WHERE b.id = board_fog.board_id AND gm.user_id = auth.uid()
+        AND (b.is_visible = true OR gm.role = 'narrador')
+    )
+  );
+
+CREATE POLICY "fog_manage" ON board_fog
+  USING (EXISTS (
+    SELECT 1 FROM boards b
+    JOIN game_members gm ON gm.game_id = b.game_id
+    WHERE b.id = board_fog.board_id AND gm.user_id = auth.uid() AND gm.role = 'narrador'
+  ));
 ```
 
 ---
 
-## 22. Biblioteca Principal: Fabric.js
+## 24. Biblioteca Principal: Fabric.js
 
-**Versão:** `fabric@7.x` 
+**Versão:** `fabric@5.x`
 
-**Por que Fabric.js?**
-- API madura e completa para manipulação de objetos canvas
-- Serialização/desserialização JSON nativa
-- Suporte a grupos, clipPath, eventos ricos
-- `EraserBrush` disponível
-- Boa performance para casos de uso de VTT (virtual tabletop)
-
-**Instalação:**
 ```bash
 npm install fabric
 ```
 
-**Integração com Svelte:**
 ```svelte
-<!-- BoardCanvas.svelte -->
 <script>
   import { onMount, onDestroy } from 'svelte'
   import { Canvas } from 'fabric'
@@ -835,6 +753,7 @@ npm install fabric
       height: window.innerHeight,
       selection: true,
       preserveObjectStacking: true,
+      backgroundColor: '#ffffff'
     })
     boardState.mountCanvas(fabricCanvas)
   })
@@ -850,54 +769,71 @@ npm install fabric
 
 ---
 
-## 23. Responsividade e Resize
+## 25. Responsividade e Resize
 
-- O canvas ocupa 100% da área disponível (tela completa menos toolbars)
-- `ResizeObserver` no container → `canvas.setDimensions({ width, height })` ao redimensionar a janela
-- O viewport (pan/zoom) é preservado no resize
-
----
-
-## 24. Acessibilidade (Mínimo Viável)
-
-- Todos os botões da toolbar têm `aria-label` e `title` (tooltip com atalho)
-- O alerta de board (`BoardAlert`) usa `role="alert"` e `aria-live="assertive"`
-- Focus trap no modal TokenPicker
+- Canvas ocupa 100% da área disponível
+- `ResizeObserver` → `canvas.setDimensions({ width, height })`
+- Viewport (pan/zoom) preservado no resize
+- Grid SVG e fog overlay recalculados após resize
 
 ---
 
-## 25. Roadmap / Fases de Implementação
+## 26. Acessibilidade (Mínimo Viável)
+
+- Botões da toolbar com `aria-label`, `title` e tooltip com atalho
+- Alerta de board com `role="alert"` e `aria-live="assertive"`
+- Focus trap no modal de inserção de token
+
+---
+
+## 27. Roadmap / Fases de Implementação
 
 ### Fase 1 — Core Canvas (MVP)
-- [ ] Fabric.js + BoardCanvas.svelte
-- [ ] Ferramentas: select, pan, pencil, rect, ellipse, text, image
-- [ ] Undo/Redo local
-- [ ] Board único por jogo
-- [ ] Persistência no Supabase
+- [ ] Fabric.js + BoardCanvas
+- [ ] Ferramentas: select, pan, pencil, eraser, shapes, line, text, image
+- [ ] Preview de lápis e borracha em tempo real
+- [ ] Undo/Redo local (50 snapshots)
+- [ ] Grid quadrado e hexagonal com SVG overlay
+- [ ] Snap magnético
+- [ ] Drag & Drop de imagens
+- [ ] Menu de contexto com clique direito
+- [ ] Painel de propriedades por ferramenta e por objeto selecionado
+- [ ] 5 fontes via Google Fonts (lazy load)
+- [ ] Atalhos de teclado completos
+- [ ] Scroll para ajustar tamanho, Alt+Scroll para opacidade
+- [ ] Agrupamento/desagrupamento
+- [ ] Zoom display em %
 
-### Fase 2 — Colaboração
+### Fase 2 — Tokens e Fog
+- [ ] Token modo circular (Token) com upload de imagem
+- [ ] Token modo retangular (Card)
+- [ ] Alternância Token ↔ Card via clique direito
+- [ ] Fog of War: camada SVG global preta
+- [ ] Fog: toggle liga/desliga
+- [ ] Fog: pincel revelar área
+- [ ] Fog: pincel ocultar área
+- [ ] Fog: visibilidade diferenciada narrador (40%) vs jogador (100%)
+- [ ] Persistência do fog em `board_fog`
+
+### Fase 3 — Colaboração
 - [ ] Broadcast Supabase em tempo real
 - [ ] Cursores remotos
 - [ ] Múltiplos boards + visibilidade
 - [ ] Board ativo (narrador) + alertas
+- [ ] Sync de fog entre usuários
 
-### Fase 3 — Recursos VTT
-- [ ] Tokens de card
-- [ ] Fog of War
-- [ ] Grid quadrado + snap
-- [ ] Grid hexagonal
+### Fase 4 — Recursos VTT
 - [ ] Gaveta de assets (local)
-- [ ] Conectores / ligações
+- [ ] Conectores / ligações com anchor
+- [ ] Minimap de navegação
 
-### Fase 4 — Polish
+### Fase 5 — Polish
 - [ ] Brushes avançados (ink, soft, marker)
-- [ ] Minimap
-- [ ] Painel de propriedades completo
-- [ ] Espelhar, alinhar, distribuir
-- [ ] Todos os atalhos de teclado
+- [ ] Painel de alinhamento e distribuição
 - [ ] Sticky notes
+- [ ] Medidor de distância em células
 
-### Fase 5 — Expansão
+### Fase 6 — Expansão
 - [ ] Assets externos / bancos linkados
 - [ ] Exportar board como PNG/PDF
 - [ ] Templates de board
@@ -906,16 +842,19 @@ npm install fabric
 
 ---
 
-## 26. Glossário
+## 28. Glossário
 
 | Termo | Definição |
 |---|---|
 | **Board** | Um canvas individual dentro de um jogo |
 | **Board Ativo** | O board que o narrador está exibindo para os jogadores |
-| **Board Local** | O board que um usuário específico está visualizando no momento |
-| **Token** | Representação visual de um card do jogo no canvas |
-| **Fog of War** | Camada de névoa que esconde regiões do mapa para os jogadores |
+| **Board Local** | O board que um usuário específico está visualizando |
+| **Token** | Representação visual circular de um personagem no mapa |
+| **Card** | Representação visual retangular de um personagem (modo alternativo do token) |
+| **Fog of War** | Camada preta global que oculta o mapa para jogadores; revelada progressivamente pelo narrador |
 | **Snap Magnético** | Travamento automático de elementos nas células do grid |
-| **Conector** | Linha que vincula dois elementos e os segue ao serem movidos |
+| **Conector** | Linha que vincula dois elementos e os segue ao moverem |
 | **Broadcast** | Mensagem efêmera em tempo real via Supabase Realtime |
 | **Op** | Operação atômica de mudança no canvas (add/update/delete) |
+| **Preview** | Indicador visual em tempo real do tamanho/cor da ferramenta ativa |
+| **Região revelada** | Área do fog onde o narrador removeu a opacidade, tornando visível para jogadores |

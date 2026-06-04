@@ -1,117 +1,96 @@
 @import "tailwindcss";
 
 @theme {
-  /* Light theme base */
-  --radius: 0.625rem;
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  --radius: 4px;
+  --radius-lg: 6px;
+  --radius-md: 4px;
+  --radius-sm: 3px;
 
-  /* RPG Custom - Light */
-  --color-success: oklch(0.627 0.194 149.214);
-  --color-success-foreground: oklch(0.985 0 0);
-  --color-warning: oklch(0.84 0.16 84);
-  --color-warning-foreground: oklch(0.21 0 0);
-  --color-info: oklch(0.7 0.15 230);
-  --color-info-foreground: oklch(0.985 0 0);
+  /* Colors based on Notion */
+  --color-background: var(--bg-main);
+  --color-foreground: var(--fg-main);
+  --color-card: var(--bg-sidebar);
+  --color-card-foreground: var(--fg-main);
+  --color-popover: var(--bg-popover);
+  --color-popover-foreground: var(--fg-main);
+  --color-primary: var(--primary-main);
+  --color-primary-foreground: var(--primary-fg);
+  --color-secondary: var(--bg-hover);
+  --color-secondary-foreground: var(--fg-main);
+  --color-muted: var(--bg-hover);
+  --color-muted-foreground: var(--fg-muted);
+  --color-accent: var(--bg-hover);
+  --color-accent-foreground: var(--fg-main);
+  --color-border: var(--border-main);
+  --color-input: var(--border-main);
 
-  /* Border Radius */
-  --radius-lg: 0.625rem;
-  --radius-md: calc(0.625rem - 2px);
-  --radius-sm: calc(0.625rem - 4px);
+  --color-success: var(--semantic-success);
+  --color-success-foreground: var(--semantic-success-fg);
+  --color-warning: var(--semantic-warning);
+  --color-warning-foreground: var(--semantic-warning-fg);
+  --color-destructive: var(--semantic-destructive);
+  --color-destructive-foreground: var(--semantic-destructive-fg);
 }
 
 @layer base {
   :root {
-    --color-background: oklch(1 0 0);
-    --color-foreground: oklch(0.145 0 0);
-    --color-card: oklch(1 0 0);
-    --color-card-foreground: oklch(0.145 0 0);
-    --color-popover: oklch(1 0 0);
-    --color-popover-foreground: oklch(0.145 0 0);
-    --color-primary: oklch(0.205 0 0);
-    --color-primary-foreground: oklch(0.985 0 0);
-    --color-secondary: oklch(0.97 0 0);
-    --color-secondary-foreground: oklch(0.205 0 0);
-    --color-muted: oklch(0.97 0 0);
-    --color-muted-foreground: oklch(0.556 0 0);
-    --color-accent: oklch(0.97 0 0);
-    --color-accent-foreground: oklch(0.205 0 0);
-    --color-destructive: oklch(0.577 0.245 27.325);
-    --color-destructive-foreground: oklch(0.985 0 0);
-    --color-border: oklch(0.922 0 0);
-    --color-input: oklch(0.922 0 0);
-    --color-ring: oklch(0.708 0 0);
-    --color-success: oklch(0.627 0.194 149.214);
-    --color-success-foreground: oklch(0.985 0 0);
-    --color-warning: oklch(0.84 0.16 84);
-    --color-warning-foreground: oklch(0.21 0 0);
-    --color-info: oklch(0.7 0.15 230);
-    --color-info-foreground: oklch(0.985 0 0);
+    --bg-main: #ffffff;
+    --bg-sidebar: #f7f7f5;
+    --bg-popover: #ffffff;
+    --fg-main: #37352f;
+    --fg-muted: rgba(55, 53, 47, 0.6);
+    --border-main: rgba(55, 53, 47, 0.09);
+    --bg-hover: rgba(55, 53, 47, 0.04);
+
+    --primary-main: #2383e2; /* Notion blue */
+    --primary-fg: #ffffff;
+
+    --semantic-success: #0f7654;
+    --semantic-success-fg: #ffffff;
+    --semantic-warning: #df8b0f;
+    --semantic-warning-fg: #ffffff;
+    --semantic-destructive: #d13735;
+    --semantic-destructive-fg: #ffffff;
   }
 
   .dark {
-    /* Zinc-950 Dark Theme - Elegant Contrast */
-    --color-background: oklch(0.11 0 0);
-    --color-foreground: oklch(0.985 0 0);
-    --color-card: oklch(0.17 0 0);
-    --color-card-foreground: oklch(0.985 0 0);
-    --color-popover: oklch(0.22 0 0);
-    --color-popover-foreground: oklch(0.985 0 0);
-    --color-primary: oklch(0.92 0 0);
-    --color-primary-foreground: oklch(0.11 0 0);
-    --color-secondary: oklch(0.2 0 0);
-    --color-secondary-foreground: oklch(0.985 0 0);
-    --color-muted: oklch(0.16 0 0);
-    --color-muted-foreground: oklch(0.6 0 0);
-    --color-accent: oklch(0.25 0 0);
-    --color-accent-foreground: oklch(0.985 0 0);
-    --color-destructive: oklch(0.65 0.22 25);
-    --color-destructive-foreground: oklch(0.985 0 0);
-    --color-border: oklch(1 0 0 / 12%);
-    --color-input: oklch(1 0 0 / 15%);
-    --color-ring: oklch(0.55 0 0);
+    --bg-main: #191919;
+    --bg-sidebar: #202020;
+    --bg-popover: #252525;
+    --fg-main: rgba(255, 255, 255, 0.9);
+    --fg-muted: rgba(255, 255, 255, 0.5);
+    --border-main: rgba(255, 255, 255, 0.095);
+    --bg-hover: rgba(255, 255, 255, 0.055);
 
-    /* RPG Custom - Dark */
-    --color-success: oklch(0.55 0.18 145);
-    --color-success-foreground: oklch(0.985 0 0);
-    --color-warning: oklch(0.75 0.16 80);
-    --color-warning-foreground: oklch(0.21 0 0);
-    --color-info: oklch(0.65 0.15 220);
-    --color-info-foreground: oklch(0.985 0 0);
+    --primary-main: #2eaadc; /* Notion dark blue */
+    --primary-fg: #191919;
+
+    --semantic-success: #2ea87b;
+    --semantic-success-fg: #191919;
+    --semantic-warning: #e09935;
+    --semantic-warning-fg: #191919;
+    --semantic-destructive: #ff5c57;
+    --semantic-destructive-fg: #ffffff;
   }
 
   * {
-    border-color: oklch(var(--color-border));
+    border-color: var(--border-main);
   }
 
   body {
-    background-color: oklch(var(--color-background));
-    color: oklch(var(--color-foreground));
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--fg-main);
+    font-family:
+      ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji",
+      Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+    -webkit-font-smoothing: antialiased;
   }
 }
 
 /* Utilities personalizadas */
 @utility scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: oklch(var(--color-muted)) transparent;
+  scrollbar-color: var(--border-main) transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -123,9 +102,16 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: oklch(var(--color-muted));
+    background: var(--border-main);
     border-radius: 3px;
   }
+}
+
+@utility line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 @utility line-clamp-2 {
@@ -144,15 +130,11 @@
 
 /* Animações para Drawer */
 @utility animate-fade-in {
-  animation: fade-in 0.2s ease-out forwards;
+  animation: fade-in 0.15s ease-out forwards;
 }
 
 @utility animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out forwards;
-}
-
-@utility animate-slide-in-left {
-  animation: slide-in-left 0.3s ease-out forwards;
+  animation: slide-in-right 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fade-in {
@@ -173,41 +155,8 @@
   }
 }
 
-@keyframes slide-in-left {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes fab-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.5) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@utility animate-fab-enter {
-  animation: fab-enter 0.2s ease-out forwards;
-}
-
 /* DiceBox 3D - Canvas em tela cheia */
-canvas.dice-box-canvas {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 9998 !important;
-  pointer-events: none !important;
-}
-
+canvas.dice-box-canvas,
 #dice-box-canvas {
   position: fixed !important;
   top: 0 !important;
@@ -219,24 +168,182 @@ canvas.dice-box-canvas {
 }
 
 .dice-result-badge {
-  background-color: rgba(63, 63, 70, 0.4); /* zinc-700/40 */
-  color: #f4f4f5; /* zinc-100 */
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.25rem;
-  font-weight: 700;
-  border: 1px solid rgba(161, 161, 170, 0.2); /* zinc-400/20 */
+  background-color: var(--bg-hover);
+  color: var(--fg-main);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 600;
+  border: 1px solid var(--border-main);
   display: inline-block;
   margin: 0 0.125rem;
+  font-size: 0.8rem;
 }
 
 .dice-total-badge {
-  background-color: rgba(59, 130, 246, 0.2); /* blue-500/20 */
-  color: #60a5fa; /* blue-400 */
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.25rem;
-  font-weight: 800;
-  border: 1px solid rgba(59, 130, 246, 0.4); /* blue-500/40 */
+  background-color: rgba(35, 131, 226, 0.1);
+  color: var(--primary-main);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 700;
+  border: 1px solid var(--primary-main);
   display: inline-block;
   margin: 0 0.125rem;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+  font-size: 0.8rem;
+}
+
+/* Notion-style Interactive Shortcodes */
+.is-interactive {
+  cursor: pointer;
+  transition:
+    background-color 0.1s ease,
+    border-color 0.1s ease;
+}
+
+.is-interactive:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--fg-muted);
+}
+
+.shortcode-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-main);
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.shortcode-stat strong {
+  color: var(--fg-muted);
+}
+
+.shortcode-stat .stat-value-display {
+  color: var(--fg-main);
+  font-weight: 600;
+}
+
+.shortcode-hp {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-main);
+  border-radius: 4px;
+}
+
+.hp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hp-label {
+  color: var(--fg-muted);
+}
+
+.hp-text {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-main);
+}
+
+.hp-bar-container {
+  height: 4px;
+  width: 100%;
+  background-color: var(--bg-hover);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hp-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.hp-bar-fill.is-high {
+  background-color: #2ea87b;
+}
+.hp-bar-fill.is-medium {
+  background-color: #a0c238;
+}
+.hp-bar-fill.is-low {
+  background-color: #e09935;
+}
+.hp-bar-fill.is-critical {
+  background-color: #ff5c57;
+}
+.hp-bar-fill.is-dead {
+  background-color: #721c24;
+}
+
+.shortcode-money {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  background: rgba(223, 139, 15, 0.08);
+  border: 1px solid rgba(223, 139, 15, 0.2);
+  color: #df8b0f;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.shortcode-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-main);
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.shortcode-count .count-name {
+  color: var(--fg-muted);
+}
+
+.shortcode-count .count-current-value {
+  color: var(--fg-main);
+  font-weight: 600;
+}
+
+.shortcode-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  background: rgba(155, 81, 224, 0.08);
+  border: 1px solid rgba(155, 81, 224, 0.2);
+  color: #9b51e0;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.is-hidden-from-players {
+  position: relative;
+  border: 1px dashed #d13735;
+  background: rgba(209, 55, 53, 0.02);
+  padding: 0.2rem;
+  border-radius: 3px;
+}
+
+.is-hidden-from-players::after {
+  content: "Oculto";
+  position: absolute;
+  top: -6px;
+  right: 4px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  background: #d13735;
+  color: white;
+  padding: 0 3px;
+  border-radius: 2px;
 }

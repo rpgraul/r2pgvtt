@@ -1,44 +1,40 @@
 <script>
 import { ToggleGroup } from 'bits-ui';
-import { cn } from '$lib/utils/cn.js';
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import TrashDialog from './grid/TrashDialog.svelte';
 import { Trash2 } from 'lucide-svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import { cn } from '$lib/utils/cn.js';
+import TrashDialog from './grid/TrashDialog.svelte';
 
 const categories = [
-  { value: 'all', label: 'Todos', icon: null },
-  { value: 'pj', label: 'Personagem', icon: null },
-  { value: 'monstro', label: 'Monstro', icon: null },
-  { value: 'npc', label: 'NPC', icon: null },
-  { value: 'item', label: 'Item', icon: null },
-  { value: 'anotacao', label: 'Anotação', icon: null },
+  { value: 'all', label: 'Todos' },
+  { value: 'pj', label: 'Personagem' },
+  { value: 'monstro', label: 'Monstro' },
+  { value: 'npc', label: 'NPC' },
+  { value: 'item', label: 'Item' },
+  { value: 'anotacao', label: 'Anotação' },
 ];
 
 let value = $state('all');
 let showTrashDialog = $state(false);
 
 function handleValueChange(newValue) {
+  if (!newValue) return; // Prevent deselecting to empty value
   value = newValue;
   gameState.setCategory(newValue === 'all' ? 'all' : newValue);
 }
 </script>
 
-<div class="flex flex-wrap gap-2">
+<div class="flex items-center gap-2">
   <ToggleGroup.Root
     type="single"
     bind:value
     onValueChange={handleValueChange}
-    class="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground"
+    class="inline-flex h-8.5 items-center justify-center rounded border bg-background/50 p-0.5 text-muted-foreground shrink-0"
   >
     {#each categories as cat}
       <ToggleGroup.Item
         value={cat.value}
-        class={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "disabled:pointer-events-none disabled:opacity-50",
-          "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-        )}
+        class="inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer select-none data-[state=on]:bg-secondary data-[state=on]:text-foreground data-[state=on]:font-semibold"
       >
         {cat.label}
       </ToggleGroup.Item>
@@ -49,9 +45,9 @@ function handleValueChange(newValue) {
     <button
       type="button"
       onclick={() => showTrashDialog = true}
-      class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all hover:bg-accent hover:text-accent-foreground"
+      class="inline-flex h-8.5 items-center justify-center rounded border bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-secondary/60 text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
     >
-      <Trash2 class="w-4 h-4 mr-1" />
+      <Trash2 class="w-3.5 h-3.5 mr-1" />
       Lixeira
     </button>
   {/if}

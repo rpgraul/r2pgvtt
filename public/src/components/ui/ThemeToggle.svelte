@@ -1,6 +1,6 @@
 <script>
+import { Moon, Sun } from 'lucide-svelte';
 import { toggleMode } from 'mode-watcher';
-import { Sun, Moon } from 'lucide-svelte';
 import Button from './Button.svelte';
 </script>
 

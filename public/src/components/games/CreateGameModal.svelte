@@ -3,8 +3,8 @@ import { Upload, X } from 'lucide-svelte';
 import { goto } from '$app/navigation';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
-import { db } from '$lib/supabase/tables';
 import { gameState } from '$lib/state/gameState.svelte.ts';
+import { db } from '$lib/supabase/tables';
 
 interface Props {
   open: boolean;

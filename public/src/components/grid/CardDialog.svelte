@@ -1,15 +1,15 @@
 <script>
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import { toast } from '$lib/stores/toast.js';
+import RichTextEditor from '$components/editor/RichTextEditor.svelte';
+import Button from '$components/ui/Button.svelte';
+import { Checkbox } from '$components/ui/checkbox/index.js';
 import Dialog from '$components/ui/Dialog.svelte';
 import DialogContent from '$components/ui/DialogContent.svelte';
-import DialogTitle from '$components/ui/DialogTitle.svelte';
 import DialogDescription from '$components/ui/DialogDescription.svelte';
-import Button from '$components/ui/Button.svelte';
+import DialogTitle from '$components/ui/DialogTitle.svelte';
 import Input from '$components/ui/Input.svelte';
 import { Select } from '$components/ui/select/index.js';
-import { Checkbox } from '$components/ui/checkbox/index.js';
-import RichTextEditor from '$components/editor/RichTextEditor.svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import { toast } from '$lib/stores/toast.js';
 
 let { open = $bindable(false), editItem = null } = $props();
 

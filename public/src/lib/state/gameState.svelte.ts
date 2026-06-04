@@ -1,7 +1,7 @@
 import { supabase } from '$lib/supabase/client';
 import { db } from '$lib/supabase/tables';
-import { authState } from './auth.svelte';
 import { fromCardDBArray } from '$lib/utils/cardMapper';
+import { authState } from './auth.svelte';
 
 const STORAGE_KEY = 'rpgboard_current_game';
 
@@ -147,6 +147,7 @@ class GameState {
     });
 
     if (gameId) {
+      this.loadGameRole(gameId);
       db.subscribeToChat(
         gameId,
         (messages) => {

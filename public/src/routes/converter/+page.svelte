@@ -1,9 +1,9 @@
 <script>
 import { onMount } from 'svelte';
-import { gameState } from '$lib/state/gameState.svelte.ts';
+import Badge from '$components/ui/Badge.svelte';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
-import Badge from '$components/ui/Badge.svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 
 let textInput = $state('');
 let jsonOutput = $state('');

@@ -1,18 +1,18 @@
 <script lang="ts">
-import type { Game } from '$lib/supabase/types';
 import {
-  Gamepad2,
-  Calendar,
-  Clock,
-  Trash2,
-  LogOut,
   AlertTriangle,
+  Calendar,
+  Check,
+  Clock,
+  Gamepad2,
+  LogOut,
   RotateCcw,
   Share2,
-  Copy,
-  Check,
+  Trash2,
 } from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
+import { db } from '$lib/supabase/tables';
+import type { Game } from '$lib/supabase/types';
 
 interface Props {
   game: Game;
@@ -93,40 +93,37 @@ const showCopyLink = $derived(!!game.invite_code && !isDeleted && canInvite);
 
 {#if isDeleted}
   <!-- Mesa deletada - não navegável -->
-  <div class="group block p-6 bg-card border border-red-500/50 rounded-xl opacity-60">
-    <div class="flex items-start gap-4">
+  <div class="block p-4 bg-background border border-destructive/30 rounded opacity-60">
+    <div class="flex items-start gap-3">
       {#if game.capa_url}
         <img 
           src={game.capa_url} 
           alt={game.nome}
-          class="w-16 h-16 rounded-lg object-cover grayscale"
+          class="w-12 h-12 rounded object-cover grayscale shrink-0 border border-border"
         />
       {:else}
-        <div class="p-3 bg-red-500/10 rounded-lg">
-          <Gamepad2 class="w-6 h-6 text-red-400" />
+        <div class="p-2.5 bg-secondary rounded shrink-0">
+          <Gamepad2 class="w-5 h-5 text-muted-foreground" />
         </div>
       {/if}
       
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
-          <h3 class="text-lg font-semibold text-foreground truncate">
+          <h3 class="text-sm font-semibold text-foreground truncate">
             {game.nome}
           </h3>
-          <span class="flex items-center gap-1 px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded">
-            <AlertTriangle class="w-3 h-3" />
+          <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-destructive/10 text-destructive rounded">
+            <AlertTriangle class="w-2.5 h-2.5" />
             Excluída
           </span>
         </div>
         
-        <div class="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+        <div class="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           {#if game.sistema}
-            <span class="px-2 py-0.5 bg-secondary rounded text-xs">
+            <span class="px-1.5 py-0.5 bg-secondary rounded font-medium">
               {game.sistema}
             </span>
           {/if}
-        </div>
-        
-        <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <span class="flex items-center gap-1">
             <Calendar class="w-3 h-3" />
             Criada: {formatDate(game.created_at)}
@@ -134,27 +131,22 @@ const showCopyLink = $derived(!!game.invite_code && !isDeleted && canInvite);
         </div>
       </div>
 
-      <div class="flex flex-col items-end gap-2">
+      <div class="flex flex-col items-end gap-1.5 shrink-0">
         {#if userRole}
-          <span class="px-2 py-1 text-xs font-medium rounded-full
-            {userRole === 'narrador' ? 'bg-purple-500/20 text-purple-400' :
-             userRole === 'assistente' ? 'bg-blue-500/20 text-blue-400' :
-             'bg-green-500/20 text-green-400'}">
+          <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-secondary text-foreground uppercase tracking-wider">
             {userRole === 'narrador' ? 'Mestre' : userRole === 'assistente' ? 'Assistente' : 'Jogador'}
           </span>
         {/if}
         
         {#if isNarrator}
-          <Button variant="ghost" size="sm" onclick={handleRestore} class="text-green-500 hover:text-green-400">
-            <RotateCcw class="w-4 h-4 mr-1" />
+          <button 
+            onclick={handleRestore} 
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-success hover:bg-secondary rounded transition-colors"
+            title="Restaurar Mesa"
+          >
+            <RotateCcw class="w-3.5 h-3.5" />
             Restaurar
-          </Button>
-        {/if}
-        
-        {#if !isNarrator}
-          <Button variant="ghost" size="sm" onclick={handleLeave} class="text-muted-foreground hover:text-foreground">
-            <LogOut class="w-4 h-4" />
-          </Button>
+          </button>
         {/if}
       </div>
     </div>
@@ -163,38 +155,38 @@ const showCopyLink = $derived(!!game.invite_code && !isDeleted && canInvite);
   <!-- Mesa normal - navegável -->
   <a
     href="/games/{game.id}"
-    class="group block p-6 bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-lg transition-all duration-200"
+    class="group block p-4 bg-background border border-border rounded hover:bg-secondary/20 transition-all duration-150"
   >
-    <div class="flex items-start gap-4">
+    <div class="flex items-start gap-3">
       {#if game.capa_url}
         <img 
           src={game.capa_url} 
           alt={game.nome}
-          class="w-16 h-16 rounded-lg object-cover"
+          class="w-12 h-12 rounded object-cover shrink-0 border border-border"
         />
       {:else}
-        <div class="p-3 bg-primary/10 rounded-lg">
-          <Gamepad2 class="w-6 h-6 text-primary" />
+        <div class="p-2.5 bg-secondary rounded shrink-0 group-hover:bg-background transition-colors">
+          <Gamepad2 class="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
         </div>
       {/if}
       
       <div class="flex-1 min-w-0">
-        <h3 class="text-lg font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+        <h3 class="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
           {game.nome}
         </h3>
         
-        <div class="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+        <div class="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           {#if game.sistema}
-            <span class="px-2 py-0.5 bg-secondary rounded text-xs">
+            <span class="px-1.5 py-0.5 bg-secondary rounded font-medium text-foreground">
               {game.sistema}
             </span>
           {/if}
         </div>
         
-        <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <div class="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           <span class="flex items-center gap-1">
             <Calendar class="w-3 h-3" />
-            Criada: {formatDate(game.created_at)}
+            {formatDate(game.created_at)}
           </span>
           {#if game.last_accessed_at}
             <span class="flex items-center gap-1">
@@ -205,35 +197,46 @@ const showCopyLink = $derived(!!game.invite_code && !isDeleted && canInvite);
         </div>
       </div>
 
-      <div class="flex flex-col items-end gap-2">
+      <div class="flex flex-col items-end gap-2 shrink-0">
         {#if userRole}
-          <span class="px-2 py-1 text-xs font-medium rounded-full
-            {userRole === 'narrador' ? 'bg-purple-500/20 text-purple-400' :
-             userRole === 'assistente' ? 'bg-blue-500/20 text-blue-400' :
-             'bg-green-500/20 text-green-400'}">
+          <span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-secondary text-foreground uppercase tracking-wider">
             {userRole === 'narrador' ? 'Mestre' : userRole === 'assistente' ? 'Assistente' : 'Jogador'}
           </span>
         {/if}
         
-        {#if showCopyLink}
-          <Button variant="ghost" size="sm" onclick={handleCopyLink} title="Copiar link de convite">
-            {#if copied}
-              <Check class="w-4 h-4 text-green-500" />
-            {:else}
-              <Share2 class="w-4 h-4" />
-            {/if}
-          </Button>
-        {/if}
-        
-        {#if isNarrator}
-          <Button variant="ghost" size="sm" onclick={handleDelete} class="text-red-500 hover:text-red-400" title="Excluir mesa">
-            <Trash2 class="w-4 h-4" />
-          </Button>
-        {:else if userRole}
-          <Button variant="ghost" size="sm" onclick={handleLeave} class="text-muted-foreground hover:text-foreground" title="Sair da mesa">
-            <LogOut class="w-4 h-4" />
-          </Button>
-        {/if}
+        <div class="flex items-center gap-1">
+          {#if showCopyLink}
+            <button 
+              onclick={handleCopyLink} 
+              class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="Copiar link de convite"
+            >
+              {#if copied}
+                <Check class="w-3.5 h-3.5 text-success" />
+              {:else}
+                <Share2 class="w-3.5 h-3.5" />
+              {/if}
+            </button>
+          {/if}
+          
+          {#if isNarrator}
+            <button 
+              onclick={handleDelete} 
+              class="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" 
+              title="Excluir mesa"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
+          {:else if userRole}
+            <button 
+              onclick={handleLeave} 
+              class="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" 
+              title="Sair da mesa"
+            >
+              <LogOut class="w-3.5 h-3.5" />
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
   </a>

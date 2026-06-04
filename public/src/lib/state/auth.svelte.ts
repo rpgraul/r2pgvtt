@@ -1,5 +1,5 @@
-import { supabase } from '$lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { supabase } from '$lib/supabase/client';
 import type { Profile } from '$lib/supabase/types';
 
 function createAuthState() {
@@ -13,14 +13,18 @@ function createAuthState() {
     isInitialized = true;
     isLoading = true;
 
-    const { data } = await supabase.auth.getSession();
-    user = data.session?.user ?? null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      user = data.session?.user ?? null;
 
-    if (user) {
-      await loadProfile();
+      if (user) {
+        await loadProfile();
+      }
+    } catch (e) {
+      console.error('Error initializing auth session:', e);
+    } finally {
+      isLoading = false;
     }
-
-    isLoading = false;
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       user = session?.user ?? null;

@@ -1,7 +1,7 @@
 <script>
+import { Pause, Play, Repeat, Repeat1, SkipForward, Volume2, VolumeX } from 'lucide-svelte';
+import { onDestroy, onMount } from 'svelte';
 import { musicState } from '$lib/state/music.svelte.js';
-import { Play, Pause, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-svelte';
-import { onMount, onDestroy } from 'svelte';
 
 const isPlaying = $derived(musicState.isPlaying());
 const currentTrack = $derived(musicState.currentTrack());
@@ -140,29 +140,31 @@ function handleProgressClick(e) {
 const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
 </script>
 
-<div class="controls-container">
-  <div class="now-playing">
+<div class="space-y-3.5 select-none">
+  <!-- Track info banner -->
+  <div class="p-3 bg-secondary/30 border rounded flex items-center gap-3">
     {#if currentTrack}
       <img
         src={`https://img.youtube.com/vi/${currentTrack.youtube_id}/mqdefault.jpg`}
         alt=""
-        class="now-playing-thumb"
+        class="w-12 h-7 object-cover rounded border border-border shrink-0"
       />
-      <div class="now-playing-info">
-        <span class="now-playing-label">Tocando agora</span>
-        <span class="now-playing-title">{currentTrack.title || currentTrack.youtube_id}</span>
+      <div class="min-w-0 flex-1">
+        <span class="text-[8px] text-muted-foreground uppercase tracking-wider block font-bold">Tocando agora</span>
+        <span class="text-xs text-foreground font-semibold truncate block mt-0.5">{currentTrack.title || currentTrack.youtube_id}</span>
       </div>
     {:else}
-      <div class="now-playing-empty">
-        <span class="text-sm text-muted-foreground">Nenhuma música selecionada</span>
+      <div class="flex items-center justify-center py-2 flex-grow text-center text-xs text-muted-foreground">
+        Nenhuma faixa tocando
       </div>
     {/if}
   </div>
 
-  <div class="progress-section">
-    <span class="time-label">{formatTime(currentTime)}</span>
+  <!-- Progress Bar -->
+  <div class="flex items-center gap-2 text-[10px]">
+    <span class="text-muted-foreground min-w-[28px] text-right font-medium">{formatTime(currentTime)}</span>
     <div
-      class="progress-bar"
+      class="flex-grow h-1.5 bg-secondary rounded-full cursor-pointer relative overflow-hidden"
       onclick={handleProgressClick}
       role="slider"
       aria-valuenow={currentTime}
@@ -170,57 +172,55 @@ const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
       aria-valuemax={duration}
       tabindex="0"
     >
-      <div class="progress-fill" style="width: {progress}%"></div>
+      <div class="h-full bg-primary transition-all duration-100 rounded-full" style="width: {progress}%"></div>
     </div>
-    <span class="time-label">{formatTime(duration)}</span>
+    <span class="text-muted-foreground min-w-[28px] text-left font-medium">{formatTime(duration)}</span>
   </div>
 
-  <div class="buttons-row">
+  <!-- Playback buttons -->
+  <div class="flex items-center justify-center gap-3.5 pt-1">
     <button
-      class="control-btn"
-      class:active={repeatMode !== 'off'}
-      class:primary={repeatMode === 'track'}
-      class:off={repeatMode === 'off'}
+      class="p-1.5 rounded transition-colors cursor-pointer {repeatMode !== 'off' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}"
       onclick={handleRepeat}
       title="Repetir: {repeatMode === 'off' ? 'Desligado' : repeatMode === 'track' ? 'Música' : 'Playlist'}"
     >
       {#if repeatMode === 'track'}
-        <Repeat1 class="w-5 h-5" />
+        <Repeat1 class="w-4.5 h-4.5" />
       {:else}
-        <Repeat class="w-5 h-5" />
+        <Repeat class="w-4.5 h-4.5" />
       {/if}
     </button>
 
     <button
-      class="control-btn"
-      class:primary={isPlaying}
+      class="p-2.5 rounded-full border bg-background hover:bg-secondary/60 text-foreground cursor-pointer transition-colors shadow-sm disabled:opacity-50"
       onclick={handlePlayPause}
       disabled={!canPlay || isLoading}
       title={isPlaying ? 'Pausar' : 'Reproduzir'}
     >
       {#if isPlaying}
-        <Pause class="w-5 h-5" />
+        <Pause class="w-5 h-5 fill-current" />
       {:else}
-        <Play class="w-5 h-5" />
+        <Play class="w-5 h-5 fill-current" />
       {/if}
     </button>
 
     <button
-      class="control-btn"
+      class="p-1.5 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-50"
       onclick={handleSkip}
       disabled={!canSkip || isLoading}
       title="Próxima"
     >
-      <SkipForward class="w-5 h-5" />
+      <SkipForward class="w-4.5 h-4.5 fill-current" />
     </button>
   </div>
 
-  <div class="volume-row">
-    <button class="volume-btn" onclick={handleToggleMute} title={isMuted ? 'Ativar som' : 'Silenciar'}>
+  <!-- Volume control -->
+  <div class="flex items-center gap-2 pt-1">
+    <button class="text-muted-foreground hover:text-foreground p-1 cursor-pointer transition-colors" onclick={handleToggleMute} title={isMuted ? 'Ativar som' : 'Silenciar'}>
       {#if localVolume === 0 || isMuted}
-        <VolumeX class="w-4 h-4" />
+        <VolumeX class="w-3.5 h-3.5" />
       {:else}
-        <Volume2 class="w-4 h-4" />
+        <Volume2 class="w-3.5 h-3.5" />
       {/if}
     </button>
     <input
@@ -229,195 +229,8 @@ const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
       max="100"
       value={isMuted ? 0 : localVolume}
       oninput={handleVolumeChange}
-      class="volume-slider"
+      class="flex-1 h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
     />
-    <span class="volume-label">{isMuted ? 0 : localVolume}%</span>
+    <span class="text-[10px] text-muted-foreground min-w-[28px] text-right font-medium">{isMuted ? 0 : localVolume}%</span>
   </div>
 </div>
-
-<style>
-  .controls-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .now-playing {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background-color: hsl(var(--muted) / 0.5);
-    border-radius: 0.5rem;
-  }
-
-  .now-playing-thumb {
-    width: 56px;
-    height: 32px;
-    object-fit: cover;
-    border-radius: 0.25rem;
-  }
-
-  .now-playing-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .now-playing-label {
-    font-size: 0.625rem;
-    text-transform: uppercase;
-    color: hsl(var(--muted-foreground));
-    letter-spacing: 0.05em;
-  }
-
-  .now-playing-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .now-playing-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    padding: 0.5rem;
-  }
-
-  .progress-section {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .time-label {
-    font-size: 0.75rem;
-    color: hsl(var(--muted-foreground));
-    min-width: 2.5rem;
-    text-align: center;
-  }
-
-  .progress-bar {
-    flex: 1;
-    height: 0.5rem;
-    background-color: #4a4a4a;
-    border-radius: 9999px;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background-color: #22c55e;
-    border-radius: 9999px;
-    transition: width 0.1s linear;
-  }
-
-  .buttons-row {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-    align-items: center;
-  }
-
-  .control-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    border: none;
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .control-btn:hover:not(:disabled) {
-    background-color: hsl(var(--primary) / 0.2);
-    transform: scale(1.05);
-  }
-
-  .control-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .control-btn.primary {
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-  }
-
-  .control-btn.active {
-    color: hsl(var(--primary));
-  }
-
-  .control-btn.off {
-    opacity: 0.5;
-  }
-
-  .control-btn.active.primary {
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-  }
-
-  .volume-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .volume-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border: none;
-    background: none;
-    color: hsl(var(--muted-foreground));
-    cursor: pointer;
-    border-radius: 0.25rem;
-    transition: color 0.15s;
-  }
-
-  .volume-btn:hover {
-    color: hsl(var(--foreground));
-  }
-
-  .volume-slider {
-    flex: 1;
-    height: 0.5rem;
-    background-color: #4a4a4a;
-    border-radius: 9999px;
-    appearance: none;
-    cursor: pointer;
-  }
-
-  .volume-slider::-webkit-slider-thumb {
-    appearance: none;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-    background-color: #22c55e;
-    cursor: pointer;
-    transition: transform 0.15s;
-    border: 2px solid white;
-  }
-
-  .volume-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-  }
-
-  .volume-label {
-    font-size: 0.75rem;
-    color: hsl(var(--muted-foreground));
-    min-width: 2.5rem;
-    text-align: right;
-  }
-</style>

@@ -1,8 +1,7 @@
 <script>
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import Input from './ui/Input.svelte';
 import { Search } from 'lucide-svelte';
 import { onDestroy } from 'svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 
 let searchValue = $state('');
 
@@ -18,7 +17,7 @@ function handleInput(e) {
 
   debounceTimer = setTimeout(() => {
     gameState.setSearch(searchValue);
-  }, 300);
+  }, 200);
 }
 
 function handleClear() {
@@ -27,20 +26,20 @@ function handleClear() {
 }
 </script>
 
-<div class="relative">
-  <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+<div class="relative w-full">
+  <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
   <input
     type="text"
     value={searchValue}
     oninput={handleInput}
     placeholder="Buscar por título, conteúdo ou tag..."
-    class="flex h-10 w-full rounded-md border bg-popover pl-10 pr-10 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground border-input"
+    class="flex h-8.5 w-full rounded border bg-background pl-8 pr-7 text-xs outline-none focus:border-primary/80 transition-colors text-foreground placeholder:text-muted-foreground/60"
   />
   {#if searchValue}
     <button
       type="button"
       onclick={handleClear}
-      class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm font-semibold select-none"
     >
       ×
     </button>

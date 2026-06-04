@@ -1,7 +1,7 @@
 <script>
-import { cn } from '$lib/utils/cn.js';
-import { X, Dices } from 'lucide-svelte';
+import { Dices, X } from 'lucide-svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { cn } from '$lib/utils/cn.js';
 
 let { open = $bindable(false), onRollComplete = () => {} } = $props();
 

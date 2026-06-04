@@ -1,6 +1,6 @@
 <script>
-import { cn } from '$lib/utils/cn.js';
 import { X } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn.js';
 
 let {
   open = $bindable(false),

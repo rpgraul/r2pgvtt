@@ -1,5 +1,5 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
+import { onDestroy, onMount } from 'svelte';
 import { audioStore } from '$lib/state/audio.svelte.ts';
 
 let player = $state(null);

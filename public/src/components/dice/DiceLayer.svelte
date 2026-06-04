@@ -1,6 +1,6 @@
 <script>
-import DiceAlertList from './DiceAlertList.svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
+import DiceAlertList from './DiceAlertList.svelte';
 
 function handleWindowClick() {
   if (diceStore.isDiceVisible && !diceStore.hasActiveRolls()) {

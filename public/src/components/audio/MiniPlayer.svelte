@@ -1,11 +1,11 @@
 <script>
+import { Music, Pause, Play, RefreshCw, Settings, Volume2, VolumeX } from 'lucide-svelte';
 import { onMount } from 'svelte';
-import { audioStore } from '$lib/state/audio.svelte.ts';
-import { authState } from '$lib/state/auth.svelte.ts';
-import { Play, Pause, Volume2, VolumeX, Settings, RefreshCw, Music } from 'lucide-svelte';
-import { cn } from '$lib/utils/cn.js';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
+import { audioStore } from '$lib/state/audio.svelte.ts';
+import { authState } from '$lib/state/auth.svelte.ts';
+import { cn } from '$lib/utils/cn.js';
 
 let showSettings = $state(false);
 let videoUrl = $state('');

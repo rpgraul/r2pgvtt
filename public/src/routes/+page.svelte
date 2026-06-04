@@ -1,43 +1,39 @@
 <script>
 import { onMount } from 'svelte';
-import { page } from '$app/stores';
 import { browser } from '$app/environment';
-import CategoryFilters from '$components/CategoryFilters.svelte';
-import GridContainer from '$components/grid/GridContainer.svelte';
-import SearchInput from '$components/SearchInput.svelte';
-import TagFilters from '$components/TagFilters.svelte';
-import { authState } from '$lib/state/auth.svelte';
+import { page } from '$app/stores';
+import GridView from '$components/grid/GridView.svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 
 let ready = $state(false);
 
+const inGame = $derived(!!gameState.gameId);
+
 onMount(() => {
   if (browser) {
     const urlGameId = $page.url.searchParams.get('gameId');
-
     if (urlGameId) {
       window.history.replaceState({}, '', '/');
       gameState.setGameId(urlGameId);
-    } else {
-      gameState.init(null);
     }
   }
   ready = true;
 });
 </script>
 
-<div class="min-h-screen bg-background text-foreground">
-  <main class="container px-4 py-6 space-y-6">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div class="flex-1 max-w-md">
-        <SearchInput />
+<div class="h-full w-full bg-background text-foreground overflow-hidden">
+  {#if ready}
+    {#if inGame}
+      <GridView />
+    {:else}
+      <!-- Sem mesa selecionada -->
+      <div class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h2 class="text-xl font-semibold mb-2">Nenhuma mesa ativa selecionada</h2>
+        <p class="text-sm text-muted-foreground mb-4">Escolha uma mesa para começar a jogar.</p>
+        <a href="/games" class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">
+          Ver Minhas Mesas
+        </a>
       </div>
-      <div class="flex items-center gap-2">
-        <CategoryFilters />
-        <TagFilters />
-      </div>
-    </div>
-    
-    <GridContainer />
-  </main>
+    {/if}
+  {/if}
 </div>

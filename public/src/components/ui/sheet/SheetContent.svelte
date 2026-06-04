@@ -1,6 +1,6 @@
 <script>
-import { cn } from '$lib/utils/cn';
 import { X } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn';
 
 let { side = 'right', class: className, children } = $props();
 

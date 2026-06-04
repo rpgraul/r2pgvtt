@@ -1,10 +1,11 @@
 <script lang="ts">
-import { authState } from '$lib/state/auth.svelte';
 import { onMount } from 'svelte';
-import { db } from '$lib/supabase/tables';
+import { goto } from '$app/navigation';
 import GameList from '$components/games/GameList.svelte';
 import Button from '$components/ui/Button.svelte';
-import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import { db } from '$lib/supabase/tables';
 
 let isLoading = $state(true);
 let games = $state([]);
@@ -13,6 +14,7 @@ let authReady = $derived(!authState.isLoading && authState.isAuthenticated);
 
 $effect(() => {
   if (authReady) {
+    gameState.setGameId(null);
     loadGames();
   }
 });

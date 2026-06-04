@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { authState } from '$lib/state/auth.svelte';
 import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
 
 onMount(() => {
   // Enable superuser mode

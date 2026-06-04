@@ -1,6 +1,6 @@
 <script>
+import { Music, Pause, Play, X } from 'lucide-svelte';
 import { musicState } from '$lib/state/music.svelte.js';
-import { X, Music, Play, Pause } from 'lucide-svelte';
 
 const playlist = $derived(musicState.playlist());
 const currentTrack = $derived(musicState.currentTrack());

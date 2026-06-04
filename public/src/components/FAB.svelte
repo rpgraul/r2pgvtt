@@ -1,29 +1,28 @@
 <script>
+import {
+  Dices,
+  HelpCircle,
+  IdCard,
+  Layers,
+  ListChecks,
+  MessageCircle,
+  Music,
+  Palette,
+  Plus,
+  Settings,
+  Users,
+  X,
+} from 'lucide-svelte';
 import { goto } from '$app/navigation';
-import { gameState } from '$lib/state/gameState.svelte.ts';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet/index.js';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import MiniPlayer from './audio/MiniPlayer.svelte';
+import ChatSidebar from './chat/ChatSidebar.svelte';
+import MusicPlayer from './player/MusicPlayer.svelte';
 import Dialog from './ui/Dialog.svelte';
 import DialogContent from './ui/DialogContent.svelte';
 import DialogTitle from './ui/DialogTitle.svelte';
-import MiniPlayer from './audio/MiniPlayer.svelte';
-import MusicPlayer from './player/MusicPlayer.svelte';
-import ChatSidebar from './chat/ChatSidebar.svelte';
-
-import {
-  Plus,
-  Dices,
-  Music,
-  MessageCircle,
-  X,
-  Settings,
-  ListChecks,
-  Layers,
-  HelpCircle,
-  Users,
-  Palette,
-  IdCard,
-} from 'lucide-svelte';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet/index.js';
 
 let { currentPath = '/' } = $props();
 

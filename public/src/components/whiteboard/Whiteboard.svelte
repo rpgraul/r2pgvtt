@@ -1,34 +1,19 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import { authState } from '$lib/state/auth.svelte.ts';
-import { toast } from '$lib/stores/toast.js';
+import { Circle, Download, Eraser, Minus, Pencil, Square, Trash2, Type } from 'lucide-svelte';
+import { onDestroy, onMount } from 'svelte';
 import Button from '$components/ui/Button.svelte';
 import { Tooltip } from '$components/ui/tooltip/index.js';
-import {
-  Pencil,
-  Eraser,
-  Square,
-  Circle,
-  Minus,
-  Type,
-  Image,
-  Undo,
-  Redo,
-  Download,
-  Trash2,
-  Palette,
-} from 'lucide-svelte';
+import { authState } from '$lib/state/auth.svelte.ts';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import { supabase } from '$lib/supabase/client';
+import { db } from '$lib/supabase/tables';
 
 let canvasContainer;
 let canvas = null;
-let isDrawing = $state(false);
 let selectedTool = $state('select');
-let color = $state('#000000');
-let brushSize = $state(3);
-let canUndo = $state(false);
-let canRedo = $state(false);
-let unsubscribe = null;
+let color = $state('#ef4444');
+let brushSize = $state(4);
+let isSyncing = false;
 
 const tools = [
   { id: 'select', label: 'Selecionar', icon: 'cursor' },
@@ -51,7 +36,8 @@ const colors = [
   '#ec4899',
 ];
 
-const isNarrator = $derived(authState.role === 'narrador');
+const isNarrator = $derived(gameState.currentGameRole === 'narrador');
+let channel = null;
 
 onMount(async () => {
   const fabric = await import('fabric');
@@ -59,23 +45,54 @@ onMount(async () => {
   canvas = new fabric.Canvas('whiteboard-canvas', {
     width: canvasContainer?.clientWidth || 1200,
     height: canvasContainer?.clientHeight || 800,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#18181b', // Dark theme background
     selection: true,
   });
 
-  canvas.on('object:modified', saveCanvas);
+  // Listeners de modificação do canvas
+  canvas.on('object:modified', () => {
+    if (isSyncing) return;
+    saveCanvas();
+  });
   canvas.on('object:added', () => {
-    canUndo = true;
+    if (isSyncing) return;
+    saveCanvas();
+  });
+  canvas.on('object:removed', () => {
+    if (isSyncing) return;
+    saveCanvas();
   });
 
-  subscribeToWhiteboard();
+  const gameId = gameState.gameId;
+  if (gameId) {
+    // 1. Carregar estado inicial do banco
+    db.getSettings(`whiteboard_state:${gameId}`).then((val) => {
+      if (val && val.canvasJson) {
+        loadCanvasFromJson(val.canvasJson);
+      }
+    });
+
+    // 2. Assinar Canal de Broadcast do Supabase
+    channel = supabase.channel(`whiteboard:${gameId}`);
+    channel
+      .on('broadcast', { event: 'draw_update' }, ({ payload }) => {
+        if (payload && payload.canvasJson) {
+          loadCanvasFromJson(payload.canvasJson);
+        }
+      })
+      .subscribe();
+  }
 
   window.addEventListener('resize', handleResize);
 });
 
 onDestroy(() => {
-  if (unsubscribe) unsubscribe();
-  if (canvas) canvas.dispose();
+  if (channel) {
+    supabase.removeChannel(channel);
+  }
+  if (canvas) {
+    canvas.dispose();
+  }
   window.removeEventListener('resize', handleResize);
 });
 
@@ -88,46 +105,46 @@ function handleResize() {
   }
 }
 
-function subscribeToWhiteboard() {
-  if (!isNarrator) {
-    const wbRef = doc(db, 'whiteboard', 'main');
-    unsubscribe = onSnapshot(wbRef, (docSnap) => {
-      if (docSnap.exists() && docSnap.data().canvasJson) {
-        loadCanvasFromJson(docSnap.data().canvasJson);
-      }
+let saveTimeout = null;
+async function saveCanvas() {
+  if (!canvas) return;
+  const gameId = gameState.gameId;
+  if (!gameId) return;
+
+  const canvasJson = JSON.stringify(canvas.toJSON());
+
+  // 1. Broadcast em tempo real para os outros jogadores da mesa
+  if (channel) {
+    channel.send({
+      type: 'broadcast',
+      event: 'draw_update',
+      payload: { canvasJson },
     });
   }
-}
 
-async function saveCanvas() {
-  if (!canvas || !isNarrator) return;
-
-  try {
-    const canvasJson = JSON.stringify(canvas.toJSON());
-    await setDoc(
-      doc(db, 'whiteboard', 'main'),
-      {
-        canvasJson,
-        updatedBy: auth.userName,
-        updatedAt: new Date(),
-      },
-      { merge: true },
-    );
-  } catch (error) {
-    console.error('Error saving canvas:', error);
-  }
+  // 2. Salvar no Supabase (Debounced em 1s para evitar sobrecarga no DB)
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    db.updateSettings(`whiteboard_state:${gameId}`, {
+      canvasJson,
+      updatedBy: authState.displayName,
+      updatedAt: new Date().toISOString(),
+    }).catch((err) => console.error('[Quadro] Erro ao salvar estado:', err));
+  }, 1000);
 }
 
 async function loadCanvasFromJson(json) {
   if (!canvas) return;
 
   try {
-    const fabric = await import('fabric');
+    isSyncing = true;
     canvas.loadFromJSON(json, () => {
       canvas.renderAll();
+      isSyncing = false;
     });
   } catch (error) {
     console.error('Error loading canvas:', error);
+    isSyncing = false;
   }
 }
 
@@ -150,7 +167,7 @@ function setTool(tool) {
       break;
     case 'erase':
       canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush.color = '#ffffff';
+      canvas.freeDrawingBrush.color = '#18181b'; // Cor de fundo do canvas (borracha)
       canvas.freeDrawingBrush.width = 20;
       break;
     case 'rectangle':
@@ -175,29 +192,29 @@ async function addShape(type) {
   switch (type) {
     case 'rectangle':
       shape = new fabric.Rect({
-        left: 100,
-        top: 100,
-        width: 100,
-        height: 100,
+        left: 150,
+        top: 150,
+        width: 120,
+        height: 120,
         fill: 'transparent',
         stroke: color,
-        strokeWidth: 2,
+        strokeWidth: 3,
       });
       break;
     case 'circle':
       shape = new fabric.Circle({
-        left: 100,
-        top: 100,
-        radius: 50,
+        left: 150,
+        top: 150,
+        radius: 60,
         fill: 'transparent',
         stroke: color,
-        strokeWidth: 2,
+        strokeWidth: 3,
       });
       break;
     case 'line':
-      shape = new fabric.Line([50, 100, 200, 100], {
+      shape = new fabric.Line([50, 150, 250, 150], {
         stroke: color,
-        strokeWidth: 2,
+        strokeWidth: 3,
       });
       break;
   }
@@ -211,8 +228,8 @@ async function addShape(type) {
 async function addText() {
   const fabric = await import('fabric');
   const text = new fabric.IText('Texto', {
-    left: 100,
-    top: 100,
+    left: 150,
+    top: 150,
     fontFamily: 'Arial',
     fontSize: 24,
     fill: color,
@@ -228,7 +245,7 @@ function clearCanvas() {
   if (!confirm('Limpar todo o quadro?')) return;
   if (canvas) {
     canvas.clear();
-    canvas.backgroundColor = '#ffffff';
+    canvas.backgroundColor = '#18181b';
     saveCanvas();
   }
 }
@@ -242,7 +259,7 @@ function downloadCanvas() {
   });
 
   const link = document.createElement('a');
-  link.download = 'whiteboard.png';
+  link.download = 'quadro.png';
   link.href = dataURL;
   link.click();
 }
@@ -250,7 +267,7 @@ function downloadCanvas() {
 
 <div class="h-full flex flex-col">
   <!-- Toolbar -->
-  <div class="flex items-center gap-2 p-2 border-b bg-card">
+  <div class="flex flex-wrap items-center gap-2 p-2 border-b bg-card">
     <div class="flex gap-1">
       {#each tools as tool}
         <Tooltip content={tool.label}>
@@ -281,21 +298,21 @@ function downloadCanvas() {
       {/each}
     </div>
     
-    <div class="w-px h-6 bg-border"></div>
+    <div class="hidden sm:block w-px h-6 bg-border"></div>
     
     <!-- Colors -->
     <div class="flex gap-1">
       {#each colors as c}
         <button
-          onclick={() => color = c}
+          onclick={() => { color = c; if (canvas && canvas.isDrawingMode) canvas.freeDrawingBrush.color = c; }}
           class="w-6 h-6 rounded border-2 transition-transform hover:scale-110"
-          style="background-color: {c}; border-color: {color === c ? '#3b82f6' : 'transparent'}"
+          style="background-color: {c}; border-color: {color === c ? 'var(--color-primary)' : 'transparent'}"
           aria-label="Cor {c}"
         ></button>
       {/each}
     </div>
     
-    <div class="w-px h-6 bg-border"></div>
+    <div class="hidden sm:block w-px h-6 bg-border"></div>
     
     <!-- Brush Size -->
     <div class="flex items-center gap-2">
@@ -304,7 +321,9 @@ function downloadCanvas() {
         min="1"
         max="20"
         bind:value={brushSize}
+        onchange={() => { if (canvas && canvas.isDrawingMode) canvas.freeDrawingBrush.width = brushSize; }}
         class="w-20"
+        aria-label="Tamanho do pincel"
       />
       <span class="text-xs text-muted-foreground">{brushSize}px</span>
     </div>
@@ -313,16 +332,13 @@ function downloadCanvas() {
     
     <!-- Actions -->
     <Button variant="ghost" size="sm" onclick={downloadCanvas}>
-      <Download class="w-4 h-4 mr-1" />
-      Baixar
+      Baixar Quadro
     </Button>
     
-    {#if isNarrator}
-      <Button variant="ghost" size="sm" onclick={clearCanvas}>
-        <Trash2 class="w-4 h-4 mr-1" />
-        Limpar
-      </Button>
-    {/if}
+    <Button variant="ghost" size="sm" onclick={clearCanvas}>
+      <Trash2 class="w-4 h-4 mr-1 text-destructive" />
+      Limpar
+    </Button>
   </div>
   
   <!-- Canvas Container -->

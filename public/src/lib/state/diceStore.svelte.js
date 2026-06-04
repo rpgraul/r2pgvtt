@@ -1,7 +1,7 @@
 import { createDiceBoxManager } from '../actions/useDiceBox.js';
+import { evaluateRolls, getSecureRandomInt, parseFormula } from '../utils/diceLogic.js';
 import { authState } from './auth.svelte.ts';
 import { gameState } from './gameState.svelte.ts';
-import { parseFormula, evaluateRolls, getSecureRandomInt } from '../utils/diceLogic.js';
 
 function createDiceStore() {
   let activeDice = $state([]);
@@ -10,7 +10,7 @@ function createDiceStore() {
   let hasUserDismissed = $state(false);
   let isDiceVisible = $state(false);
   let alertTimeoutId = null;
-  let rollMetadataQueue = $state(new Map());
+  const rollMetadataQueue = $state(new Map());
   let diceBoxInstance = null;
 
   const defaultColor = '#0000ff';
@@ -132,6 +132,10 @@ function createDiceStore() {
 
       // DISPARA O BROADCAST (O Roller também vai processar isso no receptor)
       gameState.broadcastDiceAction(payload);
+
+      // Processar localmente para rodar a animação 3D e atualizar o chat do próprio jogador
+      await processRollSinal(payload);
+
       return result;
     } catch (error) {
       console.error('[DiceStore] Local Roll Error:', error);

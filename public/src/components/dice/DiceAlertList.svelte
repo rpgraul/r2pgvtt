@@ -1,7 +1,7 @@
 <script>
-import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { Dices } from 'lucide-svelte';
 import { fly } from 'svelte/transition';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
 
 // Use a key to force re-render when it changes
 let renderKey = $state(0);

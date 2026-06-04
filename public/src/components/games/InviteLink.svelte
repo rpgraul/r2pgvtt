@@ -1,7 +1,7 @@
 <script lang="ts">
-import type { Game } from '$lib/supabase/types';
-import { Share2, Check } from 'lucide-svelte';
+import { Check, Share2 } from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
+import type { Game } from '$lib/supabase/types';
 
 interface Props {
   game: Game | null;

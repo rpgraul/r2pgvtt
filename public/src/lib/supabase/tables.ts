@@ -1,6 +1,6 @@
 import { authState } from '$lib/state/auth.svelte';
+import { fromCardDB, toCardDB } from '$lib/utils/cardMapper';
 import { supabase } from './client';
-import { toCardDB, fromCardDB } from '$lib/utils/cardMapper';
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

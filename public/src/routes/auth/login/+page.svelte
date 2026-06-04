@@ -1,9 +1,9 @@
 <script lang="ts">
-import { authState } from '$lib/state/auth.svelte';
+import { goto } from '$app/navigation';
+import OAuthButton from '$components/auth/OAuthButton.svelte';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
-import OAuthButton from '$components/auth/OAuthButton.svelte';
-import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
 
 let isLogin = $state(true);
 let email = $state('');

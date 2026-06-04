@@ -1,7 +1,7 @@
 <script>
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
 import Button from '$components/ui/Button.svelte';
 import Input from '$components/ui/Input.svelte';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '$components/ui/tabs/index.js';
 
 let { onInsert, onClose } = $props();
 

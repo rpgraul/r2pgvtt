@@ -1,7 +1,7 @@
 <script>
 import { Dialog } from 'bits-ui';
-import { cn } from '$lib/utils/cn.js';
 import { X } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn.js';
 
 let { class: className = '', children, ...restProps } = $props();
 </script>

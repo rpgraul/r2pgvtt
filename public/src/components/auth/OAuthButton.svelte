@@ -1,6 +1,6 @@
 <script lang="ts">
-import { authState } from '$lib/state/auth.svelte';
 import { goto } from '$app/navigation';
+import { authState } from '$lib/state/auth.svelte';
 
 let loading = $state(false);
 

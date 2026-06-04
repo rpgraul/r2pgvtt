@@ -1,6 +1,6 @@
 <script>
-import { cn } from '$lib/utils/cn';
 import { ChevronDown } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn';
 
 let {
   value = $bindable(''),

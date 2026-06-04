@@ -1,6 +1,6 @@
 <script>
-import { cn } from '$lib/utils/cn';
 import { Check } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn';
 
 let { checked = $bindable(false), id, onCheckedChange, class: className } = $props();
 

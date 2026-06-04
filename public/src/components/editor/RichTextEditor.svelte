@@ -1,40 +1,38 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
 import { Editor } from '@tiptap/core';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
-import HpNode from '$lib/tiptap/extensions/HpNode.js';
-import MoneyNode from '$lib/tiptap/extensions/MoneyNode.js';
-import StatNode from '$lib/tiptap/extensions/StatNode.js';
-import CountNode from '$lib/tiptap/extensions/CountNode.js';
-import XpNode from '$lib/tiptap/extensions/XpNode.js';
-
+import StarterKit from '@tiptap/starter-kit';
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  List,
-  ListOrdered,
-  Quote,
   Code,
   Heading1,
   Heading2,
   Heading3,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Link as LinkIcon,
   Highlighter,
-  Undo,
+  Italic,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+  Quote,
   Redo,
+  Strikethrough,
+  Underline as UnderlineIcon,
+  Undo,
 } from 'lucide-svelte';
-
+import { onDestroy, onMount } from 'svelte';
 import Button from '$components/ui/Button.svelte';
+import CountNode from '$lib/tiptap/extensions/CountNode.js';
+import HpNode from '$lib/tiptap/extensions/HpNode.js';
+import MoneyNode from '$lib/tiptap/extensions/MoneyNode.js';
+import StatNode from '$lib/tiptap/extensions/StatNode.js';
+import XpNode from '$lib/tiptap/extensions/XpNode.js';
 import ShortcodeInserter from './ShortcodeInserter.svelte';
 
 let { content = $bindable(''), editable = true, placeholder = '' } = $props();

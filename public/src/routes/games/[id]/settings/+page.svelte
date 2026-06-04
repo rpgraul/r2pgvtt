@@ -1,16 +1,15 @@
 <script lang="ts">
-import { page } from '$app/stores';
+import { ArrowLeft, Check, Copy, Save } from 'lucide-svelte';
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { gameState } from '$lib/state/gameState.svelte';
-import { authState } from '$lib/state/auth.svelte';
-import type { Game } from '$lib/supabase/types';
-import { ArrowLeft, Save, Copy, Check } from 'lucide-svelte';
-import Button from '$components/ui/Button.svelte';
-import Input from '$components/ui/Input.svelte';
+import { page } from '$app/stores';
 import InviteLink from '$components/games/InviteLink.svelte';
 import MemberList from '$components/games/MemberList.svelte';
-import type { GameMemberWithProfile } from '$lib/supabase/types';
+import Button from '$components/ui/Button.svelte';
+import Input from '$components/ui/Input.svelte';
+import { authState } from '$lib/state/auth.svelte';
+import { gameState } from '$lib/state/gameState.svelte';
+import type { Game, GameMemberWithProfile } from '$lib/supabase/types';
 
 let game = $state<Game | null>(null);
 let members = $state<GameMemberWithProfile[]>([]);

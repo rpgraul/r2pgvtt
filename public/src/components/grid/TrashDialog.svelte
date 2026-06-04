@@ -1,12 +1,12 @@
 <script>
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import { toast } from '$lib/stores/toast.js';
+import { RotateCcw, Trash2, X } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 import Dialog from '$components/ui/Dialog.svelte';
 import DialogContent from '$components/ui/DialogContent.svelte';
-import DialogTitle from '$components/ui/DialogTitle.svelte';
 import DialogDescription from '$components/ui/DialogDescription.svelte';
-import Button from '$components/ui/Button.svelte';
-import { Trash2, RotateCcw, X } from 'lucide-svelte';
+import DialogTitle from '$components/ui/DialogTitle.svelte';
+import { gameState } from '$lib/state/gameState.svelte.ts';
+import { toast } from '$lib/stores/toast.js';
 
 let { open = $bindable(false) } = $props();
 

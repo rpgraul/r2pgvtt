@@ -1,64 +1,52 @@
 <script>
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '$components/ui/tabs/index.js';
-import { uiState } from '$lib/state/ui.svelte.js';
-import { X, MessageCircle, Music } from 'lucide-svelte';
+import { MessageSquare, Music, X } from 'lucide-svelte';
 import ChatPanel from '$components/chat/ChatSidebar.svelte';
 import MusicPlayer from '$components/player/MusicPlayer.svelte';
-import { diceStore } from '$lib/state/diceStore.svelte.js';
-
-const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
-
-function handleRoll(formula) {
-  diceStore.rollDice(formula).catch((err) => console.error('[Sidebar] Dice error:', err));
-}
+import { uiState } from '$lib/state/ui.svelte.js';
 </script>
 
-<div class="flex h-full flex-col">
-	<div class="flex items-center justify-between border-b px-4 py-3">
-		<h2 class="font-semibold">Painel</h2>
+<div class="flex h-full flex-col bg-background select-none">
+	
+	<!-- Header -->
+	<div class="flex items-center justify-between border-b px-4 py-3 shrink-0 bg-sidebar">
+		<span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Painel Lateral</span>
 		<button
 			onclick={() => uiState.toggleSidebar()}
-			class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+			class="p-2 rounded hover:bg-secondary/60 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
 			aria-label="Fechar painel"
 		>
-			<X class="h-4 w-4" />
+			<X class="h-4.5 w-4.5" />
 		</button>
 	</div>
 
-	<Tabs bind:value={uiState.activeTab} class="flex flex-1 flex-col overflow-hidden">
-		<TabsList class="w-full">
-			<TabsTrigger value="chat" activeValue={uiState.activeTab} class="flex-1">
-				<MessageCircle class="mr-1 h-4 w-4" />
-				Chat
-			</TabsTrigger>
-			<TabsTrigger value="music" activeValue={uiState.activeTab} class="flex-1">
-				<Music class="mr-1 h-4 w-4" />
-				Música
-			</TabsTrigger>
-		</TabsList>
+	<!-- Custom Notion Tab list switcher -->
+	<div class="flex border-b bg-sidebar shrink-0 text-sm">
+		<button
+			onclick={() => uiState.activeTab = 'chat'}
+			class="flex-1 py-3 font-semibold uppercase tracking-wider transition-colors border-r cursor-pointer text-center flex items-center justify-center gap-2 {uiState.activeTab === 'chat' ? 'bg-background text-foreground border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'}"
+		>
+			<MessageSquare class="w-4 h-4" />
+			Chat
+		</button>
+		<button
+			onclick={() => uiState.activeTab = 'music'}
+			class="flex-1 py-3 font-semibold uppercase tracking-wider transition-colors cursor-pointer text-center flex items-center justify-center gap-2 {uiState.activeTab === 'music' ? 'bg-background text-foreground border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'}"
+		>
+			<Music class="w-4 h-4" />
+			Música
+		</button>
+	</div>
 
-		<div class="flex-1 overflow-hidden">
-			<TabsContent value="chat" activeValue={uiState.activeTab} class="h-full">
+	<!-- Content panels -->
+	<div class="flex-1 overflow-hidden">
+		{#if uiState.activeTab === 'chat'}
+			<div class="h-full">
 				<ChatPanel />
-			</TabsContent>
-
-			<TabsContent value="music" activeValue={uiState.activeTab} class="h-full overflow-y-auto p-4">
-				<MusicPlayer />
-			</TabsContent>
-		</div>
-
-		<div class="border-t p-4">
-			<h3 class="mb-2 text-xs font-medium uppercase text-muted-foreground">Dados Rápidos</h3>
-			<div class="grid grid-cols-7 gap-1">
-				{#each diceTypes as dice}
-					<button
-						onclick={() => handleRoll(`1${dice}`)}
-						class="rounded bg-success px-1 py-2 text-center text-xs font-bold text-success-foreground transition-transform hover:scale-110"
-					>
-						{dice}
-					</button>
-				{/each}
 			</div>
-		</div>
-	</Tabs>
+		{:else if uiState.activeTab === 'music'}
+			<div class="h-full overflow-y-auto p-4 scrollbar-thin bg-background">
+				<MusicPlayer />
+			</div>
+		{/if}
+	</div>
 </div>

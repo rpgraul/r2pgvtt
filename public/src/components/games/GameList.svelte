@@ -1,9 +1,9 @@
 <script lang="ts">
-import GameCard from './GameCard.svelte';
-import CreateGameModal from './CreateGameModal.svelte';
 import { Plus } from 'lucide-svelte';
 import Button from '$components/ui/Button.svelte';
 import { db } from '$lib/supabase/tables';
+import CreateGameModal from './CreateGameModal.svelte';
+import GameCard from './GameCard.svelte';
 
 interface Props {
   games: any[];
@@ -64,35 +64,39 @@ async function handleRestore(gameId: string) {
 }
 </script>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
+<div class="space-y-6 max-w-5xl mx-auto py-8 px-4">
+  <div class="flex items-center justify-between border-b pb-4">
     <div>
-      <h2 class="text-2xl font-bold text-foreground">Minhas Mesas</h2>
-      <p class="text-sm text-muted-foreground">
+      <h1 class="text-xl font-bold text-foreground tracking-tight">Minhas Mesas</h1>
+      <p class="text-xs text-muted-foreground mt-0.5">
         {games.filter(g => !g.deleted_at).length} de 3 mesas ativas
       </p>
     </div>
     
-    <Button
+    <button
       onclick={() => showCreateModal = true}
       disabled={!canCreateMore || isLoading}
+      class="inline-flex h-8.5 items-center justify-center rounded border bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <Plus class="w-4 h-4 mr-2" />
+      <Plus class="w-3.5 h-3.5 mr-1" />
       Criar Mesa
-    </Button>
+    </button>
   </div>
 
   {#if games.length === 0}
-    <div class="text-center py-12 px-4 bg-muted/50 rounded-xl border border-border border-dashed">
-      <p class="text-muted-foreground mb-4">
-        Você ainda não participa de nenhuma mesa
+    <div class="text-center py-16 px-4 bg-background border border-dashed rounded flex flex-col items-center justify-center">
+      <p class="text-xs text-muted-foreground mb-4">
+        Você ainda não participa de nenhuma mesa.
       </p>
-      <Button onclick={() => showCreateModal = true}>
+      <button 
+        onclick={() => showCreateModal = true}
+        class="inline-flex h-8.5 items-center justify-center rounded border bg-secondary px-3 py-1.5 text-xs font-semibold hover:bg-secondary/80 transition-colors cursor-pointer text-foreground"
+      >
         Criar sua primeira mesa
-      </Button>
+      </button>
     </div>
   {:else}
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each sortedGames as game (game.id)}
         {@const userRole = game.user_role?.[0]?.role || game.user_role}
         <GameCard 
@@ -107,8 +111,8 @@ async function handleRestore(gameId: string) {
   {/if}
 
   {#if !canCreateMore}
-    <p class="text-sm text-muted-foreground text-center">
-      Limite de 3 mesas atingido. Saia de uma mesa para criar outra.
+    <p class="text-xs text-muted-foreground text-center pt-2">
+      Limite de 3 mesas ativas atingido. Exclua ou saia de uma mesa para poder criar outra.
     </p>
   {/if}
 </div>

@@ -255,7 +255,7 @@ export function parseAllShortcodes(
         else if (percent < 30) colorClass = 'is-low';
         else if (percent < 60) colorClass = 'is-medium';
 
-        const htmlHp = `<div class="shortcode-hp" data-item-id="${item.id}" data-max-hp="${maxHp}">
+        const htmlHp = `<div class="shortcode-hp is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}" data-max-hp="${maxHp}">
           <div class="hp-display-mode">
             <div class="hp-header">
               <strong class="hp-label">PV</strong>
@@ -280,7 +280,7 @@ export function parseAllShortcodes(
           options.defaultCurrency ||
           '';
 
-        const htmlMoney = `<div class="shortcode-money is-interactive" data-item-id="${item.id}">
+        const htmlMoney = `<div class="shortcode-money is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
           <i class="fas fa-coins"></i>
           <span class="money-value-display">${formatNumber(currentValue)}</span>
           <span class="money-currency">${currency}</span>
@@ -297,7 +297,7 @@ export function parseAllShortcodes(
 
         const isResource = sc.originalShortcode.includes('[*count');
 
-        const htmlCount = `<div class="shortcode-count is-interactive" data-item-id="${item.id}">
+        const htmlCount = `<div class="shortcode-count is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
           ${name ? `<strong class="count-name">${name}:</strong> ` : ''}
           <span class="count-current-value">${current}</span>/<span class="count-max-value">${max}</span>
         </div>`;
@@ -316,7 +316,7 @@ export function parseAllShortcodes(
         const xpParams = parseKeyValueArgs(finalArgs);
         const xpValue = parseInt((xpParams.current || '0').replace(/[^\d.-]/g, ''), 10) || 0;
 
-        const htmlXp = `<div class="shortcode-xp is-interactive" data-item-id="${item.id}">
+        const htmlXp = `<div class="shortcode-xp is-interactive" data-shortcode="${encodeURIComponent(sc.originalShortcode)}" data-item-id="${item.id}">
           <i class="fas fa-star"></i>
           <span class="xp-value-display">${xpValue} XP</span>
         </div>`;

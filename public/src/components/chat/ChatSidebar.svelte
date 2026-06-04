@@ -1,10 +1,8 @@
 <script>
-import { tick } from 'svelte';
-import { gameState } from '$lib/state/gameState.svelte.ts';
-import { diceStore } from '$lib/state/diceStore.svelte.js';
 import { Send } from 'lucide-svelte';
-
-let { open = $bindable(false) } = $props();
+import { tick } from 'svelte';
+import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 
 let messagesContainer;
 let inputValue = $state('');
@@ -39,6 +37,7 @@ function getContrastColor(hex) {
 function parseMessage(msg) {
   if (!msg || !msg.text) return '';
   const text = msg.text;
+
   // Escapar tags HTML para segurança
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -47,9 +46,9 @@ function parseMessage(msg) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-  const bgColor = msg.color || 'rgba(63, 63, 70, 0.4)';
+  const bgColor = msg.color || 'rgba(55, 53, 47, 0.08)';
   const textColor = msg.color ? getContrastColor(msg.color) : 'inherit';
-  const borderColor = msg.color ? 'transparent' : 'rgba(161, 161, 170, 0.2)';
+  const borderColor = msg.color ? 'transparent' : 'var(--border-main)';
   const styleAttr = `style="background-color: ${bgColor}; color: ${textColor}; border-color: ${borderColor};"`;
 
   // Substituir !!!valor!!! pelo badge de TOTAL (mais destacado)
@@ -92,7 +91,6 @@ async function handleSubmit(e) {
   }
 
   if (text) {
-    // Adicionar ao histórico, removendo duplicatas existentes para mover para o topo
     const filtered = history.filter((h) => h !== text);
     history = [text, ...filtered].slice(0, 10);
     historyIndex = -1;
@@ -110,7 +108,6 @@ function handleKeydown(e) {
       if (historyIndex === -1) tempValue = inputValue;
       historyIndex++;
       inputValue = history[historyIndex];
-      // Colocar o cursor no final (opcional, mas bom)
       setTimeout(() => {
         if (inputElement) {
           inputElement.selectionStart = inputElement.selectionEnd = inputValue.length;
@@ -138,62 +135,75 @@ function scrollToBottom() {
 }
 
 $effect(() => {
-  if (open && messages.length > 0) {
+  if (messages.length > 0) {
     tick().then(scrollToBottom);
   }
 });
 </script>
 
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col overflow-hidden bg-background">
+  
   <!-- Messages -->
   <div 
     bind:this={messagesContainer}
-    class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin"
+    class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3.5 scrollbar-thin select-text"
   >
     {#each messages as msg (msg.id)}
-      <div class={`message ${msg.type === 'system' ? 'bg-muted/50 rounded-lg p-2' : ''}`}>
-        <div class="flex items-baseline gap-2">
-          <span class="font-medium text-sm">
+      <div class={`message ${msg.type === 'system' ? 'bg-secondary/40 rounded p-2 border' : ''}`}>
+        <div class="flex items-baseline gap-2 select-none">
+          <span class="font-bold text-xs text-foreground">
             {msg.sender || 'Anônimo'}
           </span>
           {#if msg.created_at || msg.createdAt}
-            <span class="text-xs text-muted-foreground">
+            <span class="text-[10px] text-muted-foreground">
               {formatTime(msg.created_at || msg.createdAt)}
             </span>
           {/if}
         </div>
-        <p class="text-sm mt-1">{@html parseMessage(msg)}</p>
+        <p class="text-xs text-foreground/90 mt-1 select-text">{@html parseMessage(msg)}</p>
       </div>
     {/each}
     
     {#if messages.length === 0}
-      <p class="text-center text-muted-foreground text-sm py-8">
-        Nenhuma mensagem ainda
+      <p class="text-center text-muted-foreground text-xs py-10">
+        Nenhuma mensagem ainda.
       </p>
     {/if}
   </div>
 
-  <!-- Input -->
-  <form onsubmit={handleSubmit} class="p-3 border-t">
+  <!-- Input Form -->
+  <form onsubmit={handleSubmit} class="p-3 border-t bg-muted/5 shrink-0 select-none">
     <div class="flex gap-2">
       <input
         bind:this={inputElement}
         bind:value={inputValue}
         onkeydown={handleKeydown}
         type="text"
-        placeholder="Digite uma mensagem..."
-        class="flex-1 h-9 px-3 rounded-md border bg-background text-sm"
+        placeholder="Enviar mensagem ou /r 1d20..."
+        class="flex-1 h-8 px-2.5 rounded border bg-background text-xs outline-none focus:border-primary/80 transition-colors text-foreground placeholder:text-muted-foreground/50"
       />
       <button
         type="submit"
         disabled={!inputValue.trim()}
-        class="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        class="p-2 rounded border bg-background hover:bg-secondary/60 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors cursor-pointer"
       >
-        <Send class="w-4 h-4" />
+        <Send class="w-3.5 h-3.5" />
       </button>
     </div>
-    <p class="text-xs text-muted-foreground mt-2">
-      Use /r ou /roll para rolar dados (ex: /r 1d20)
-    </p>
   </form>
+
+  <!-- Quick Dice roll shortcuts -->
+  <div class="border-t p-3 bg-sidebar shrink-0 select-none">
+    <div class="grid grid-cols-7 gap-1">
+      {#each ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'] as dice}
+        <button
+          type="button"
+          onclick={() => diceStore.rollDice(`1${dice}`)}
+          class="rounded border bg-background hover:bg-secondary/60 text-foreground transition-colors py-1.5 text-center text-xs font-semibold cursor-pointer"
+        >
+          {dice}
+        </button>
+      {/each}
+    </div>
+  </div>
 </div>

@@ -1,6 +1,6 @@
 <script>
-import { cn } from '$lib/utils/cn.js';
 import { Dices } from 'lucide-svelte';
+import { cn } from '$lib/utils/cn.js';
 
 let { visible = false, userName = '', formula = '', result = 0 } = $props();
 

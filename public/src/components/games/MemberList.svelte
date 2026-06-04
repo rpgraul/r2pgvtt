@@ -1,7 +1,7 @@
 <script lang="ts">
-import type { GameMemberWithProfile } from '$lib/supabase/types';
-import { gameState } from '$lib/state/gameState.svelte';
 import { Trash2 } from 'lucide-svelte';
+import { gameState } from '$lib/state/gameState.svelte';
+import type { GameMemberWithProfile } from '$lib/supabase/types';
 
 interface Props {
   members: GameMemberWithProfile[];

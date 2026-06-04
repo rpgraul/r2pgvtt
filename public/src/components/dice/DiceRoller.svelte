@@ -1,6 +1,6 @@
 <script>
-import { gameState } from '$lib/state/gameState.svelte.ts';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
+import { gameState } from '$lib/state/gameState.svelte.ts';
 import Button from '../ui/Button.svelte';
 
 const diceTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];

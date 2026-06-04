@@ -1,9 +1,10 @@
 <script>
+import { Plus } from 'lucide-svelte';
+import Button from '$components/ui/Button.svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
+import { cn } from '$lib/utils/cn.js';
 import Card from './Card.svelte';
 import CardDialog from './CardDialog.svelte';
-import { cn } from '$lib/utils/cn.js';
-import { Plus } from 'lucide-svelte';
 
 const items = $derived(gameState.filteredItems);
 
@@ -116,6 +117,3 @@ function handleDragEnd() {
 
 <CardDialog bind:open={showCardDialog} editItem={editingCard} />
 
-<script context="module">
-  import Button from '$components/ui/Button.svelte';
-</script>

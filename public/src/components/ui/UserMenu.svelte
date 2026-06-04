@@ -1,8 +1,8 @@
 <script>
+import { ChevronDown, Gamepad2, LogOut, Settings, User } from 'lucide-svelte';
+import { goto } from '$app/navigation';
 import { authState } from '$lib/state/auth.svelte';
 import { toast } from '$lib/stores/toast.js';
-import { goto } from '$app/navigation';
-import { User, Settings, LogOut, Gamepad2, ChevronDown } from 'lucide-svelte';
 
 let isOpen = $state(false);
 

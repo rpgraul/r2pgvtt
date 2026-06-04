@@ -1,9 +1,9 @@
 <script>
+import { Edit, Trash2 } from 'lucide-svelte';
 import { gameState } from '$lib/state/gameState.svelte.ts';
 import { toast } from '$lib/stores/toast.js';
-import Badge from '../ui/Badge.svelte';
 import { cn } from '$lib/utils/cn.js';
-import { Edit, Trash2 } from 'lucide-svelte';
+import Badge from '../ui/Badge.svelte';
 
 let { item, onEdit = null } = $props();
 

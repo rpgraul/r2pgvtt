@@ -1,5 +1,5 @@
 <script>
-import { onMount, onDestroy } from 'svelte';
+import { onDestroy, onMount } from 'svelte';
 import { diceStore } from '$lib/state/diceStore.svelte.js';
 
 let initialized = $state(false);
