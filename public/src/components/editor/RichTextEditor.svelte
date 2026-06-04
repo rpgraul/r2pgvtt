@@ -143,23 +143,59 @@ function redo() {
 
 function insertShortcode(type, data) {
   let html = '';
+  const extra = data.extra || '';
 
   switch (type) {
-    case 'hp':
-      html = `<span data-type="hp" data-current="${data.current || 100}" data-max="${data.max || 100}">[hp current="${data.current || 100}" max="${data.max || 100}"]</span> `;
+    case 'hp': {
+      const cur = data.current || 100;
+      const max = data.max || 100;
+      const sc = `[hp current=${cur} max=${max}${extra}]`;
+      html = `<span data-type="hp" data-current="${cur}" data-max="${max}">${sc}</span> `;
       break;
-    case 'stat':
-      html = `<span data-type="stat" data-name="${data.name || 'FOR'}" data-value="${data.value || 10}" data-mod="${data.mod || 0}">[stat "${data.name || 'FOR'}" ${data.value || 10}]</span> `;
+    }
+    case 'stat': {
+      const name = data.name || 'FOR';
+      const val = data.value || 10;
+      const sc = `[stat "${name}" "${val}"${extra}]`;
+      html = `<span data-type="stat" data-name="${name}" data-value="${val}">${sc}</span> `;
       break;
-    case 'money':
-      html = `<span data-type="money" data-current="${data.current || 0}" data-currency="${data.currency || 'po'}">[money ${data.current || 0} ${data.currency || 'po'}]</span> `;
+    }
+    case 'money': {
+      const cur = data.current || 0;
+      const currency = data.currency || 'PO';
+      const sc = `[money current=${cur} currency=${currency}${extra}]`;
+      html = `<span data-type="money" data-current="${cur}" data-currency="${currency}">${sc}</span> `;
       break;
-    case 'count':
-      html = `<span data-type="count" data-name="${data.name || 'Items'}" data-current="${data.current || 0}" data-max="${data.max || 10}">[count "${data.name || 'Items'}" current="${data.current || 0}" max="${data.max || 10}"]</span> `;
+    }
+    case 'count': {
+      const prefix = data.overlay ? '*' : '';
+      const name = data.name || 'Itens';
+      const cur = data.current || 0;
+      const max = data.max || 10;
+      const theme = data.theme !== 'number' ? ` ${data.theme}` : '';
+      const icon = data.icon ? ` icon="${data.icon}"` : '';
+      const sc = `[${prefix}count "${name}" max=${max} current=${cur}${theme}${icon}${extra}]`;
+      html = `<span data-type="count" data-name="${name}" data-current="${cur}" data-max="${max}">${sc}</span> `;
       break;
-    case 'xp':
-      html = `<span data-type="xp" data-current="${data.current || 0}" data-total="${data.total || 1000}">[xp ${data.current || 0}/${data.total || 1000}]</span> `;
+    }
+    case 'xp': {
+      const cur = data.current || 0;
+      const label = data.label || 'XP';
+      const sc = `[xp current=${cur} label="${label}"${extra}]`;
+      html = `<span data-type="xp" data-current="${cur}" data-label="${label}">${sc}</span> `;
       break;
+    }
+    case 'nota': {
+      const titulo = data.titulo || 'Nota';
+      const hash = data.hidden ? ' #' : '';
+      const conteudo = data.conteudo || '';
+      html = `[nota titulo="${titulo}"${hash}]${conteudo}[/nota] `;
+      break;
+    }
+    case 'hide': {
+      html = `[hide]${data.conteudo || ''}[/hide] `;
+      break;
+    }
   }
 
   if (html && editor) {
@@ -168,6 +204,7 @@ function insertShortcode(type, data) {
 
   showShortcodeModal = false;
 }
+
 
 const isActive = $derived((type, attrs = {}) => {
   if (!editor) return false;
